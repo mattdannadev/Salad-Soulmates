@@ -13,7 +13,7 @@
 
 - `npm run lint`, `npm run typecheck`, `npm test`: pass (18 tests).
 - `npm run build`: all routes compile for the Next.js/Vercel target.
-- Local browser sign-in page renders; signed-in hosted review awaits owner sign-in.
+- The owner signed in successfully against hosted Supabase. The browser dashboard shows Matt Danna / Admin and the expected empty ingredient, supplier and feedback counts. Review of actual record-entry workflows remains pending.
 - PostgreSQL tests exercise actual migration SQL in disposable PGlite, not a mocked database. They check organization/facility boundaries, role restrictions, append-only history, request deduplication, supplier pack rules and atomic ingredient saves.
 
 ## Review with the owner
@@ -40,3 +40,4 @@ Preview deployments share the one hosted database. They must not load sample bus
 Products and immutable released recipes → scheduling/PTO and assigned worker views → customer orders → order-driven 40-gallon planning and 1:1 spice buckets → inventory/inbound shortages and purchasing recommendations. Preserve the visible ceiling/overage assumption. Complete Increment 1A acceptance before receiving/serialization (1B), then live Spanish batch execution (1C).
 
 Storage upload workflows, password recovery email delivery, production monitoring and recovery procedures remain to be configured before broad rollout.
+

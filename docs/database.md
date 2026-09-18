@@ -40,7 +40,7 @@ Verified on the hosted project on September 18, 2026:
 - Public user signup and anonymous sign-in are disabled; email/password sign-in and email confirmation remain enabled.
 - Site URL is currently the local development default, `http://localhost:3000`. Add the actual app URL when hosting is configured.
 
-Local tests complement, but do not replace, authenticated hosted Auth/API and end-to-end application checks. The owner-approved first administrator (Matt Danna) is provisioned and active for Salad Soulmates / Main facility. Hosted application sign-in and record-entry review remain to be completed.
+Local tests complement, but do not replace, authenticated hosted Auth/API and end-to-end application checks. The owner-approved first administrator (Matt Danna) is provisioned and active for Salad Soulmates / Main facility. Hosted application sign-in succeeded and the administrator dashboard loaded with the expected identity. Review of actual record-entry workflows remains pending.
 
 ## App connection
 
@@ -53,4 +53,5 @@ For each additional app user, provision the chosen user through Supabase Auth an
 ## Build gates
 
 The current schema is the foundation and first master-data slice. Products/recipes, scheduling/PTO, orders/planning, and worker assignments are subsequent migrations within Increment 1A. Serialized receiving remains 1B, live Spanish batch execution remains 1C. Storage is provided by Supabase; no public bucket is created before an actual upload workflow and its access policies exist.
+
 
