@@ -41,3 +41,8 @@ Products and immutable released recipes → scheduling/PTO and assigned worker v
 
 Storage upload workflows, password recovery email delivery, production monitoring and recovery procedures remain to be configured before broad rollout.
 
+
+## GitHub checks
+
+Local checks are available through npm run check. The GitHub Actions configuration is retained as docs/ci-workflow.example.yml, an inactive template. The connected GitHub OAuth account lacks workflow scope. Activating automatic checks requires that additional authorization, then moving the template to .github/workflows/check.yml. No account permissions were expanded.
+
