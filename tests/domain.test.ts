@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { planBatches, availability, purchaseUnits } from '../src/domain/planning';
-import { inventoryBalances } from '../src/domain/inventory';
+import inventoryBalances from '../src/domain/inventory';
 import { inventorySchema, packSchema } from '../src/domain/master-data';
+
 describe('operating rules', () => {
   it('plans full 40 gallon batches, one bucket each, and exposes overage', () => {
     expect(planBatches(80)).toMatchObject({
@@ -26,7 +27,12 @@ describe('operating rules', () => {
   });
   it('counts selected demand once, separate from other commitments', () => {
     expect(
-      availability({ required: 80, onHand: 70, confirmedInbound: 20, otherCommitments: 30 }),
+      availability({
+        required: 80,
+        onHand: 70,
+        confirmedInbound: 20,
+        otherCommitments: 30,
+      }),
     ).toMatchObject({ projected: -20, shortage: 20 });
   });
   it('rounds supplier packs up and refuses unvalidated conversions', () => {

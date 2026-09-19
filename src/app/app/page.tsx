@@ -1,16 +1,21 @@
 import Link from 'next/link';
-import { Leaf, Truck, MessageCircle, ArrowRight } from 'lucide-react';
+import {
+  Leaf, Truck, MessageCircle, ArrowRight,
+} from 'lucide-react';
 import { requireAdminShell } from '@/lib/auth';
 import { PageHeader } from '@/components/shell';
+import { z } from 'zod';
+import { operationError } from '@/lib/operation-error';
 
 export default async function Home() {
   const { db, profile } = await requireAdminShell();
   const results = await Promise.all(
-    ['ingredients', 'suppliers', 'feedback_items'].map((table) =>
-      db.from(table).select('id', { count: 'exact', head: true }),
-    ),
+    (['ingredients', 'suppliers', 'feedback_items'] as const).map((table) => db.from(table).select('id', { count: 'exact', head: true })),
   );
-  if (results.some((r) => r.error)) throw new Error('Unable to load overview.');
+  const counts = results.map((result) => {
+    if (result.error) throw operationError('dashboard_counts', 'Unable to load overview.', result.error);
+    return z.number().int().nonnegative().parse(result.count);
+  });
   const cards = [
     { name: 'Ingredients', icon: Leaf, href: '/app/ingredients' },
     { name: 'Suppliers', icon: Truck, href: '/app/suppliers' },
@@ -29,7 +34,7 @@ export default async function Home() {
             <c.icon />
             <div>
               <span>{c.name}</span>
-              <strong>{results[i].count ?? 0}</strong>
+              <strong>{counts[i]}</strong>
             </div>
             <ArrowRight size={18} />
           </Link>
@@ -71,8 +76,9 @@ export default async function Home() {
       <section className="panel soft">
         <h2>What comes next</h2>
         <p>
-          Products and released recipes come next, followed by scheduling and time off, customer
-          orders, and planning. Every standard 40-gallon mixer batch will require one spice bucket.
+          After the engineering refactor, the next phases cover materials and purchasing,
+          receiving, customer orders and planning, then scheduling. Every standard 40-gallon
+          mixer batch will require one spice bucket.
         </p>
         <p>
           The Spanish worker workspace is reserved for simple phone use. Assignments and batch work

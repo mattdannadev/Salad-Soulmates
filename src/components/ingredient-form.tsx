@@ -1,10 +1,12 @@
 'use client';
-import { useState, useTransition } from 'react';
+
+import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveRecord } from '@/app/actions';
 import type { Ingredient, ActionResult } from '@/domain/master-data';
-export function IngredientForm({
-  ingredient,
+
+export default function IngredientForm({
+  ingredient = undefined,
   spanish = '',
   allergens = [],
   selected = [],
@@ -21,42 +23,63 @@ export function IngredientForm({
   const [pending, start] = useTransition();
   const [result, setResult] = useState<ActionResult>();
   const router = useRouter();
+  const confirmation = useRef<HTMLDialogElement>(null);
+  const pendingForm = useRef<FormData | undefined>(undefined);
+  function submitIngredient(f: FormData) {
+    start(async () => {
+      try {
+        const response = await saveRecord('ingredient', {
+          id: ingredient?.id,
+          name: f.get('name'),
+          spanish_name: f.get('spanish_name'),
+          category: f.get('category'),
+          default_uom: f.get('default_uom'),
+          description: f.get('description'),
+          storage_notes: f.get('storage_notes'),
+          active: f.has('active'),
+          allergen_ids: f.getAll('allergen_ids'),
+        });
+        setResult(response);
+        if (response.ok) {
+          router.push(`/app/ingredients/${response.id}`);
+          router.refresh();
+        }
+      } catch {
+        setResult({ ok: false, message: 'Unable to connect. Please try again.' });
+      }
+    });
+  }
   return (
     <form
       className="record-form"
       onSubmit={(e) => {
         e.preventDefault();
         const f = new FormData(e.currentTarget);
-        if (
-          ingredient?.active &&
-          !f.has('active') &&
-          !window.confirm('Deactivate this ingredient? Existing history will be retained.')
-        )
+        if (pending) return;
+        if (ingredient?.active && !f.has('active')) {
+          pendingForm.current = f;
+          confirmation.current?.showModal();
           return;
-        start(async () => {
-          try {
-            const response = await saveRecord('ingredient', {
-              id: ingredient?.id,
-              name: f.get('name'),
-              spanish_name: f.get('spanish_name'),
-              category: f.get('category'),
-              default_uom: f.get('default_uom'),
-              description: f.get('description'),
-              storage_notes: f.get('storage_notes'),
-              active: f.has('active'),
-              allergen_ids: f.getAll('allergen_ids'),
-            });
-            setResult(response);
-            if (response.ok) {
-              router.push(`/app/ingredients/${response.id}`);
-              router.refresh();
-            }
-          } catch {
-            setResult({ ok: false, message: 'Unable to connect. Please try again.' });
-          }
-        });
+        }
+        submitIngredient(f);
       }}
     >
+      <dialog ref={confirmation} aria-labelledby="confirm-deactivation">
+        <h2 id="confirm-deactivation">Deactivate this ingredient?</h2>
+        <p>Existing history will be retained.</p>
+        <button type="button" onClick={() => confirmation.current?.close()}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            confirmation.current?.close();
+            if (pendingForm.current) submitIngredient(pendingForm.current);
+          }}
+        >
+          Deactivate
+        </button>
+      </dialog>
       <div className="form-grid">
         <label>
           Ingredient name *
@@ -131,7 +154,9 @@ export function IngredientForm({
           {result.message}
         </p>
       )}
-      <button disabled={pending}>{pending ? 'Saving…' : 'Save ingredient'}</button>
+      <button type="submit" disabled={pending}>
+        {pending ? 'Saving…' : 'Save ingredient'}
+      </button>
     </form>
   );
 }

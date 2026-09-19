@@ -1,10 +1,13 @@
 'use client';
-import { useId, useState, useTransition } from 'react';
+
+import {
+  useId, useRef, useState, useTransition,
+} from 'react';
 import { useRouter } from 'next/navigation';
 import { saveRecord } from '@/app/actions';
 import type { ActionResult } from '@/domain/master-data';
 
-export type Field = {
+export interface Field {
   name: string;
   label: string;
   type?: 'text' | 'email' | 'number' | 'date' | 'textarea' | 'select' | 'checkbox' | 'hidden';
@@ -17,12 +20,79 @@ export type Field = {
   maxLength?: number;
   readOnly?: boolean;
   onChange?: (value: string) => void;
-};
+}
+function fieldClass(type: Field['type']) {
+  if (type === 'textarea') return 'wide';
+  if (type === 'checkbox') return 'check';
+  return '';
+}
+function fieldValue(field: Field, form: FormData): unknown {
+  if (field.type === 'checkbox') return form.has(field.name);
+  const value = form.get(field.name);
+  if (field.type === 'number') return typeof value === 'string' && value.trim() ? Number(value) : null;
+  return value ?? '';
+}
+function FieldControl({ field, id }: { field: Field; id: string }) {
+  if (field.type === 'select') {
+    return (
+      <select
+        id={id}
+        name={field.name}
+        required={field.required}
+        {...(field.onChange
+          ? { value: String(field.value ?? '') }
+          : { defaultValue: String(field.value ?? '') })}
+        onChange={field.onChange ? (event) => field.onChange?.(event.target.value) : undefined}
+      >
+        {field.options?.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    );
+  }
+  if (field.type === 'textarea') {
+    return (
+      <textarea
+        id={id}
+        name={field.name}
+        defaultValue={String(field.value ?? '')}
+        rows={3}
+        required={field.required}
+        maxLength={field.maxLength ?? 2000}
+      />
+    );
+  }
+  if (field.type === 'checkbox') {
+    return (
+      <input id={id} name={field.name} type="checkbox" defaultChecked={Boolean(field.value)} />
+    );
+  }
+  return (
+    <input
+      id={id}
+      name={field.name}
+      type={field.type ?? 'text'}
+      {...(field.readOnly
+        ? { value: String(field.value ?? '') }
+        : { defaultValue: String(field.value ?? '') })}
+      readOnly={field.readOnly}
+      required={field.required}
+      min={field.min}
+      step={field.step ?? (field.type === 'number' ? '0.0001' : undefined)}
+      maxLength={
+        field.type === 'number' || field.type === 'date' ? undefined : (field.maxLength ?? 1000)
+      }
+    />
+  );
+}
+
 export function RecordForm({
   kind,
   fields,
   submit = 'Save',
-  afterSave,
+  afterSave = undefined,
   hidden = {},
   locale = 'en',
 }: {
@@ -37,26 +107,34 @@ export function RecordForm({
   const [pending, start] = useTransition();
   const router = useRouter();
   const formId = useId();
+  const receiptToken = useRef<string | undefined>(undefined);
+  const savingLabel = locale === 'es' ? 'Guardando…' : 'Saving…';
   return (
     <form
+      className="record-form"
       onSubmit={(event) => {
         event.preventDefault();
-        const form = new FormData(event.currentTarget);
+        if (pending) return;
+        const element = event.currentTarget;
+        const form = new FormData(element);
         const values: Record<string, unknown> = { ...hidden };
-        for (const field of fields)
-          values[field.name] =
-            field.type === 'checkbox'
-              ? form.has(field.name)
-              : field.type === 'number'
-                ? Number(form.get(field.name))
-                : String(form.get(field.name) ?? '');
+        fields.forEach((field) => {
+          values[field.name] = fieldValue(field, form);
+        });
+        if (kind === 'receipt') {
+          receiptToken.current ??= crypto.randomUUID();
+          values.request_id = receiptToken.current;
+        }
         start(async () => {
           try {
             const response = await saveRecord(kind, values);
             setResult(response);
             if (response.ok) {
-              if (afterSave)
-                router.push(afterSave === 'detail' ? `/app/ingredients/${response.id}` : afterSave);
+              if (kind === 'receipt') {
+                receiptToken.current = undefined;
+                element.reset();
+              }
+              if (afterSave) router.push(afterSave === 'detail' ? `/app/ingredients/${response.id}` : afterSave);
               router.refresh();
             }
           } catch {
@@ -70,80 +148,22 @@ export function RecordForm({
           }
         });
       }}
-      className="record-form"
     >
       <div className="form-grid">
         {fields.map((field) => {
           const id = `${formId}-${field.name}`;
-          if (field.type === 'hidden')
+          if (field.type === 'hidden') {
             return (
               <input key={id} type="hidden" name={field.name} value={String(field.value ?? '')} />
             );
+          }
           return (
-            <label
-              key={id}
-              className={
-                field.type === 'textarea' ? 'wide' : field.type === 'checkbox' ? 'check' : ''
-              }
-              htmlFor={id}
-            >
+            <label key={id} className={fieldClass(field.type)} htmlFor={id}>
               <span>
                 {field.label}
                 {field.required ? ' *' : ''}
               </span>
-              {field.type === 'select' ? (
-                <select
-                  id={id}
-                  name={field.name}
-                  {...(field.onChange
-                    ? { value: String(field.value ?? '') }
-                    : { defaultValue: String(field.value ?? '') })}
-                  onChange={
-                    field.onChange ? (event) => field.onChange?.(event.target.value) : undefined
-                  }
-                  required={field.required}
-                >
-                  {field.options?.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              ) : field.type === 'textarea' ? (
-                <textarea
-                  id={id}
-                  name={field.name}
-                  defaultValue={String(field.value ?? '')}
-                  rows={3}
-                  required={field.required}
-                  maxLength={field.maxLength ?? 2000}
-                />
-              ) : field.type === 'checkbox' ? (
-                <input
-                  id={id}
-                  name={field.name}
-                  type="checkbox"
-                  defaultChecked={Boolean(field.value)}
-                />
-              ) : (
-                <input
-                  id={id}
-                  name={field.name}
-                  type={field.type ?? 'text'}
-                  {...(field.readOnly
-                    ? { value: String(field.value ?? '') }
-                    : { defaultValue: String(field.value ?? '') })}
-                  readOnly={field.readOnly}
-                  required={field.required}
-                  min={field.min}
-                  step={field.step ?? (field.type === 'number' ? '0.0001' : undefined)}
-                  maxLength={
-                    field.type === 'number' || field.type === 'date'
-                      ? undefined
-                      : (field.maxLength ?? 1000)
-                  }
-                />
-              )}
+              <FieldControl field={field} id={id} />
               {field.hint && <small>{field.hint}</small>}
             </label>
           );
@@ -155,7 +175,7 @@ export function RecordForm({
         </p>
       )}
       <button type="submit" disabled={pending}>
-        {pending ? (locale === 'es' ? 'Guardando…' : 'Saving…') : submit}
+        {pending ? savingLabel : submit}
       </button>
     </form>
   );

@@ -1059,3 +1059,14 @@ dialog::backdrop {
     animation: none;
   }
 }
+
+.recipe-version-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.recipe-version-links [aria-current='page'] {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}

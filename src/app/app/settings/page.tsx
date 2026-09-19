@@ -1,30 +1,30 @@
+import hasPermission from '@/lib/permissions';
+import { rowSchemas } from '@/domain/master-data';
 import { redirect } from 'next/navigation';
+import { z } from 'zod';
 import { requireAdminShell } from '@/lib/auth';
-import { rows } from '@/lib/data';
+import { rows, readResult } from '@/lib/data';
 import { PageHeader } from '@/components/shell';
 import { ReferenceOptionForm, AccessProfileForm } from '@/components/settings-forms';
-import type {
-  ReferenceList,
-  ReferenceOption,
-  Permission,
-  AccessProfile,
-} from '@/domain/master-data';
 
 export default async function SettingsPage() {
   const { db } = await requireAdminShell();
-  const { data: allowed } = await db.rpc('has_permission', { requested: 'settings.manage' });
+  const allowed = await hasPermission(db, 'settings.manage');
   if (!allowed) redirect('/app');
   const [listResult, options, permissionResult, profiles, assignments] = await Promise.all([
     db.from('reference_lists').select('*').order('area').order('code'),
-    rows<ReferenceOption>(db, 'reference_options'),
+    rows(db, 'reference_options', rowSchemas.reference_options),
     db.from('permissions').select('*').order('area').order('code'),
-    rows<AccessProfile>(db, 'access_profiles'),
+    rows(db, 'access_profiles', rowSchemas.access_profiles),
     db.from('access_profile_permissions').select('access_profile_id,permission_code'),
   ]);
-  if (listResult.error || permissionResult.error || assignments.error)
-    throw new Error('Unable to load access profile settings.');
-  const lists = listResult.data as ReferenceList[];
-  const permissions = permissionResult.data as Permission[];
+  const lists = readResult(listResult, rowSchemas.reference_lists.array(), 'reference_lists');
+  const permissions = readResult(permissionResult, rowSchemas.permissions.array(), 'permissions');
+  const assigned = readResult(
+    assignments,
+    z.array(z.object({ access_profile_id: z.uuid(), permission_code: z.string() })),
+    'permission_assignments',
+  );
   const areas = [...new Set(lists.map((list) => list.area))].sort();
   return (
     <>
@@ -40,34 +40,32 @@ export default async function SettingsPage() {
           needs a different combination of actions.
         </p>
         <div className="settings-stack">
-          {profiles.map((p) =>
-            p.is_system ? (
-              <article className="settings-summary" key={p.id}>
-                <h3>{p.name}</h3>
-                <p>{p.description}</p>
-                <div>
-                  {(assignments.data ?? [])
-                    .filter((a) => a.access_profile_id === p.id)
-                    .map((a) => (
-                      <span className="badge" key={a.permission_code}>
-                        {permissions.find((x) => x.code === a.permission_code)?.label}
-                      </span>
-                    ))}
-                </div>
-              </article>
-            ) : (
-              <details key={p.id}>
-                <summary>{p.name}</summary>
-                <AccessProfileForm
-                  profile={p}
-                  permissions={permissions}
-                  selected={(assignments.data ?? [])
-                    .filter((a) => a.access_profile_id === p.id)
-                    .map((a) => a.permission_code)}
-                />
-              </details>
-            ),
-          )}
+          {profiles.map((p) => (p.is_system ? (
+            <article className="settings-summary" key={p.id}>
+              <h3>{p.name}</h3>
+              <p>{p.description}</p>
+              <div>
+                {assigned
+                  .filter((a) => a.access_profile_id === p.id)
+                  .map((a) => (
+                    <span className="badge" key={a.permission_code}>
+                      {permissions.find((x) => x.code === a.permission_code)?.label}
+                    </span>
+                  ))}
+              </div>
+            </article>
+          ) : (
+            <details key={p.id}>
+              <summary>{p.name}</summary>
+              <AccessProfileForm
+                profile={p}
+                permissions={permissions}
+                selected={assigned
+                  .filter((a) => a.access_profile_id === p.id)
+                  .map((a) => a.permission_code)}
+              />
+            </details>
+          )))}
           <details>
             <summary>Create custom access profile</summary>
             <AccessProfileForm permissions={permissions} />
@@ -82,7 +80,10 @@ export default async function SettingsPage() {
             .map((list) => (
               <div className="settings-list" key={list.code}>
                 <h2>
-                  {list.name_en} / {list.name_es}
+                  {list.name_en}
+                  {' '}
+                  /
+                  {list.name_es}
                 </h2>
                 {options
                   .filter((option) => option.list_code === list.code)
@@ -90,7 +91,10 @@ export default async function SettingsPage() {
                   .map((option) => (
                     <details key={option.id}>
                       <summary>
-                        {option.label_en} / {option.label_es}
+                        {option.label_en}
+                        {' '}
+                        /
+                        {option.label_es}
                         {!option.active ? ' (Inactive)' : ''}
                       </summary>
                       <ReferenceOptionForm

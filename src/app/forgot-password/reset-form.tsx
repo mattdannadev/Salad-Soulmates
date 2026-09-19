@@ -1,7 +1,9 @@
 'use client';
+
 import { useActionState } from 'react';
 import { requestPasswordReset } from '../actions';
-export function ForgotPasswordForm() {
+
+export default function ForgotPasswordForm() {
   const [state, action, pending] = useActionState(requestPasswordReset, { ok: false, message: '' });
   return (
     <form action={action} className="record-form">
@@ -14,7 +16,9 @@ export function ForgotPasswordForm() {
           {state.message}
         </p>
       )}
-      <button disabled={pending}>{pending ? 'Sending…' : 'Send reset link'}</button>
+      <button type="submit" disabled={pending}>
+        {pending ? 'Sending…' : 'Send reset link'}
+      </button>
     </form>
   );
 }

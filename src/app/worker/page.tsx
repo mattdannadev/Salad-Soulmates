@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { Leaf, LogOut } from 'lucide-react';
 import { requireProfile } from '@/lib/auth';
 import { signOut } from '@/app/actions';
-import { FeedbackDrawer } from '@/components/feedback';
+import FeedbackDrawer from '@/components/feedback';
+
 export const dynamic = 'force-dynamic';
 export default async function Worker() {
   const { profile } = await requireProfile();
@@ -11,14 +12,17 @@ export default async function Worker() {
       <header className="row">
         <Leaf size={34} />
         <form action={signOut}>
-          <button className="secondary">
+          <button type="submit" className="secondary">
             <LogOut size={18} />
             Salir
           </button>
         </form>
       </header>
       <p className="eyebrow">SALAD SOULMATES</p>
-      <h1>Hola, {profile.display_name.split(' ')[0]}</h1>
+      <h1>
+        Hola,
+        {profile.display_name.split(' ')[0]}
+      </h1>
       <section className="panel">
         <h2>Tu espacio de trabajo</h2>
         <p>Estamos preparando esta herramienta.</p>

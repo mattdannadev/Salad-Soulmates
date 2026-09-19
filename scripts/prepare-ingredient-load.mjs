@@ -1,66 +1,10 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { parse } from 'csv-parse/sync';
 
-const input = process.argv[2];
-const output = process.argv[3] ?? 'data/import/ingredient-review.csv';
-if (!input)
-  throw new Error(
-    'Usage: npm run prepare:ingredients -- <worksheet-export.csv> [review-output.csv]',
-  );
-
-function csv(text) {
-  const rows = [];
-  let row = [];
-  let field = '';
-  let quoted = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (quoted && c === '"' && text[i + 1] === '"') {
-      field += '"';
-      i++;
-    } else if (c === '"') quoted = !quoted;
-    else if (!quoted && c === ',') {
-      row.push(field);
-      field = '';
-    } else if (!quoted && (c === '\n' || c === '\r')) {
-      if (c === '\r' && text[i + 1] === '\n') i++;
-      row.push(field);
-      if (row.some(Boolean)) rows.push(row);
-      row = [];
-      field = '';
-    } else field += c;
-  }
-  row.push(field);
-  if (row.some(Boolean)) rows.push(row);
-  return rows;
-}
-const quote = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`;
-const rows = csv(readFileSync(resolve(input), 'utf8'));
-const headers = rows.shift()?.map((h) => h.trim().toLowerCase()) ?? [];
-const required = ['worksheet', 'recipe', 'ingredient', 'quantity', 'unit'];
-for (const name of required)
-  if (!headers.includes(name)) throw new Error(`Missing required column: ${name}`);
-const index = Object.fromEntries(headers.map((h, i) => [h, i]));
-const groups = new Map();
-for (const row of rows) {
-  const source = row[index.ingredient]?.trim();
-  if (!source) continue;
-  const key = source.toLocaleLowerCase('en-US').replace(/\s+/g, ' ');
-  const group = groups.get(key) ?? {
-    names: new Set(),
-    units: new Set(),
-    recipes: new Set(),
-    worksheets: new Set(),
-    count: 0,
-  };
-  group.names.add(source);
-  group.units.add(row[index.unit]?.trim());
-  group.recipes.add(row[index.recipe]?.trim());
-  group.worksheets.add(row[index.worksheet]?.trim());
-  group.count++;
-  groups.set(key, group);
-}
-const head = [
+const REQUIRED_COLUMNS = ['worksheet', 'recipe', 'ingredient', 'quantity', 'unit'];
+const REVIEW_COLUMNS = [
   'source_names',
   'proposed_name',
   'observed_units',
@@ -73,30 +17,77 @@ const head = [
   'ready_to_load',
   'review_notes',
 ];
-const result = [head.map(quote).join(',')];
-for (const group of [...groups.values()].sort((a, b) =>
-  [...a.names][0].localeCompare([...b.names][0]),
-)) {
-  const names = [...group.names];
-  const units = [...group.units].filter(Boolean);
-  const ambiguous = names.length > 1 || units.length !== 1;
-  result.push(
-    [
-      names.join(' | '),
-      names[0],
-      units.join(' | '),
-      [...group.recipes].filter(Boolean).join(' | '),
-      [...group.worksheets].filter(Boolean).join(' | '),
-      group.count,
-      '',
-      '',
-      units.length === 1 ? units[0] : '',
-      'false',
-      ambiguous ? 'Review aliases or units' : 'Add Spanish name and category',
-    ]
-      .map(quote)
-      .join(','),
-  );
+/** Quote every field and neutralize spreadsheet formula prefixes in this human-review export. */
+function quote(value) {
+  const text = String(value ?? '');
+  const safe = /^[=+@\-\t\r]/.test(text) ? `'${text}` : text;
+  return `"${safe.replaceAll('"', '""')}"`;
 }
-writeFileSync(resolve(output), `${result.join('\n')}\n`);
-console.log(`Prepared ${groups.size} ingredient candidates for human review: ${resolve(output)}`);
+/** Prepare review candidates only; this script never connects to a database. */
+export default function prepareIngredientReview(source) {
+  if (typeof source !== 'string') throw new TypeError('CSV input must be text.');
+  const records = parse(source, { bom: true, skip_empty_lines: true, columns: false });
+  const headers = records.shift()?.map((value) => value.trim().toLowerCase()) ?? [];
+  if (new Set(headers).size !== headers.length) throw new Error('Duplicate CSV column names.');
+  REQUIRED_COLUMNS.forEach((name) => {
+    if (!headers.includes(name)) throw new Error(`Missing required column: ${name}`);
+  });
+  const index = Object.fromEntries(headers.map((name, position) => [name, position]));
+  const groups = new Map();
+  records.forEach((row) => {
+    const name = row[index.ingredient]?.trim();
+    if (!name) throw new Error('Ingredient name is required on every input row.');
+    const key = name.toLocaleLowerCase('en-US').replace(/\s+/g, ' ');
+    const group = groups.get(key) ?? {
+      names: new Set(),
+      units: new Set(),
+      recipes: new Set(),
+      worksheets: new Set(),
+      count: 0,
+    };
+    group.names.add(name);
+    group.units.add(row[index.unit]?.trim());
+    group.recipes.add(row[index.recipe]?.trim());
+    group.worksheets.add(row[index.worksheet]?.trim());
+    group.count += 1;
+    groups.set(key, group);
+  });
+  const result = [REVIEW_COLUMNS.map(quote).join(',')];
+  [...groups.values()]
+    .sort((left, right) => [...left.names][0].localeCompare([...right.names][0]))
+    .forEach((group) => {
+      const names = [...group.names];
+      const units = [...group.units].filter(Boolean);
+      const ambiguous = names.length > 1 || units.length !== 1;
+      result.push(
+        [
+          names.join(' | '),
+          names[0],
+          units.join(' | '),
+          [...group.recipes].filter(Boolean).join(' | '),
+          [...group.worksheets].filter(Boolean).join(' | '),
+          group.count,
+          '',
+          '',
+          units.length === 1 ? units[0] : '',
+          'false',
+          ambiguous ? 'Review aliases or units' : 'Add Spanish name and category',
+        ]
+          .map(quote)
+          .join(','),
+      );
+    });
+  return `${result.join('\n')}\n`;
+}
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const input = process.argv[2];
+  const output = process.argv[3] ?? 'data/import/ingredient-review.csv';
+  if (!input) {
+    throw new Error(
+      'Usage: npm run prepare:ingredients -- <worksheet-export.csv> [review-output.csv]',
+    );
+  }
+  if (resolve(input) === resolve(output)) throw new Error('Review output must not overwrite the source.');
+  writeFileSync(resolve(output), prepareIngredientReview(readFileSync(resolve(input), 'utf8')));
+  process.stdout.write(`Prepared ingredient candidates for human review: ${resolve(output)}\n`);
+}

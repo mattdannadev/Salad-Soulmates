@@ -1,20 +1,22 @@
+import { rowSchemas } from '@/domain/master-data';
 import { redirect } from 'next/navigation';
 import { requireProfile } from '@/lib/auth';
 import { rows } from '@/lib/data';
-import { ReceiptForm } from '@/components/receipt-form';
-import { ReceiptHistory } from '@/components/receipt-history';
-import { FeedbackDrawer } from '@/components/feedback';
-import type { Ingredient, Supplier, Receipt, ReceiptLine } from '@/domain/master-data';
+import ReceiptForm from '@/components/receipt-form';
+import ReceiptHistory from '@/components/receipt-history';
+import FeedbackDrawer from '@/components/feedback';
+
+export const dynamic = 'force-dynamic';
 
 export default async function ReceiverWorkspace() {
   const { db, profile } = await requireProfile();
   if (profile.role === 'worker') redirect('/worker');
   if (profile.role === 'reviewer') redirect('/app/receiving');
   const [ingredients, suppliers, receipts, lines] = await Promise.all([
-    rows<Ingredient>(db, 'ingredients'),
-    rows<Supplier>(db, 'suppliers'),
-    rows<Receipt>(db, 'inventory_receipts'),
-    rows<ReceiptLine>(db, 'inventory_receipt_lines'),
+    rows(db, 'ingredients', rowSchemas.ingredients),
+    rows(db, 'suppliers', rowSchemas.suppliers),
+    rows(db, 'inventory_receipts', rowSchemas.inventory_receipts),
+    rows(db, 'inventory_receipt_lines', rowSchemas.inventory_receipt_lines),
   ]);
   const es = profile.preferred_locale === 'es';
   return (

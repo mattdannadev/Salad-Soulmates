@@ -1,20 +1,31 @@
+import hasPermission from '@/lib/permissions';
+import { rowSchemas } from '@/domain/master-data';
 import { redirect } from 'next/navigation';
+import { z } from 'zod';
 import { requireAdminShell } from '@/lib/auth';
-import { rows, date } from '@/lib/data';
+import { rows, date, readResult } from '@/lib/data';
 import { PageHeader } from '@/components/shell';
-import { AccessRequestReview } from '@/components/access-request-review';
-import type { AccessRequest } from '@/domain/master-data';
+import AccessRequestReview from '@/components/access-request-review';
 
 export default async function AccessRequests() {
   const { db } = await requireAdminShell();
-  const { data: allowed } = await db.rpc('has_permission', { requested: 'access.manage' });
+  const allowed = await hasPermission(db, 'access.manage');
   if (!allowed) redirect('/app');
   const [requests, facilities, accessProfiles] = await Promise.all([
-    rows<AccessRequest>(db, 'access_requests'),
+    rows(db, 'access_requests', rowSchemas.access_requests),
     db.from('facilities').select('id,name').eq('active', true).order('name'),
     db.from('access_profiles').select('id,name,base_role').eq('active', true).order('name'),
   ]);
-  if (facilities.error || accessProfiles.error) throw new Error('Unable to load access settings.');
+  const facilityRows = readResult(
+    facilities,
+    z.array(z.object({ id: z.uuid(), name: z.string() })),
+    'access_facilities',
+  );
+  const profileRows = readResult(
+    accessProfiles,
+    rowSchemas.access_profiles.pick({ id: true, name: true, base_role: true }).array(),
+    'access_profiles',
+  );
   const open = requests
     .filter((r) => ['New', 'Contacted', 'Invited'].includes(r.status))
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
@@ -35,20 +46,25 @@ export default async function AccessRequests() {
                   <h3>{request.display_name}</h3>
                   <p>{request.contact_value}</p>
                   <p>
-                    <span className="badge">{request.requested_role}</span>{' '}
+                    <span className="badge">{request.requested_role}</span>
+                    {' '}
                     <span className="badge">
                       {request.preferred_locale === 'es' ? 'Español' : 'English'}
-                    </span>{' '}
+                    </span>
+                    {' '}
                     <span className="badge">{request.status}</span>
                   </p>
-                  <small>Requested {date(request.created_at)}</small>
+                  <small>
+                    Requested
+                    {date(request.created_at)}
+                  </small>
                 </div>
                 <AccessRequestReview
                   id={request.id}
                   contactKind={request.contact_kind}
                   requestedRole={request.requested_role}
-                  facilities={facilities.data ?? []}
-                  profiles={accessProfiles.data ?? []}
+                  facilities={facilityRows}
+                  profiles={profileRows}
                 />
               </article>
             ))}

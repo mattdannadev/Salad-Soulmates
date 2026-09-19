@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Leaf } from 'lucide-react';
-import { RequestAccessForm } from './request-access-form';
+import RequestAccessForm from './request-access-form';
+
 export default function Register() {
   return (
     <main className="login-page">

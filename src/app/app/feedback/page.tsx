@@ -1,13 +1,12 @@
+import { rowSchemas } from '@/domain/master-data';
 import { requireAdminShell } from '@/lib/auth';
 import { rows, date } from '@/lib/data';
-import type { Feedback } from '@/domain/master-data';
 import { RecordForm } from '@/components/record-form';
 import { PageHeader } from '@/components/shell';
+
 export default async function FeedbackPage() {
   const { db, profile } = await requireAdminShell();
-  const feedback = (await rows<Feedback>(db, 'feedback_items')).sort((a, b) =>
-    b.created_at.localeCompare(a.created_at),
-  );
+  const feedback = (await rows(db, 'feedback_items', rowSchemas.feedback_items)).sort((a, b) => b.created_at.localeCompare(a.created_at));
   return (
     <>
       <PageHeader
@@ -30,11 +29,17 @@ export default async function FeedbackPage() {
           <div className="row">
             <span className="badge">{f.status}</span>
             <small>
-              {date(f.created_at)} CT · {f.feedback_type}
+              {date(f.created_at)}
+              {' '}
+              CT ·
+              {f.feedback_type}
             </small>
           </div>
           <p className="feedback-comment">{f.comment}</p>
-          <p className="subtle">Page: {f.route}</p>
+          <p className="subtle">
+            Page:
+            {f.route}
+          </p>
           {profile.role === 'admin' ? (
             <details>
               <summary>Review feedback</summary>

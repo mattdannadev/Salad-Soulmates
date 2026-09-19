@@ -1,10 +1,18 @@
 'use client';
+
 import { useActionState } from 'react';
 import { approveAccessRequest, reviewAccessRequest } from '@/app/actions';
 
-type Facility = { id: string; name: string };
-type AccessProfile = { id: string; name: string; base_role: string };
-export function AccessRequestReview({
+interface Facility {
+  id: string;
+  name: string;
+}
+interface AccessProfile {
+  id: string;
+  name: string;
+  base_role: string;
+}
+export default function AccessRequestReview({
   id,
   contactKind,
   requestedRole,
@@ -53,7 +61,9 @@ export function AccessRequestReview({
               ))}
             </select>
           </label>
-          <button disabled={approving}>{approving ? 'Approving…' : 'Approve & invite'}</button>
+          <button type="submit" disabled={approving}>
+            {approving ? 'Approving…' : 'Approve & invite'}
+          </button>
           {approval.message ? (
             <p
               role={approval.ok ? 'status' : 'alert'}
@@ -74,10 +84,22 @@ export function AccessRequestReview({
           Review note
           <input name="note" maxLength={1000} />
         </label>
-        <button name="decision" value="Contacted" className="secondary" disabled={updating}>
+        <button
+          type="submit"
+          name="decision"
+          value="Contacted"
+          className="secondary"
+          disabled={updating}
+        >
           Mark contacted
         </button>
-        <button name="decision" value="Declined" className="secondary" disabled={updating}>
+        <button
+          type="submit"
+          name="decision"
+          value="Declined"
+          className="secondary"
+          disabled={updating}
+        >
           Decline
         </button>
         {review.message ? (

@@ -1,4 +1,5 @@
 import { signOut } from '../actions';
+
 export default function Access() {
   return (
     <main className="login-page">
@@ -10,7 +11,7 @@ export default function Access() {
         </p>
         <p>Tu cuenta necesita acceso. Contacta a tu administrador.</p>
         <form action={signOut}>
-          <button>Sign out / Salir</button>
+          <button type="submit">Sign out / Salir</button>
         </form>
       </section>
     </main>

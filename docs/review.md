@@ -1,5 +1,7 @@
 # Foundation review and deployment
 
+This is the historical foundation review. Current delivery order and refactor evidence are in `docs/build-plan.md` and `docs/engineering-refactor.md`; those supersede the old next-step sequence and CI status below.
+
 ## Implemented
 
 - Email/password sign-in, session refresh, active profile checks and role-aware routing.
@@ -41,8 +43,6 @@ Products and immutable released recipes → scheduling/PTO and assigned worker v
 
 Storage upload workflows, password recovery email delivery, production monitoring and recovery procedures remain to be configured before broad rollout.
 
-
 ## GitHub checks
 
-Local checks are available through npm run check. The GitHub Actions configuration is retained as docs/ci-workflow.example.yml, an inactive template. The connected GitHub OAuth account lacks workflow scope. Activating automatic checks requires that additional authorization, then moving the template to .github/workflows/check.yml. No account permissions were expanded.
-
+The refactor adds `.github/workflows/check.yml` with pinned actions and complete checks. It remains local because repository writes were denied. The older `docs/ci-workflow.example.yml` is historical. Remote execution, required checks, and required reviews have not been activated or verified by this refactor.

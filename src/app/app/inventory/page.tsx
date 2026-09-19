@@ -1,24 +1,28 @@
+import { rowSchemas } from '@/domain/master-data';
 import Link from 'next/link';
+import { z } from 'zod';
 import { requireAdminShell } from '@/lib/auth';
-import { rows, number, date } from '@/lib/data';
-import { inventoryBalances } from '@/domain/inventory';
-import type { Ingredient, InventoryEvent } from '@/domain/master-data';
-import { InventoryForm } from '@/components/inventory-form';
+import {
+  rows, number, date, readResult,
+} from '@/lib/data';
+import inventoryBalances from '@/domain/inventory';
+import InventoryForm from '@/components/inventory-form';
 import { PageHeader } from '@/components/shell';
+
 export default async function Inventory() {
   const { db, profile } = await requireAdminShell();
   const [ingredients, events, facility] = await Promise.all([
-    rows<Ingredient>(db, 'ingredients'),
-    rows<InventoryEvent>(db, 'inventory_events'),
+    rows(db, 'ingredients', rowSchemas.ingredients),
+    rows(db, 'inventory_events', rowSchemas.inventory_events),
     db.from('facilities').select('name').eq('id', profile.facility_id).single(),
   ]);
-  if (facility.error) throw new Error('Unable to load facility.');
+  const facilityData = readResult(facility, z.object({ name: z.string() }), 'inventory_facility');
   const balances = inventoryBalances(events);
   const recent = [...events].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 50);
   return (
     <>
       <PageHeader
-        eyebrow={facility.data.name}
+        eyebrow={facilityData.name}
         title="Ingredient inventory"
         description="Reviewed opening balances and adjustments for your facility. Every change keeps its history."
       />
@@ -41,15 +45,19 @@ export default async function Inventory() {
                       <Link href={`/app/ingredients/${i.id}`}>{i.name}</Link>
                     </td>
                     <td>
-                      {number(balances[i.id] ?? 0)} {i.default_uom}
+                      {number(balances[i.id] ?? 0)}
+                      {' '}
+                      {i.default_uom}
                     </td>
                     <td>
                       {(balances[i.id] ?? 0) < 0 ? (
                         <span className="badge warning">Review negative balance</span>
-                      ) : events.some((e) => e.ingredient_id === i.id) ? (
-                        'Recorded'
                       ) : (
-                        'Not entered'
+                        <span>
+                          {events.some((e) => e.ingredient_id === i.id)
+                            ? 'Recorded'
+                            : 'Not entered'}
+                        </span>
                       )}
                     </td>
                   </tr>
@@ -72,7 +80,15 @@ export default async function Inventory() {
       <section className="panel">
         <h2>Recent history</h2>
         <p>
-          Latest {recent.length} of {events.length} entries · Times in America/Chicago
+          Latest
+          {' '}
+          {recent.length}
+          {' '}
+          of
+          {' '}
+          {events.length}
+          {' '}
+          entries · Times in America/Chicago
         </p>
         {recent.length ? (
           <div className="table-wrap">
@@ -93,10 +109,12 @@ export default async function Inventory() {
                     <td>
                       {ingredients.find((i) => i.id === e.ingredient_id)?.name ?? 'Unavailable'}
                     </td>
-                    <td>{e.event_type === 'OpeningBalance' ? 'Opening balance' : 'Adjustment'}</td>
+                    <td>{e.event_type === 'OpeningBalance' ? 'Opening balance' : e.event_type}</td>
                     <td>
                       {Number(e.quantity_delta) > 0 ? '+' : ''}
-                      {number(Number(e.quantity_delta))} {e.uom}
+                      {number(Number(e.quantity_delta))}
+                      {' '}
+                      {e.uom}
                     </td>
                     <td>{e.reason_note}</td>
                   </tr>

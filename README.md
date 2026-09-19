@@ -54,4 +54,3 @@ Database tests run in disposable local PostgreSQL through PGlite and never touch
 - Contextual feedback remains part of review.
 
 The owner selected one hosted database; see `docs/decisions.md` for the override to the original staging-database recommendation.
-

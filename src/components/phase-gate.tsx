@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { LockKeyhole } from 'lucide-react';
 import { PageHeader } from './shell';
 
-export function PhaseGate({
+export default function PhaseGate({
   eyebrow,
   title,
   description,

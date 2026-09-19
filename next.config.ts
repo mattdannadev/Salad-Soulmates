@@ -1,8 +1,9 @@
 import type { NextConfig } from 'next';
+
 const config: NextConfig = {
   poweredByHeader: false,
-  async headers() {
-    return [
+  headers() {
+    return Promise.resolve([
       {
         source: '/:path*',
         headers: [
@@ -11,7 +12,7 @@ const config: NextConfig = {
           { key: 'X-Frame-Options', value: 'DENY' },
         ],
       },
-    ];
+    ]);
   },
 };
 export default config;

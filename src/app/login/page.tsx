@@ -1,7 +1,8 @@
 import { isConfigured } from '@/lib/supabase';
-import { LoginForm } from './sign-in-form';
 import Link from 'next/link';
 import { Leaf } from 'lucide-react';
+import LoginForm from './sign-in-form';
+
 export default async function Login({
   searchParams,
 }: {
@@ -22,8 +23,10 @@ export default async function Login({
           <LoginForm />
         ) : (
           <div className="notice">
-            The database connection is not configured yet.{' '}
-            <Link href="/setup">View setup status</Link>.
+            The database connection is not configured yet.
+            {' '}
+            <Link href="/setup">View setup status</Link>
+            .
           </div>
         )}
         <div className="auth-links">

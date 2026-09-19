@@ -1,7 +1,9 @@
 'use client';
+
 import { useActionState } from 'react';
 import { requestAccess } from '../actions';
-export function RequestAccessForm() {
+
+export default function RequestAccessForm() {
   const [state, action, pending] = useActionState(requestAccess, { ok: false, message: '' });
   return (
     <form action={action} className="record-form">
@@ -42,7 +44,9 @@ export function RequestAccessForm() {
           {state.message}
         </p>
       )}
-      <button disabled={pending}>{pending ? 'Submitting…' : 'Submit request'}</button>
+      <button type="submit" disabled={pending}>
+        {pending ? 'Submitting…' : 'Submit request'}
+      </button>
     </form>
   );
 }

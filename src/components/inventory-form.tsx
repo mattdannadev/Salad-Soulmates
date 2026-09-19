@@ -1,12 +1,14 @@
 'use client';
-import { useState, useTransition } from 'react';
+
+import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveRecord } from '@/app/actions';
 import type { Ingredient, ActionResult } from '@/domain/master-data';
-export function InventoryForm({ ingredients }: { ingredients: Ingredient[] }) {
+
+export default function InventoryForm({ ingredients }: { ingredients: Ingredient[] }) {
   const [ingredientId, setIngredientId] = useState('');
   const [result, setResult] = useState<ActionResult>();
-  const [requestId, setRequestId] = useState<string>();
+  const requestId = useRef<string | undefined>(undefined);
   const [pending, start] = useTransition();
   const router = useRouter();
   const selected = ingredients.find((i) => i.id === ingredientId);
@@ -15,11 +17,11 @@ export function InventoryForm({ ingredients }: { ingredients: Ingredient[] }) {
       className="record-form"
       onSubmit={(event) => {
         event.preventDefault();
-        if (!selected) return;
+        if (!selected || pending) return;
         const form = event.currentTarget;
         const values = new FormData(form);
-        const token = requestId ?? crypto.randomUUID();
-        setRequestId(token);
+        const token = requestId.current ?? crypto.randomUUID();
+        requestId.current = token;
         const payload = {
           ingredient_id: selected.id,
           uom: selected.default_uom,
@@ -33,7 +35,7 @@ export function InventoryForm({ ingredients }: { ingredients: Ingredient[] }) {
             const response = await saveRecord('inventory', payload);
             setResult(response);
             if (response.ok) {
-              setRequestId(undefined);
+              requestId.current = undefined;
               form.reset();
               setIngredientId('');
               router.refresh();
@@ -70,7 +72,11 @@ export function InventoryForm({ ingredients }: { ingredients: Ingredient[] }) {
             </select>
           </label>
           <label>
-            Quantity change {selected ? `(${selected.default_uom})` : ''} *
+            Quantity change
+            {' '}
+            {selected ? `(${selected.default_uom})` : ''}
+            {' '}
+            *
             <input name="quantity_delta" type="number" required step="0.0001" />
             <small>
               Opening balance: positive quantity. Adjustment: add with +, subtract with −.
@@ -91,7 +97,7 @@ export function InventoryForm({ ingredients }: { ingredients: Ingredient[] }) {
           Entries preserve history. Correct a mistake with a new adjustment. This does not record
           production consumption.
         </p>
-        <button disabled={!selected || pending}>
+        <button type="submit" disabled={!selected || pending}>
           {pending ? 'Saving…' : 'Record inventory entry'}
         </button>
       </fieldset>

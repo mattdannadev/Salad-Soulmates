@@ -1,8 +1,9 @@
+import { rowSchemas } from '@/domain/master-data';
 import Link from 'next/link';
 import { requireAdminShell } from '@/lib/auth';
 import { rows } from '@/lib/data';
-import type { Ingredient } from '@/domain/master-data';
 import { PageHeader } from '@/components/shell';
+
 export default async function Ingredients({
   searchParams,
 }: {
@@ -10,7 +11,7 @@ export default async function Ingredients({
 }) {
   const { db, profile } = await requireAdminShell();
   const { q = '' } = await searchParams;
-  const ingredients = (await rows<Ingredient>(db, 'ingredients'))
+  const ingredients = (await rows(db, 'ingredients', rowSchemas.ingredients))
     .filter((i) => i.name.toLowerCase().includes(q.toLowerCase()))
     .sort((a, b) => a.name.localeCompare(b.name));
   return (
@@ -34,7 +35,9 @@ export default async function Ingredients({
               Search ingredients
             </label>
             <input id="search" name="q" placeholder="Search ingredients…" defaultValue={q} />
-            <button className="secondary">Search</button>
+            <button type="submit" className="secondary">
+              Search
+            </button>
           </form>
           <Link href="/app/allergens">Manage allergens →</Link>
         </div>
@@ -47,7 +50,9 @@ export default async function Ingredients({
                   <th>Category</th>
                   <th>Base unit</th>
                   <th>Status</th>
-                  <th />
+                  <th>
+                    <span className="sr-only">Open ingredient</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
