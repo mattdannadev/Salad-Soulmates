@@ -27,7 +27,7 @@ export const packSchema = z.object({
   supplier_id: z.uuid(),
   supplier_sku: z.string().trim().max(100),
   purchase_uom: z.enum(['pail', 'bag', 'case', 'each']),
-  pack_quantity: z.number().positive().max(1000000),
+  pack_quantity: z.number().positive().max(1000000).multipleOf(0.0001),
   pack_quantity_uom: z.enum(units),
   is_preferred: z.boolean(),
   active: z.boolean(),
@@ -42,6 +42,7 @@ export const inventorySchema = z
       .finite()
       .min(-1000000)
       .max(1000000)
+      .multipleOf(0.0001)
       .refine((n) => n !== 0, 'Enter a non-zero quantity.'),
     uom: z.enum(units),
     reason_note: z.string().trim().min(3).max(1000),
@@ -54,7 +55,7 @@ export const inventorySchema = z
 export const feedbackSchema = z.object({
   route: z
     .string()
-    .regex(/^\/(app|worker)(\/|$)/)
+    .regex(/^\/(app|worker|receiving)(\/|$)/)
     .max(500),
   comment: z.string().trim().min(1).max(2000),
   feedback_type: z.enum(['Suggestion', 'Issue', 'Positive', 'Question']),
@@ -62,7 +63,7 @@ export const feedbackSchema = z.object({
 export const receiptSchema = z.object({
   supplier_id: z.uuid(),
   ingredient_id: z.uuid(),
-  quantity: z.number().positive().max(1000000),
+  quantity: z.number().positive().max(1000000).multipleOf(0.0001),
   uom: z.enum(units),
   received_on: z.iso.date(),
   supplier_reference: z.string().trim().max(120),
@@ -72,117 +73,160 @@ export const receiptSchema = z.object({
   request_id: z.uuid(),
 });
 
-export type Ingredient = {
-  id: string;
-  name: string;
-  category: string;
-  default_uom: string;
-  active: boolean;
-  description: string;
-  storage_notes: string;
-};
-export type Supplier = {
-  id: string;
-  name: string;
-  contact_name: string;
-  email: string;
-  phone: string;
-  lead_time_days: number;
-  active: boolean;
-};
-export type SupplierItem = {
-  id: string;
-  ingredient_id: string;
-  supplier_id: string;
-  supplier_sku: string;
-  purchase_uom: string;
-  pack_quantity: number;
-  pack_quantity_uom: string;
-  is_preferred: boolean;
-  active: boolean;
-  notes: string;
-};
-export type InventoryEvent = {
-  id: string;
-  ingredient_id: string;
-  event_type: string;
-  quantity_delta: number;
-  uom: string;
-  reason_note: string;
-  created_at: string;
-};
-export type Feedback = {
-  id: string;
-  route: string;
-  comment: string;
-  feedback_type: string;
-  status: string;
-  resolution_note: string;
-  created_at: string;
-};
-export type Profile = {
-  id: string;
-  organization_id: string;
-  facility_id: string;
-  display_name: string;
-  role: 'admin' | 'reviewer' | 'worker' | 'receiver';
-  preferred_locale: 'es' | 'en';
-  active: boolean;
-  access_profile_id: string;
-};
-export type AccessRequest = {
-  id: string;
-  display_name: string;
-  contact_kind: 'email' | 'phone';
-  contact_value: string;
-  preferred_locale: 'en' | 'es';
-  requested_role: 'reviewer' | 'worker' | 'receiver';
-  status: string;
-  review_note: string;
-  created_at: string;
-  auth_user_id: string | null;
-};
-export type Receipt = {
-  id: string;
-  supplier_id: string;
-  received_on: string;
-  supplier_reference: string;
-  note: string;
-  created_at: string;
-};
-export type ReceiptLine = {
-  id: string;
-  receipt_id: string;
-  ingredient_id: string;
-  quantity: number;
-  uom: string;
-  supplier_lot: string;
-  expiration_date: string | null;
-};
-export type ReferenceList = {
-  organization_id: string;
+export const ingredientRowSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  category: z.string(),
+  default_uom: z.string(),
+  active: z.boolean(),
+  description: z.string(),
+  storage_notes: z.string(),
+});
+export type Ingredient = z.infer<typeof ingredientRowSchema>;
+export const supplierRowSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  contact_name: z.string(),
+  email: z.string(),
+  phone: z.string(),
+  lead_time_days: z.number().int().nullable(),
+  active: z.boolean(),
+});
+export type Supplier = z.infer<typeof supplierRowSchema>;
+export const supplierItemRowSchema = z.object({
+  id: z.uuid(),
+  ingredient_id: z.uuid(),
+  supplier_id: z.uuid(),
+  supplier_sku: z.string(),
+  purchase_uom: z.string(),
+  pack_quantity: z.number().finite(),
+  pack_quantity_uom: z.string(),
+  is_preferred: z.boolean(),
+  active: z.boolean(),
+  notes: z.string(),
+});
+export type SupplierItem = z.infer<typeof supplierItemRowSchema>;
+export const inventoryEventRowSchema = z.object({
+  id: z.uuid(),
+  ingredient_id: z.uuid(),
+  event_type: z.string(),
+  quantity_delta: z.number().finite(),
+  uom: z.string(),
+  reason_note: z.string(),
+  created_at: z.string(),
+});
+export type InventoryEvent = z.infer<typeof inventoryEventRowSchema>;
+export const feedbackRowSchema = z.object({
+  id: z.uuid(),
+  route: z.string(),
+  comment: z.string(),
+  feedback_type: z.string(),
+  status: z.string(),
+  resolution_note: z.string(),
+  created_at: z.string(),
+});
+export type Feedback = z.infer<typeof feedbackRowSchema>;
+export const profileRowSchema = z.object({
+  id: z.uuid(),
+  organization_id: z.uuid(),
+  facility_id: z.uuid(),
+  display_name: z.string(),
+  role: z.enum(['admin', 'reviewer', 'worker', 'receiver']),
+  preferred_locale: z.enum(['es', 'en']),
+  active: z.boolean(),
+  access_profile_id: z.uuid(),
+});
+export type Profile = z.infer<typeof profileRowSchema>;
+export const accessRequestRowSchema = z.object({
+  id: z.uuid(),
+  display_name: z.string(),
+  contact_kind: z.enum(['email', 'phone']),
+  contact_value: z.string(),
+  preferred_locale: z.enum(['en', 'es']),
+  requested_role: z.enum(['reviewer', 'worker', 'receiver']),
+  status: z.string(),
+  review_note: z.string(),
+  created_at: z.string(),
+  auth_user_id: z.uuid().nullable(),
+});
+export type AccessRequest = z.infer<typeof accessRequestRowSchema>;
+export const receiptRowSchema = z.object({
+  id: z.uuid(),
+  supplier_id: z.uuid(),
+  received_on: z.string(),
+  supplier_reference: z.string(),
+  note: z.string(),
+  created_at: z.string(),
+});
+export type Receipt = z.infer<typeof receiptRowSchema>;
+export const receiptLineRowSchema = z.object({
+  id: z.uuid(),
+  receipt_id: z.uuid(),
+  ingredient_id: z.uuid(),
+  quantity: z.number().finite(),
+  uom: z.string(),
+  supplier_lot: z.string(),
+  expiration_date: z.string().nullable(),
+});
+export type ReceiptLine = z.infer<typeof receiptLineRowSchema>;
+export const referenceListRowSchema = z.object({
+  organization_id: z.uuid(),
+  code: z.string(),
+  area: z.string(),
+  name_en: z.string(),
+  name_es: z.string(),
+  allow_custom_values: z.boolean(),
+});
+export type ReferenceList = z.infer<typeof referenceListRowSchema>;
+export const referenceOptionRowSchema = z.object({
+  id: z.uuid(),
+  list_code: z.string(),
+  code: z.string(),
+  label_en: z.string(),
+  label_es: z.string(),
+  sort_order: z.number().finite(),
+  active: z.boolean(),
+});
+export type ReferenceOption = z.infer<typeof referenceOptionRowSchema>;
+export interface Permission {
   code: string;
   area: string;
-  name_en: string;
-  name_es: string;
-  allow_custom_values: boolean;
-};
-export type ReferenceOption = {
-  id: string;
-  list_code: string;
-  code: string;
-  label_en: string;
-  label_es: string;
-  sort_order: number;
-  active: boolean;
-};
-export type Permission = { code: string; area: string; label: string; description: string };
-export type AccessProfile = {
-  id: string;
-  name: string;
+  label: string;
   description: string;
-  base_role: 'admin' | 'reviewer' | 'worker' | 'receiver';
-  is_system: boolean;
-  active: boolean;
+}
+export const accessProfileRowSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  description: z.string(),
+  base_role: z.enum(['admin', 'reviewer', 'worker', 'receiver']),
+  is_system: z.boolean(),
+  active: z.boolean(),
+});
+export type AccessProfile = z.infer<typeof accessProfileRowSchema>;
+export interface ActionResult {
+  ok: boolean;
+  message: string;
+  id?: string;
+}
+
+export const rowSchemas = {
+  ingredients: ingredientRowSchema,
+  suppliers: supplierRowSchema,
+  supplier_items: supplierItemRowSchema,
+  inventory_events: inventoryEventRowSchema,
+  feedback_items: feedbackRowSchema,
+  profiles: profileRowSchema,
+  access_requests: accessRequestRowSchema,
+  inventory_receipts: receiptRowSchema,
+  inventory_receipt_lines: receiptLineRowSchema,
+  reference_lists: referenceListRowSchema,
+  reference_options: referenceOptionRowSchema,
+  permissions: z.object({
+    code: z.string(),
+    area: z.string(),
+    label: z.string(),
+    description: z.string(),
+  }),
+  access_profiles: accessProfileRowSchema,
+  allergens: z.object({ id: z.uuid(), name: z.string() }),
 };
-export type ActionResult = { ok: boolean; message: string; id?: string };

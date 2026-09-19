@@ -1,11 +1,15 @@
 import Link from 'next/link';
-import { Leaf, ArrowRight, ShieldCheck, Layers, Languages } from 'lucide-react';
+import {
+  Leaf, ArrowRight, ShieldCheck, Layers, Languages,
+} from 'lucide-react';
+
 export default function Setup() {
   return (
     <div className="setup-page">
       <header className="setup-brand">
         <Leaf />
-        Salad Soulmates<span>APPLICATION FOUNDATION</span>
+        Salad Soulmates
+        <span>APPLICATION FOUNDATION</span>
       </header>
       <main className="setup-content">
         <p className="eyebrow">GROWING SOMETHING GOOD</p>
@@ -37,7 +41,9 @@ export default function Setup() {
           </article>
         </div>
         <Link className="button" href="/login">
-          Go to sign in <ArrowRight size={18} />
+          Go to sign in
+          {' '}
+          <ArrowRight size={18} />
         </Link>
         <p className="muted">Setup instructions: docs/database.md in the repository.</p>
       </main>

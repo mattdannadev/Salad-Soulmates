@@ -1,5 +1,6 @@
 import { Leaf } from 'lucide-react';
-import { UpdatePasswordForm } from './update-password-form';
+import UpdatePasswordForm from './update-password-form';
+
 export default function ResetPassword() {
   return (
     <main className="login-page">

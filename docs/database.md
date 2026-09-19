@@ -53,5 +53,3 @@ For each additional app user, provision the chosen user through Supabase Auth an
 ## Build gates
 
 The current schema is the foundation and first master-data slice. Products/recipes, scheduling/PTO, orders/planning, and worker assignments are subsequent migrations within Increment 1A. Serialized receiving remains 1B, live Spanish batch execution remains 1C. Storage is provided by Supabase; no public bucket is created before an actual upload workflow and its access policies exist.
-
-

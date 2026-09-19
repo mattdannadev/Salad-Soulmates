@@ -1,14 +1,16 @@
 'use client';
+
 import { useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { MessageCircle, X } from 'lucide-react';
 import { RecordForm } from './record-form';
-export function FeedbackDrawer({ worker = false }: { worker?: boolean }) {
+
+export default function FeedbackDrawer({ worker = false }: { worker?: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const route = usePathname();
   return (
     <>
-      <button className="feedback-button" onClick={() => dialog.current?.showModal()}>
+      <button type="button" className="feedback-button" onClick={() => dialog.current?.showModal()}>
         <MessageCircle size={18} />
         {worker ? 'Comentarios' : 'Feedback'}
       </button>
@@ -16,6 +18,7 @@ export function FeedbackDrawer({ worker = false }: { worker?: boolean }) {
         <div className="row">
           <h2>{worker ? 'Comentarios' : 'Share your thoughts'}</h2>
           <button
+            type="button"
             className="icon-button"
             aria-label={worker ? 'Cerrar comentarios' : 'Close feedback'}
             onClick={() => dialog.current?.close()}
@@ -45,17 +48,15 @@ export function FeedbackDrawer({ worker = false }: { worker?: boolean }) {
               label: worker ? 'Tipo' : 'Type',
               type: 'select',
               value: 'Suggestion',
-              options: ['Suggestion', 'Issue', 'Positive', 'Question'].map((value) => ({
+              options: (['Suggestion', 'Issue', 'Positive', 'Question'] as const).map((value) => ({
                 value,
                 label: worker
-                  ? (
-                      {
-                        Suggestion: 'Sugerencia',
-                        Issue: 'Problema',
-                        Positive: 'Me gusta',
-                        Question: 'Pregunta',
-                      } as Record<string, string>
-                    )[value]
+                  ? {
+                    Suggestion: 'Sugerencia',
+                    Issue: 'Problema',
+                    Positive: 'Me gusta',
+                    Question: 'Pregunta',
+                  }[value]
                   : value,
               })),
             },

@@ -1,13 +1,16 @@
+import { rowSchemas } from '@/domain/master-data';
 import { redirect } from 'next/navigation';
+import hasPermission from '@/lib/permissions';
 import { requireAdminShell } from '@/lib/auth';
-import { rows } from '@/lib/data';
-import { IngredientForm } from '@/components/ingredient-form';
+import { rows, readResult } from '@/lib/data';
+import IngredientForm from '@/components/ingredient-form';
 import { PageHeader } from '@/components/shell';
+
 export default async function NewIngredient() {
   const { db, profile } = await requireAdminShell();
-  const [{ data: canWrite }, allergens, categoryResult] = await Promise.all([
-    db.rpc('has_permission', { requested: 'master_data.write' }),
-    rows<{ id: string; name: string }>(db, 'allergens'),
+  const [canWrite, allergens, categoryResult] = await Promise.all([
+    hasPermission(db, 'master_data.write'),
+    rows(db, 'allergens', rowSchemas.allergens),
     db
       .from('reference_options')
       .select('code,label_en,label_es')
@@ -16,8 +19,11 @@ export default async function NewIngredient() {
       .order('sort_order'),
   ]);
   if (!canWrite) redirect('/app/ingredients');
-  if (categoryResult.error) throw new Error('Unable to load ingredient types.');
-  const categories = categoryResult.data;
+  const categories = readResult(
+    categoryResult,
+    rowSchemas.reference_options.pick({ code: true, label_en: true, label_es: true }).array(),
+    'ingredient_categories',
+  );
   return (
     <>
       <PageHeader

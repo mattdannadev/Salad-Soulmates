@@ -1,10 +1,19 @@
 'use client';
+
 import { useMemo, useState } from 'react';
+import { facilityDate } from '@/domain/format';
 import { RecordForm } from './record-form';
 
-type Ingredient = { id: string; name: string; default_uom: string };
-type Supplier = { id: string; name: string };
-export function ReceiptForm({
+interface Ingredient {
+  id: string;
+  name: string;
+  default_uom: string;
+}
+interface Supplier {
+  id: string;
+  name: string;
+}
+export default function ReceiptForm({
   ingredients,
   suppliers,
   locale = 'en',
@@ -14,7 +23,6 @@ export function ReceiptForm({
   locale?: 'en' | 'es';
 }) {
   const [ingredientId, setIngredientId] = useState(ingredients[0]?.id ?? '');
-  const [requestId] = useState(() => crypto.randomUUID());
   const unit = useMemo(
     () => ingredients.find((i) => i.id === ingredientId)?.default_uom ?? 'lb',
     [ingredients, ingredientId],
@@ -38,7 +46,7 @@ export function ReceiptForm({
             name: 'received_on',
             label: es ? 'Fecha de recepción' : 'Received date',
             type: 'date',
-            value: new Date().toISOString().slice(0, 10),
+            value: facilityDate(),
             required: true,
           },
           {
@@ -60,10 +68,15 @@ export function ReceiptForm({
             label: es ? 'Cantidad' : 'Quantity received',
             type: 'number',
             min: 0.0001,
-            step: 'any',
+            step: '0.0001',
             required: true,
           },
-          { name: 'uom', label: es ? 'Unidad base' : 'Base unit', value: unit, readOnly: true },
+          {
+            name: 'uom',
+            label: es ? 'Unidad base' : 'Base unit',
+            value: unit,
+            readOnly: true,
+          },
           {
             name: 'supplier_lot',
             label: es ? 'Lote del proveedor' : 'Supplier lot',
@@ -80,7 +93,6 @@ export function ReceiptForm({
             type: 'textarea',
             maxLength: 1000,
           },
-          { name: 'request_id', label: 'Request ID', type: 'hidden', value: requestId },
         ]}
       />
     </>

@@ -1,7 +1,9 @@
 'use client';
+
 import { useActionState } from 'react';
 import { signIn } from '../actions';
-export function LoginForm() {
+
+export default function LoginForm() {
   const [state, action, pending] = useActionState(signIn, { ok: false, message: '' });
   return (
     <form action={action} className="record-form">
@@ -18,7 +20,9 @@ export function LoginForm() {
           {state.message}
         </p>
       )}
-      <button disabled={pending}>{pending ? 'Signing in…' : 'Sign in'}</button>
+      <button type="submit" disabled={pending}>
+        {pending ? 'Signing in…' : 'Sign in'}
+      </button>
     </form>
   );
 }

@@ -1,11 +1,13 @@
+import { rowSchemas } from '@/domain/master-data';
 import Link from 'next/link';
 import { requireAdminShell } from '@/lib/auth';
 import { rows } from '@/lib/data';
 import { RecordForm } from '@/components/record-form';
 import { PageHeader } from '@/components/shell';
+
 export default async function Allergens() {
   const { db, profile } = await requireAdminShell();
-  const allergens = await rows<{ id: string; name: string }>(db, 'allergens');
+  const allergens = await rows(db, 'allergens', rowSchemas.allergens);
   return (
     <>
       <Link href="/app/ingredients" className="back-link">

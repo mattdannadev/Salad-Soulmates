@@ -1,11 +1,14 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { logFailure } from './lib/operation-error';
+import type { Database } from './lib/database.types';
+
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) return response;
-  const db = createServerClient(url, key, {
+  const db = createServerClient<Database>(url, key, {
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll(values) {
@@ -15,7 +18,8 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
-  await db.auth.getClaims();
+  const { error } = await db.auth.getClaims();
+  if (error) logFailure('proxy_session_refresh', error);
   response.headers.set('Cache-Control', 'private, no-store');
   return response;
 }

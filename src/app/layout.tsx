@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+
 export const metadata: Metadata = {
   title: { default: 'Salad Soulmates', template: '%s · Salad Soulmates' },
   description: 'Fresh operations, beautifully organized.',

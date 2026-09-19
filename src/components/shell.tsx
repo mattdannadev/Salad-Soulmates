@@ -1,4 +1,5 @@
 'use client';
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -18,9 +19,16 @@ import {
   Settings,
 } from 'lucide-react';
 import { signOut, setPreferredLocale } from '@/app/actions';
-import { FeedbackDrawer } from './feedback';
+import FeedbackDrawer from './feedback';
+
 const links = [
-  { href: '/app', en: 'Home', es: 'Inicio', icon: Home, permission: 'dashboard.read' },
+  {
+    href: '/app',
+    en: 'Home',
+    es: 'Inicio',
+    icon: Home,
+    permission: 'dashboard.read',
+  },
   {
     href: '/app/ingredients',
     en: 'Ingredients',
@@ -77,7 +85,13 @@ const links = [
     icon: PackageCheck,
     permission: 'inventory.read',
   },
-  { href: '/app/team', en: 'Team', es: 'Equipo', icon: Users, permission: 'workforce.read' },
+  {
+    href: '/app/team',
+    en: 'Team',
+    es: 'Equipo',
+    icon: Users,
+    permission: 'workforce.read',
+  },
   {
     href: '/app/access-requests',
     en: 'Access requests',
@@ -129,7 +143,9 @@ export function Shell({
         <nav aria-label="Main navigation">
           {links
             .filter((link) => !link.permission || permissions.includes(link.permission))
-            .map(({ href, en, es, icon: Icon }) => (
+            .map(({
+              href, en, es, icon: Icon,
+            }) => (
               <Link
                 key={href}
                 href={href}
@@ -154,7 +170,11 @@ export function Shell({
       <div className="app-main">
         <header className="topbar">
           <span className="breadcrumb">
-            Operations <ArrowUpRight size={14} /> Increment 1A
+            Operations
+            {' '}
+            <ArrowUpRight size={14} />
+            {' '}
+            Increment 1A
           </span>
           <div className="identity">
             <form action={setPreferredLocale} className="locale-switcher">
@@ -177,14 +197,15 @@ export function Shell({
               <small>{role}</small>
             </span>
             <form action={signOut}>
-              <button className="icon-button" aria-label="Sign out">
+              <button type="submit" className="icon-button" aria-label="Sign out">
                 <LogOut size={18} />
               </button>
             </form>
           </div>
         </header>
         <div className="staging-banner">
-          INCREMENT 1A{' '}
+          INCREMENT 1A
+          {' '}
           <span>
             {locale === 'es'
               ? 'Datos maestros activos · la ejecución de producción sigue bloqueada'
@@ -211,7 +232,7 @@ export function PageHeader({
   eyebrow,
   title,
   description,
-  action,
+  action = undefined,
 }: {
   eyebrow: string;
   title: string;

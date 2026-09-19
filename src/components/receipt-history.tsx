@@ -1,7 +1,9 @@
 import { date, number } from '@/lib/data';
-import type { Receipt, ReceiptLine, Ingredient, Supplier } from '@/domain/master-data';
+import type {
+  Receipt, ReceiptLine, Ingredient, Supplier,
+} from '@/domain/master-data';
 
-export function ReceiptHistory({
+export default function ReceiptHistory({
   receipts,
   lines,
   ingredients,
@@ -18,11 +20,9 @@ export function ReceiptHistory({
   const ingredientNames = new Map(ingredients.map((i) => [i.id, i.name]));
   const supplierNames = new Map(suppliers.map((s) => [s.id, s.name]));
   const receiptMap = new Map(receipts.map((r) => [r.id, r]));
-  const recent = [...lines].sort((a, b) =>
-    (receiptMap.get(b.receipt_id)?.received_on ?? '').localeCompare(
-      receiptMap.get(a.receipt_id)?.received_on ?? '',
-    ),
-  );
+  const recent = [...lines].sort((a, b) => (receiptMap.get(b.receipt_id)?.received_on ?? '').localeCompare(
+    receiptMap.get(a.receipt_id)?.received_on ?? '',
+  ));
   return (
     <section className="panel">
       <h2>{es ? 'Historial de recepciones' : 'Receipt history'}</h2>
@@ -48,7 +48,9 @@ export function ReceiptHistory({
                     <td>{receipt ? supplierNames.get(receipt.supplier_id) : '—'}</td>
                     <td>{ingredientNames.get(line.ingredient_id) ?? '—'}</td>
                     <td>
-                      {number(Number(line.quantity))} {line.uom}
+                      {number(Number(line.quantity))}
+                      {' '}
+                      {line.uom}
                     </td>
                     <td>{receipt?.supplier_reference || '—'}</td>
                     <td>

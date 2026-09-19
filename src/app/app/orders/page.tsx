@@ -1,5 +1,6 @@
 import { requireAdminShell } from '@/lib/auth';
-import { PhaseGate } from '@/components/phase-gate';
+import PhaseGate from '@/components/phase-gate';
+
 export default async function Orders() {
   const { profile } = await requireAdminShell();
   const es = profile.preferred_locale === 'es';

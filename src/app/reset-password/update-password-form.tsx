@@ -1,7 +1,9 @@
 'use client';
+
 import { useActionState } from 'react';
 import { updatePassword } from '../actions';
-export function UpdatePasswordForm() {
+
+export default function UpdatePasswordForm() {
   const [state, action, pending] = useActionState(updatePassword, { ok: false, message: '' });
   return (
     <form action={action} className="record-form">
@@ -30,7 +32,9 @@ export function UpdatePasswordForm() {
           {state.message}
         </p>
       )}
-      <button disabled={pending}>{pending ? 'Updating…' : 'Update password'}</button>
+      <button type="submit" disabled={pending}>
+        {pending ? 'Updating…' : 'Update password'}
+      </button>
     </form>
   );
 }

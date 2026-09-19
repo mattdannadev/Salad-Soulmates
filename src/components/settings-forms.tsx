@@ -1,13 +1,14 @@
 'use client';
+
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { RecordForm } from './record-form';
 import { saveRecord } from '@/app/actions';
 import type { ReferenceOption, Permission, AccessProfile } from '@/domain/master-data';
+import { RecordForm } from './record-form';
 
 export function ReferenceOptionForm({
   listCode,
-  option,
+  option = undefined,
   allowCustom,
 }: {
   listCode: string;
@@ -20,7 +21,12 @@ export function ReferenceOptionForm({
       submit={option ? 'Save value' : 'Add value'}
       hidden={{ id: option?.id }}
       fields={[
-        { name: 'list_code', label: 'List', type: 'hidden', value: listCode },
+        {
+          name: 'list_code',
+          label: 'List',
+          type: 'hidden',
+          value: listCode,
+        },
         {
           name: 'code',
           label: 'Stable code',
@@ -29,8 +35,18 @@ export function ReferenceOptionForm({
           readOnly: Boolean(option) || !allowCustom,
           hint: 'Stored in records; labels may change safely.',
         },
-        { name: 'label_en', label: 'English label', value: option?.label_en ?? '', required: true },
-        { name: 'label_es', label: 'Spanish label', value: option?.label_es ?? '', required: true },
+        {
+          name: 'label_en',
+          label: 'English label',
+          value: option?.label_en ?? '',
+          required: true,
+        },
+        {
+          name: 'label_es',
+          label: 'Spanish label',
+          value: option?.label_es ?? '',
+          required: true,
+        },
         {
           name: 'sort_order',
           label: 'Sort order',
@@ -39,14 +55,19 @@ export function ReferenceOptionForm({
           min: 0,
           required: true,
         },
-        { name: 'active', label: 'Active', type: 'checkbox', value: option?.active ?? true },
+        {
+          name: 'active',
+          label: 'Active',
+          type: 'checkbox',
+          value: option?.active ?? true,
+        },
       ]}
     />
   );
 }
 
 export function AccessProfileForm({
-  profile,
+  profile = undefined,
   permissions,
   selected = [],
 }: {
@@ -64,16 +85,20 @@ export function AccessProfileForm({
         event.preventDefault();
         const form = new FormData(event.currentTarget);
         start(async () => {
-          const response = await saveRecord('access-profile', {
-            id: profile?.id,
-            name: String(form.get('name')),
-            description: String(form.get('description')),
-            base_role: String(form.get('base_role')),
-            active: form.has('active'),
-            permission_codes: form.getAll('permission_codes').map(String),
-          });
-          setResult(response);
-          if (response.ok) router.refresh();
+          try {
+            const response = await saveRecord('access-profile', {
+              id: profile?.id,
+              name: form.get('name'),
+              description: form.get('description'),
+              base_role: form.get('base_role'),
+              active: form.has('active'),
+              permission_codes: form.getAll('permission_codes').map(String),
+            });
+            setResult(response);
+            if (response.ok) router.refresh();
+          } catch {
+            setResult({ ok: false, message: 'Unable to connect. Please try again.' });
+          }
         });
       }}
     >
@@ -112,7 +137,10 @@ export function AccessProfileForm({
             <span>
               <strong>{permission.label}</strong>
               <small>
-                {permission.area} · {permission.description}
+                {permission.area}
+                {' '}
+                ·
+                {permission.description}
               </small>
             </span>
           </label>
@@ -123,8 +151,8 @@ export function AccessProfileForm({
           {result.message}
         </p>
       ) : null}
-      <button disabled={pending}>
-        {pending ? 'Saving…' : profile ? 'Save profile' : 'Create profile'}
+      <button type="submit" disabled={pending}>
+        {pending ? 'Saving…' : (profile && 'Save profile') || 'Create profile'}
       </button>
     </form>
   );

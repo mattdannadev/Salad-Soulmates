@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Leaf } from 'lucide-react';
-import { ForgotPasswordForm } from './reset-form';
+import ForgotPasswordForm from './reset-form';
+
 export default function ForgotPassword() {
   return (
     <main className="login-page">

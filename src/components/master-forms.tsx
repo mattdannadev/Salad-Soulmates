@@ -1,15 +1,26 @@
-import { RecordForm, type Field } from './record-form';
 import type { Supplier, SupplierItem } from '@/domain/master-data';
-export function SupplierForm({ supplier }: { supplier?: Supplier }) {
+import { RecordForm, type Field } from './record-form';
+
+export function SupplierForm({ supplier = undefined }: { supplier?: Supplier }) {
   return (
     <RecordForm
       kind="supplier"
       hidden={supplier ? { id: supplier.id } : {}}
       afterSave="/app/suppliers"
       fields={[
-        { name: 'name', label: 'Supplier name', required: true, value: supplier?.name },
+        {
+          name: 'name',
+          label: 'Supplier name',
+          required: true,
+          value: supplier?.name,
+        },
         { name: 'contact_name', label: 'Contact name', value: supplier?.contact_name },
-        { name: 'email', label: 'Email', type: 'email', value: supplier?.email },
+        {
+          name: 'email',
+          label: 'Email',
+          type: 'email',
+          value: supplier?.email,
+        },
         { name: 'phone', label: 'Phone', value: supplier?.phone },
         {
           name: 'lead_time_days',
@@ -31,7 +42,7 @@ export function SupplierForm({ supplier }: { supplier?: Supplier }) {
   );
 }
 export function PackForm({
-  pack,
+  pack = undefined,
   ingredientId,
   unit,
   suppliers,
@@ -83,8 +94,18 @@ export function PackForm({
       type: 'checkbox',
       value: pack?.is_preferred ?? false,
     },
-    { name: 'active', label: 'Active pack', type: 'checkbox', value: pack?.active ?? true },
-    { name: 'notes', label: 'Notes', type: 'textarea', value: pack?.notes },
+    {
+      name: 'active',
+      label: 'Active pack',
+      type: 'checkbox',
+      value: pack?.active ?? true,
+    },
+    {
+      name: 'notes',
+      label: 'Notes',
+      type: 'textarea',
+      value: pack?.notes,
+    },
   ];
   return (
     <RecordForm

@@ -1,13 +1,12 @@
+import { rowSchemas } from '@/domain/master-data';
 import { requireAdminShell } from '@/lib/auth';
 import { rows } from '@/lib/data';
-import type { Supplier } from '@/domain/master-data';
 import { PageHeader } from '@/components/shell';
 import { SupplierForm } from '@/components/master-forms';
+
 export default async function Suppliers() {
   const { db, profile } = await requireAdminShell();
-  const suppliers = (await rows<Supplier>(db, 'suppliers')).sort((a, b) =>
-    a.name.localeCompare(b.name),
-  );
+  const suppliers = (await rows(db, 'suppliers', rowSchemas.suppliers)).sort((a, b) => a.name.localeCompare(b.name));
   return (
     <>
       <PageHeader
@@ -26,14 +25,27 @@ export default async function Suppliers() {
         {suppliers.map((s) => (
           <details key={s.id}>
             <summary>
-              {s.name} <span className="badge">{s.active ? 'Active' : 'Inactive'}</span>
+              {s.name}
+              {' '}
+              <span className="badge">{s.active ? 'Active' : 'Inactive'}</span>
             </summary>
             {profile.role === 'admin' ? (
               <SupplierForm supplier={s} />
             ) : (
               <p>
-                {s.contact_name} · {s.email || 'No email'} · {s.phone || 'No phone'} ·{' '}
-                {s.lead_time_days ?? 0} days
+                {s.contact_name}
+                {' '}
+                ·
+                {s.email || 'No email'}
+                {' '}
+                ·
+                {s.phone || 'No phone'}
+                {' '}
+                ·
+                {' '}
+                {s.lead_time_days ?? 0}
+                {' '}
+                days
               </p>
             )}
           </details>
