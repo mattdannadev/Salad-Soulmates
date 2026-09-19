@@ -9,6 +9,7 @@ test('login validation, authenticated workflows, and sign-out', async ({ page })
   await page.getByLabel('Password', { exact: true }).fill('wrong-password');
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByRole('alert').filter({ hasText: 'Unable to sign in' })).toBeVisible();
+  await page.getByLabel('Email or phone number').fill('admin@example.test');
   await page.getByLabel('Password', { exact: true }).fill('local-test-password');
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/app$/);
