@@ -8,14 +8,19 @@ message is needed for these checks.
 
 `npm run test:postgres` opens separate PostgreSQL sessions and checks actual lock
 waits through `pg_stat_activity` before committing the competing transaction.
-It covers six cases:
+It covers six overlap cases and a permission regression:
 
 1. Inventory posting first, then a base-unit change: the change must fail.
 2. Base-unit change first, then a posting in the old unit: the posting must fail.
 3. Identical concurrent receipt retries: exactly one ledger posting.
 4. Conflicting concurrent receipt retries: explicit conflict rejection.
 5. Recipe release first, then a content edit: immutable-content rejection.
-6. Last recipe line deleted first, then release: empty-recipe rejection.
+6. Last recipe line moved to another draft first, then release: empty-recipe rejection.
+7. Direct recipe-line deletion remains denied, including for administrators.
+
+The sixth case uses the existing permitted UPDATE path. Recipe tables deliberately
+grant SELECT/INSERT/UPDATE, with no DELETE grant or policy; the test does not expand
+those permissions to create an otherwise unavailable operation.
 
 The runner accepts no database URL or hostname. It connects only to
 `127.0.0.1:55432`, creates a randomly named `ss_gate_*` database, applies the actual

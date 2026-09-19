@@ -8,7 +8,7 @@ test('login validation, authenticated workflows, and sign-out', async ({ page })
   await page.getByLabel('Email or phone number').fill('admin@example.test');
   await page.getByLabel('Password', { exact: true }).fill('wrong-password');
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByRole('alert')).toContainText('Unable to sign in');
+  await expect(page.getByRole('alert').filter({ hasText: 'Unable to sign in' })).toBeVisible();
   await page.getByLabel('Password', { exact: true }).fill('local-test-password');
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/app$/);
@@ -61,7 +61,7 @@ test('a lost inventory response preserves the request ID and entered values on r
   await expect(page).toHaveURL(/\/app$/);
   await page.goto('/app/inventory');
   const reason = `Retry fixture ${info.project.name}`;
-  await page.getByLabel('Ingredient *', { exact: true }).selectOption({ label: 'Preview garlic powder' });
+  await page.getByRole('combobox', { name: /^Ingredient\s*\*/ }).selectOption({ label: 'Preview garlic powder' });
   await page.getByLabel(/Quantity change/).fill('2');
   await page.getByLabel('Reason *', { exact: true }).fill(reason);
   let interrupted = false;
@@ -75,7 +75,7 @@ test('a lost inventory response preserves the request ID and entered values on r
     await route.continue();
   });
   await page.getByRole('button', { name: 'Record inventory entry', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('Connection interrupted');
+  await expect(page.getByRole('alert').filter({ hasText: 'Connection interrupted' })).toBeVisible();
   await expect(page.getByLabel(/Quantity change/)).toHaveValue('2');
   await expect(page.getByLabel('Reason *', { exact: true })).toHaveValue(reason);
   await page.getByRole('button', { name: 'Record inventory entry', exact: true }).click();

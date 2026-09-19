@@ -186,7 +186,7 @@ async function draftRecipe() {
     values($1,$2,$3,$4,'fixture',1,'1 lb',1,'lb')`,
     [lineId, versionId, sectionId, ingredientId],
   );
-  return { versionId, lineId };
+  return { recipeId, versionId, lineId };
 }
 const releaseSql = "update public.recipe_versions set status='Released',released_by=$1 where id=$2";
 it('rejects a recipe edit that overlaps release of its version', async () => {
@@ -199,13 +199,33 @@ it('rejects a recipe edit that overlaps release of its version', async () => {
   );
   expect(String(outcome.error)).toMatch(/immutable|Draft/);
 });
-it('cannot release after a concurrent edit removes the last recipe line', async () => {
-  const { versionId, lineId } = await draftRecipe();
+it('does not grant administrators direct deletion of draft recipe lines', async () => {
+  const { lineId } = await draftRecipe();
+  await expect(first.query('delete from public.recipe_lines where id=$1', [lineId]))
+    .rejects.toThrow('permission denied for table recipe_lines');
+});
+it('cannot release after a concurrent edit moves the last line to another draft', async () => {
+  const { recipeId, versionId, lineId } = await draftRecipe();
+  const destinationVersionId = randomUUID();
+  const destinationSectionId = randomUUID();
+  await first.query(
+    'insert into public.recipe_versions(id,recipe_id,version_number) values($1,$2,2)',
+    [destinationVersionId, recipeId],
+  );
+  await first.query(`insert into public.recipe_sections(id,recipe_version_id,name,sequence)
+    values($1,$2,'Destination',1)`, [destinationSectionId, destinationVersionId]);
+  // Direct DELETE is deliberately unavailable. A permitted move empties the
+  // source draft while exercising the same release-versus-content lock order.
   const outcome = await overlap(
-    'delete from public.recipe_lines where id=$1',
-    [lineId],
+    'update public.recipe_lines set recipe_version_id=$1,recipe_section_id=$2 where id=$3',
+    [destinationVersionId, destinationSectionId, lineId],
     releaseSql,
     [actor, versionId],
   );
   expect(String(outcome.error)).toContain('empty recipe');
+  const result: unknown = await observer.query(
+    'select status from public.recipe_versions where id=$1',
+    [versionId],
+  );
+  expect(resultRows.parse(result).rows).toEqual([{ status: 'Draft' }]);
 });
