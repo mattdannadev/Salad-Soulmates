@@ -14,14 +14,17 @@ export default async function SettingsPage() {
   const { db } = await requireAdminShell();
   const { data: allowed } = await db.rpc('has_permission', { requested: 'settings.manage' });
   if (!allowed) redirect('/app');
-  const [lists, options, permissions, profiles, assignments] = await Promise.all([
-    rows<ReferenceList>(db, 'reference_lists'),
+  const [listResult, options, permissionResult, profiles, assignments] = await Promise.all([
+    db.from('reference_lists').select('*').order('area').order('code'),
     rows<ReferenceOption>(db, 'reference_options'),
-    rows<Permission>(db, 'permissions'),
+    db.from('permissions').select('*').order('area').order('code'),
     rows<AccessProfile>(db, 'access_profiles'),
     db.from('access_profile_permissions').select('access_profile_id,permission_code'),
   ]);
-  if (assignments.error) throw new Error('Unable to load access profile settings.');
+  if (listResult.error || permissionResult.error || assignments.error)
+    throw new Error('Unable to load access profile settings.');
+  const lists = listResult.data as ReferenceList[];
+  const permissions = permissionResult.data as Permission[];
   const areas = [...new Set(lists.map((list) => list.area))].sort();
   return (
     <>
