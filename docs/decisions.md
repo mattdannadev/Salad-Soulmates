@@ -1,5 +1,20 @@
 # Implementation decisions
 
+## 2026-09-19 — Explicit production release authorization
+
+After CI passed, the owner requested deployment and explicitly confirmed merging
+PR #1, updating the live Vercel site, and applying the two pending migrations.
+This authorization supersedes the earlier Preview-only restriction for this
+release. It does not authorize sample data, a second hosted database, or unrelated
+operational changes. Remaining real Auth, broader browser, isolation-level, full
+review, and branch-protection acceptance items stay open; authorization does not
+claim those checks have passed.
+
+The existing hosted project recorded `refactor_reliability` as `20260919231113`
+and `serialize_inventory_units` as `20260919231118`. Their Git filenames now match
+that history; SQL content is unchanged from the versions tested in CI. Do not
+replay the earlier candidate timestamps as additional migrations.
+
 ## 2026-09-18 — One hosted database
 
 The owner explicitly chose one Supabase database for this small company, superseding the separate staging-database recommendation in PRD v2.2 and Build Specification v1.1. Keep those source documents unchanged as historical reference; this decision governs the implementation.

@@ -10,8 +10,8 @@ const migrations = [
   '20260919154004_receiving_workflow.sql',
   '20260919155843_permissions_and_reference_options.sql',
   '20260919170000_harden_function_grants.sql',
-  '20260919174033_refactor_reliability.sql',
-  '20260919193053_serialize_inventory_units.sql',
+  '20260919231113_refactor_reliability.sql',
+  '20260919231118_serialize_inventory_units.sql',
 ];
 
 /** Apply migrations and synthetic identity data only inside the newly created test database. */

@@ -2,7 +2,14 @@
 
 Updated: September 19, 2026
 Owner instruction: execute all three supplied engineering documents within the first refactor phase.
-Execution status: **refactor implemented locally; complete local check passed; Phase 1 acceptance remains open.**
+Execution status: **refactor CI passed; production release explicitly authorized; Phase 1 follow-up acceptance remains open.**
+
+Latest owner decision (September 19): merge PR #1, deploy the live app, and apply
+the two pending migrations. CI passed 145 tests plus the build, six browser cases,
+and seven native PostgreSQL tests. The migrations are applied; see `decisions.md`
+for their authoritative hosted versions. This supersedes older access/deployment
+blockers in the historical progress notes below. Real Auth and the remaining
+verification/review items must still be completed before advancing feature phases.
 
 ## Approved delivery order
 

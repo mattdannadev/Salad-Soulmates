@@ -49,10 +49,10 @@ beforeAll(async () => {
     readFileSync('supabase/migrations/20260919170000_harden_function_grants.sql', 'utf8'),
   );
   await db.exec(
-    readFileSync('supabase/migrations/20260919174033_refactor_reliability.sql', 'utf8'),
+    readFileSync('supabase/migrations/20260919231113_refactor_reliability.sql', 'utf8'),
   );
   await db.exec(
-    readFileSync('supabase/migrations/20260919193053_serialize_inventory_units.sql', 'utf8'),
+    readFileSync('supabase/migrations/20260919231118_serialize_inventory_units.sql', 'utf8'),
   );
 });
 afterAll(async () => {

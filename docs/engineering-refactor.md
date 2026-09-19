@@ -8,7 +8,31 @@ Baseline: `028880cebe49140271ce37f69ed6ddd406a79640`
 
 Local branch: `refactor/complete-and-preserve-modules`
 
-Status: **implemented locally; complete local check passed; Phase 1 remains open.**
+Status: **remote CI passed; production release authorized; Phase 1 follow-up checks remain open.**
+
+## Latest release checkpoint — September 19, 2026
+
+GitHub access and billing are resolved. PR #1 head `c94ba1e` passed
+[Quality run #3](https://github.com/mattdannadev/Salad-Soulmates/actions/runs/35474137049):
+formatting, lint, type checks, 145 tests, the Next.js build, six desktop/phone
+browser cases, and seven native PostgreSQL tests. Six database cases confirmed
+real overlapping lock waits at READ COMMITTED; the seventh preserves denied
+recipe-line deletion.
+
+The owner explicitly authorized the merge, production deployment, and two hosted
+migrations after the remaining checks were disclosed. Both migrations are now
+applied as `20260919231113_refactor_reliability.sql` and
+`20260919231118_serialize_inventory_units.sql`. Read-only verification confirmed
+the receiver-feedback constraint, receipt advisory lock, ingredient row lock,
+reference-code trigger, restricted function execution, and enabled table RLS.
+No sample records were inserted. Git filenames and test references are reconciled
+to the hosted migration timestamps without changing their SQL.
+
+Real Auth integration, broader browser acceptance, stronger isolation levels,
+full policy/migration review, and required checks/reviews on main remain open.
+The older execution notes below describe historical checkpoints; their prior
+GitHub/billing/browser/PostgreSQL blockers and unapplied-migration statements are
+superseded by this checkpoint. See PR #1 for the final deployment outcome.
 
 ## All three inputs are part of Phase 1
 
@@ -26,7 +50,7 @@ The untouched baseline passed `npm ci` and `npm run check`, including 22 tests a
 
 Read-only inspection of the existing Supabase project found migration `20260919055744_recipe_master_and_approved_source_import` in hosted migration history but missing from Git. Its exact stored DDL was restored as a migration; it contains no business-data import statements. Generated database types were retrieved from the actual schema. Local tests now load those product/recipe tables and verify RLS across all 27 application tables.
 
-A new forward migration, `20260919174033_refactor_reliability.sql`, was created with the migration CLI. It changes receipt retry handling, allows receiver feedback, and preserves reference codes. It has been applied only to disposable PGlite databases. No hosted schema or records were modified. The restored migration is already recorded as applied on the hosted project and must not be replayed there manually.
+A new forward migration, `20260919231113_refactor_reliability.sql`, was created with the migration CLI. It changes receipt retry handling, allows receiver feedback, and preserves reference codes. It has been applied only to disposable PGlite databases. No hosted schema or records were modified. The restored migration is already recorded as applied on the hosted project and must not be replayed there manually.
 
 ## Changes and evidence
 
@@ -108,7 +132,7 @@ install and complete check passed 116 tests before these changes.
   assignment and failed invitation-ID persistence. Auth and the database still
   cannot commit atomically; the unsaved-ID case explicitly requires administrator
   reconciliation before retrying.
-- Prepared `20260919193053_serialize_inventory_units.sql` with the Supabase CLI.
+- Prepared `20260919231118_serialize_inventory_units.sql` with the Supabase CLI.
   Its trigger locks the ingredient row while a posting commits, validates the
   current actor/tenant/facility, retains INSERT RLS and revokes direct helper
   execution. A restricted definer context permits receivers to lock a row without

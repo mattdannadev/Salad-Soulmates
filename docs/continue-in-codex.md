@@ -1,5 +1,23 @@
 # Continue the approved Phase 1 refactor
 
+## Current release state — September 19, 2026
+
+Start with this checkpoint; older notes below are historical. GitHub write access
+and billing are resolved. PR #1 head `c94ba1e` passed both CI jobs: full check/build
+and 145 tests, six desktop/phone browser cases, and seven native PostgreSQL tests.
+The owner subsequently authorized merging PR #1, updating production, and applying
+the two pending migrations. Both are now applied and reconciled in Git as
+`20260919231113_refactor_reliability.sql` and
+`20260919231118_serialize_inventory_units.sql`; do not replay their older candidate
+filenames. See `decisions.md`, the latest `engineering-refactor.md` checkpoint,
+and the live PR/deployment for the final release state.
+
+Keep real Auth, broader browser acceptance, stronger isolation levels, complete
+policy/migration review, and branch-protection work open. The release approval
+does not mark Phase 1 complete or authorize fake shared data or another database.
+
+## Historical execution and recovery notes
+
 Work in the existing `mattdannadev/Salad-Soulmates` repository. Read root `AGENTS.md`, current owner decisions, `docs/decisions.md`, `docs/build-plan.md`, and `docs/engineering-refactor.md`. All three original engineering inputs are mandatory scope. The original audit and continuation remain in `docs/refactor-sources/` as historical records.
 
 The initial execution used a full clone at `028880cebe49140271ce37f69ed6ddd406a79640` and local branch `refactor/engineering-standards-2026-09-19`. The review delivery includes a Git bundle, patch, source archive, baseline/final verification logs, and application instructions. Inspect current main, uncommitted work, and the package commit before applying anything. Reconcile subsequent changes rather than overwriting them. The earlier 40/43-test standalone harnesses are historical and must not be reported as current application verification.
@@ -10,7 +28,7 @@ Run `npm ci` and `npm run check` on the final proposed commit. Install the pinne
 
 Complete each remaining checkbox in `docs/engineering-refactor.md`, including concurrent PostgreSQL sessions, invitation partial-failure review, full diff review, remote CI, and required-check/review settings. PGlite cannot prove multi-session concurrency. GitHub writes were denied with HTTP 403, so no remote branch or PR exists. Once write access is available, push this branch and create a **draft** PR; keep it draft until acceptance is complete.
 
-The restored migration `20260919055744_recipe_master_and_approved_source_import.sql` is copied from actual hosted migration history and is already applied there. The new migrations `20260919174033_refactor_reliability.sql` and `20260919193053_serialize_inventory_units.sql` have only run in disposable local tests. Review and reconcile migration history before any separately authorized hosted application. Never reset or create another hosted database.
+The restored migration `20260919055744_recipe_master_and_approved_source_import.sql` is copied from actual hosted migration history and is already applied there. The new migrations `20260919231113_refactor_reliability.sql` and `20260919231118_serialize_inventory_units.sql` have only run in disposable local tests. Review and reconcile migration history before any separately authorized hosted application. Never reset or create another hosted database.
 
 Preserve existing UI/routes, public contracts, tenant/facility RLS, immutable recipes and inventory history, lot/date/timezone rules, approved units/conversions, current receiving/settings/access workflows, and worker/mobile requirements. The current sequence places reference-data completion after shipping and product-grid replacement last. Do not start a new feature phase until Phase 1 is accepted. Do not merge, deploy, or modify shared operational data as a side effect of this work.
 
