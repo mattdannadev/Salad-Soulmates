@@ -6,11 +6,11 @@ export function LoginForm() {
   return (
     <form action={action} className="record-form">
       <label>
-        Correo / Email
-        <input name="email" type="email" autoComplete="username" required />
+        Email or phone number
+        <input name="identifier" type="text" autoComplete="username" required />
       </label>
       <label>
-        Contraseña / Password
+        Password
         <input name="password" type="password" autoComplete="current-password" required />
       </label>
       {state.message && (
@@ -18,7 +18,7 @@ export function LoginForm() {
           {state.message}
         </p>
       )}
-      <button disabled={pending}>{pending ? 'Conectando…' : 'Iniciar sesión / Sign in'}</button>
+      <button disabled={pending}>{pending ? 'Signing in…' : 'Sign in'}</button>
     </form>
   );
 }

@@ -18,6 +18,7 @@ beforeAll(async () => {
  grant usage on schema auth to authenticated,anon;
  grant execute on function auth.uid() to authenticated,anon;`);
   await db.exec(readFileSync('supabase/migrations/202609180001_foundation.sql', 'utf8'));
+  await db.exec(readFileSync('supabase/migrations/202609180003_access_requests.sql', 'utf8'));
   await db.exec(`insert into auth.users values('${id(1)}'),('${id(2)}'),('${id(3)}'),('${id(4)}'),('${id(5)}');
  insert into public.organizations(id,name,slug) values('${id(10)}','A','a'),('${id(20)}','B','b');
  insert into public.facilities(id,organization_id,name) values('${id(11)}','${id(10)}','A'),('${id(21)}','${id(20)}','B'),('${id(12)}','${id(10)}','A2');
@@ -30,11 +31,11 @@ afterAll(async () => {
   await db?.close();
 });
 describe('foundation migration against PostgreSQL (PGlite)', () => {
-  it('has RLS on all twelve application tables', async () => {
+  it('has RLS on all thirteen application tables', async () => {
     const result = await db.query<{ relrowsecurity: boolean }>(
       "select relrowsecurity from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and relkind='r'",
     );
-    expect(result.rows).toHaveLength(12);
+    expect(result.rows).toHaveLength(13);
     expect(result.rows.every((r) => r.relrowsecurity)).toBe(true);
   });
   it('saves an ingredient and reviewed Spanish display name atomically', async () => {
@@ -166,5 +167,35 @@ describe('foundation migration against PostgreSQL (PGlite)', () => {
     await db.exec('reset role; set role anon');
     await expect(db.query('select * from public.ingredients')).rejects.toThrow();
     await expect(db.query("select public.save_ingredient('{}'::jsonb)")).rejects.toThrow();
+  });
+  it('accepts a pending access request without exposing requests publicly', async () => {
+    await db.exec('reset role; set role anon');
+    await db.query(
+      "insert into public.access_requests(display_name,contact_kind,contact_value,preferred_locale) values('New Person','email','new@example.com','en')",
+    );
+    await expect(db.query('select * from public.access_requests')).rejects.toThrow();
+    await db.exec('reset role');
+    expect(
+      (
+        await asUser(
+          1,
+          "select status from public.access_requests where contact_value='new@example.com'",
+        )
+      ).rows,
+    ).toEqual([{ status: 'New' }]);
+    await asUser(
+      1,
+      "update public.access_requests set status='Contacted',reviewed_at=now(),reviewed_by=$1 where contact_value='new@example.com'",
+      [id(1)],
+    );
+    expect(
+      (
+        await asUser(
+          1,
+          "select status from public.access_requests where contact_value='new@example.com'",
+        )
+      ).rows,
+    ).toEqual([{ status: 'Contacted' }]);
+    expect((await asUser(4, 'select * from public.access_requests')).rows).toHaveLength(0);
   });
 });

@@ -1,14 +1,30 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Leaf, Home, Package, Truck, MessageCircle, LogOut, ArrowUpRight } from 'lucide-react';
+import {
+  Leaf,
+  Home,
+  Package,
+  Truck,
+  MessageCircle,
+  LogOut,
+  ArrowUpRight,
+  BookOpen,
+  ClipboardList,
+  CalendarDays,
+  Users,
+} from 'lucide-react';
 import { signOut } from '@/app/actions';
 import { FeedbackDrawer } from './feedback';
 const links = [
   { href: '/app', label: 'Home', icon: Home },
   { href: '/app/ingredients', label: 'Ingredients', icon: Leaf },
   { href: '/app/suppliers', label: 'Suppliers', icon: Truck },
+  { href: '/app/recipes', label: 'Recipes', icon: BookOpen },
+  { href: '/app/orders', label: 'Orders', icon: ClipboardList },
+  { href: '/app/planning', label: 'Planning', icon: CalendarDays },
   { href: '/app/inventory', label: 'Inventory', icon: Package },
+  { href: '/app/team', label: 'Team', icon: Users },
   { href: '/app/feedback', label: 'Feedback', icon: MessageCircle },
 ];
 export function Shell({
@@ -59,7 +75,7 @@ export function Shell({
       <div className="app-main">
         <header className="topbar">
           <span className="breadcrumb">
-            Operations <ArrowUpRight size={14} /> Foundation
+            Operations <ArrowUpRight size={14} /> Increment 1A
           </span>
           <div className="identity">
             <span className="avatar">{name.slice(0, 1)}</span>
@@ -75,7 +91,7 @@ export function Shell({
           </div>
         </header>
         <div className="staging-banner">
-          FOUNDATION BUILD <span>Production operations are not enabled</span>
+          INCREMENT 1A <span>Master data is active · production execution remains gated</span>
         </div>
         <main>{children}</main>
         <footer>

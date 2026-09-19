@@ -1,8 +1,11 @@
 export default function Loading() {
   return (
-    <section className="panel" role="status">
-      <h2>Loading your workspace…</h2>
-      <p>Getting the latest information.</p>
-    </section>
+    <div className="route-loading" role="status" aria-label="Loading page">
+      <span className="route-progress" />
+      <span className="skeleton skeleton-label" />
+      <span className="skeleton skeleton-title" />
+      <span className="skeleton skeleton-copy" />
+      <span className="skeleton skeleton-panel" />
+    </div>
   );
 }

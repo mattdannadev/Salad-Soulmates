@@ -1,0 +1,40 @@
+'use client';
+import { useActionState } from 'react';
+import { requestAccess } from '../actions';
+export function RequestAccessForm() {
+  const [state, action, pending] = useActionState(requestAccess, { ok: false, message: '' });
+  return (
+    <form action={action} className="record-form">
+      <label>
+        Full name
+        <input name="display_name" autoComplete="name" required maxLength={120} />
+      </label>
+      <label>
+        Email or mobile phone
+        <input
+          name="contact"
+          autoComplete="email"
+          required
+          placeholder="name@company.com or +13125551234"
+        />
+      </label>
+      <label>
+        Preferred language
+        <select name="preferred_locale" defaultValue="en">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+        </select>
+      </label>
+      <label className="honeypot" aria-hidden="true">
+        Website
+        <input name="website" tabIndex={-1} autoComplete="off" />
+      </label>
+      {state.message && (
+        <p role={state.ok ? 'status' : 'alert'} className={state.ok ? 'notice' : 'error-notice'}>
+          {state.message}
+        </p>
+      )}
+      <button disabled={pending}>{pending ? 'Submitting…' : 'Submit request'}</button>
+    </form>
+  );
+}

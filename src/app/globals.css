@@ -635,6 +635,23 @@ dialog::backdrop {
 .login-card button {
   width: 100%;
 }
+.auth-links {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 22px;
+  font-size: 14px;
+}
+.auth-wide {
+  max-width: 520px;
+}
+.honeypot {
+  position: absolute !important;
+  left: -10000px !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+}
 .worker-page {
   max-width: 600px;
   margin: auto;
@@ -853,5 +870,103 @@ dialog::backdrop {
   a,
   button {
     transition: background 0.15s ease;
+  }
+}
+.route-loading {
+  position: relative;
+  display: grid;
+  gap: 16px;
+  animation: page-in 0.18s ease-out;
+}
+.route-progress {
+  position: fixed;
+  z-index: 20;
+  top: 0;
+  left: 255px;
+  right: 0;
+  height: 3px;
+  overflow: hidden;
+  background: var(--sage-100);
+}
+.route-progress::after {
+  content: '';
+  display: block;
+  width: 35%;
+  height: 100%;
+  background: var(--green);
+  animation: route-progress 1s ease-in-out infinite;
+}
+.skeleton {
+  display: block;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #edf1e7 25%, #f8f8f3 45%, #edf1e7 65%);
+  background-size: 300% 100%;
+  animation: shimmer 1.2s ease infinite;
+}
+.skeleton-label {
+  width: 130px;
+  height: 13px;
+  margin-top: 20px;
+}
+.skeleton-title {
+  width: min(520px, 75%);
+  height: 55px;
+}
+.skeleton-copy {
+  width: min(700px, 90%);
+  height: 22px;
+}
+.skeleton-panel {
+  height: 330px;
+  margin-top: 25px;
+}
+.phase-gate {
+  display: flex;
+  align-items: flex-start;
+  gap: 22px;
+  max-width: 850px;
+}
+.phase-gate > svg {
+  color: var(--green);
+  background: var(--sage-100);
+  box-sizing: content-box;
+  padding: 14px;
+  border-radius: 50%;
+}
+.phase-gate .button {
+  display: inline-flex;
+  margin-top: 16px;
+}
+@keyframes page-in {
+  from {
+    opacity: 0.35;
+    transform: translateY(3px);
+  }
+}
+@keyframes route-progress {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(400%);
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+@media (max-width: 760px) {
+  .route-progress {
+    left: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .route-progress::after,
+  .skeleton {
+    animation: none;
   }
 }
