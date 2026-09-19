@@ -4,7 +4,7 @@ export const units = ['lb', 'oz', 'gal', 'each'] as const;
 export const ingredientSchema = z.object({
   id: z.uuid().optional(),
   name: z.string().trim().min(1).max(120),
-  category: z.enum(['Dry', 'Liquid', 'Refrigerated']),
+  category: z.string().trim().min(1).max(50),
   default_uom: z.enum(units),
   spanish_name: z.string().trim().max(120),
   description: z.string().trim().max(1000),
@@ -58,6 +58,18 @@ export const feedbackSchema = z.object({
     .max(500),
   comment: z.string().trim().min(1).max(2000),
   feedback_type: z.enum(['Suggestion', 'Issue', 'Positive', 'Question']),
+});
+export const receiptSchema = z.object({
+  supplier_id: z.uuid(),
+  ingredient_id: z.uuid(),
+  quantity: z.number().positive().max(1000000),
+  uom: z.enum(units),
+  received_on: z.iso.date(),
+  supplier_reference: z.string().trim().max(120),
+  supplier_lot: z.string().trim().max(120),
+  expiration_date: z.union([z.iso.date(), z.literal('')]),
+  note: z.string().trim().max(1000),
+  request_id: z.uuid(),
 });
 
 export type Ingredient = {
@@ -115,6 +127,62 @@ export type Profile = {
   display_name: string;
   role: 'admin' | 'reviewer' | 'worker' | 'receiver';
   preferred_locale: 'es' | 'en';
+  active: boolean;
+  access_profile_id: string;
+};
+export type AccessRequest = {
+  id: string;
+  display_name: string;
+  contact_kind: 'email' | 'phone';
+  contact_value: string;
+  preferred_locale: 'en' | 'es';
+  requested_role: 'reviewer' | 'worker' | 'receiver';
+  status: string;
+  review_note: string;
+  created_at: string;
+  auth_user_id: string | null;
+};
+export type Receipt = {
+  id: string;
+  supplier_id: string;
+  received_on: string;
+  supplier_reference: string;
+  note: string;
+  created_at: string;
+};
+export type ReceiptLine = {
+  id: string;
+  receipt_id: string;
+  ingredient_id: string;
+  quantity: number;
+  uom: string;
+  supplier_lot: string;
+  expiration_date: string | null;
+};
+export type ReferenceList = {
+  organization_id: string;
+  code: string;
+  area: string;
+  name_en: string;
+  name_es: string;
+  allow_custom_values: boolean;
+};
+export type ReferenceOption = {
+  id: string;
+  list_code: string;
+  code: string;
+  label_en: string;
+  label_es: string;
+  sort_order: number;
+  active: boolean;
+};
+export type Permission = { code: string; area: string; label: string; description: string };
+export type AccessProfile = {
+  id: string;
+  name: string;
+  description: string;
+  base_role: 'admin' | 'reviewer' | 'worker' | 'receiver';
+  is_system: boolean;
   active: boolean;
 };
 export type ActionResult = { ok: boolean; message: string; id?: string };

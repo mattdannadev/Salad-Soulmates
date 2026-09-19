@@ -13,28 +13,105 @@ import {
   ClipboardList,
   CalendarDays,
   Users,
+  ShieldCheck,
+  PackageCheck,
+  Settings,
 } from 'lucide-react';
-import { signOut } from '@/app/actions';
+import { signOut, setPreferredLocale } from '@/app/actions';
 import { FeedbackDrawer } from './feedback';
 const links = [
-  { href: '/app', label: 'Home', icon: Home },
-  { href: '/app/ingredients', label: 'Ingredients', icon: Leaf },
-  { href: '/app/suppliers', label: 'Suppliers', icon: Truck },
-  { href: '/app/recipes', label: 'Recipes', icon: BookOpen },
-  { href: '/app/orders', label: 'Orders', icon: ClipboardList },
-  { href: '/app/planning', label: 'Planning', icon: CalendarDays },
-  { href: '/app/inventory', label: 'Inventory', icon: Package },
-  { href: '/app/team', label: 'Team', icon: Users },
-  { href: '/app/feedback', label: 'Feedback', icon: MessageCircle },
+  { href: '/app', en: 'Home', es: 'Inicio', icon: Home, permission: 'dashboard.read' },
+  {
+    href: '/app/ingredients',
+    en: 'Ingredients',
+    es: 'Ingredientes',
+    icon: Leaf,
+    permission: 'master_data.read',
+  },
+  {
+    href: '/app/suppliers',
+    en: 'Suppliers',
+    es: 'Proveedores',
+    icon: Truck,
+    permission: 'master_data.read',
+  },
+  {
+    href: '/app/products',
+    en: 'Products',
+    es: 'Productos',
+    icon: Package,
+    permission: 'products.read',
+  },
+  {
+    href: '/app/recipes',
+    en: 'Recipes',
+    es: 'Recetas',
+    icon: BookOpen,
+    permission: 'products.read',
+  },
+  {
+    href: '/app/orders',
+    en: 'Orders',
+    es: 'Pedidos',
+    icon: ClipboardList,
+    permission: 'orders.read',
+  },
+  {
+    href: '/app/planning',
+    en: 'Planning',
+    es: 'Planificación',
+    icon: CalendarDays,
+    permission: 'planning.read',
+  },
+  {
+    href: '/app/inventory',
+    en: 'Inventory',
+    es: 'Inventario',
+    icon: Package,
+    permission: 'inventory.read',
+  },
+  {
+    href: '/app/receiving',
+    en: 'Receiving',
+    es: 'Recepción',
+    icon: PackageCheck,
+    permission: 'inventory.read',
+  },
+  { href: '/app/team', en: 'Team', es: 'Equipo', icon: Users, permission: 'workforce.read' },
+  {
+    href: '/app/access-requests',
+    en: 'Access requests',
+    es: 'Solicitudes de acceso',
+    icon: ShieldCheck,
+    permission: 'access.manage',
+  },
+  {
+    href: '/app/settings',
+    en: 'Settings',
+    es: 'Configuración',
+    icon: Settings,
+    permission: 'settings.manage',
+  },
+  {
+    href: '/app/feedback',
+    en: 'Feedback',
+    es: 'Comentarios',
+    icon: MessageCircle,
+    permission: null,
+  },
 ];
 export function Shell({
   children,
   name,
   role,
+  locale,
+  permissions,
 }: {
   children: React.ReactNode;
   name: string;
   role: string;
+  locale: 'en' | 'es';
+  permissions: string[];
 }) {
   const path = usePathname();
   return (
@@ -50,18 +127,20 @@ export function Shell({
           </small>
         </Link>
         <nav aria-label="Main navigation">
-          {links.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              aria-current={
-                (href === '/app' ? path === href : path.startsWith(href)) ? 'page' : undefined
-              }
-            >
-              <Icon size={20} />
-              {label}
-            </Link>
-          ))}
+          {links
+            .filter((link) => !link.permission || permissions.includes(link.permission))
+            .map(({ href, en, es, icon: Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                aria-current={
+                  (href === '/app' ? path === href : path.startsWith(href)) ? 'page' : undefined
+                }
+              >
+                <Icon size={20} />
+                {locale === 'es' ? es : en}
+              </Link>
+            ))}
         </nav>
         <div className="sidebar-foot">
           <p>
@@ -78,6 +157,20 @@ export function Shell({
             Operations <ArrowUpRight size={14} /> Increment 1A
           </span>
           <div className="identity">
+            <form action={setPreferredLocale} className="locale-switcher">
+              <label className="sr-only" htmlFor="locale">
+                Language
+              </label>
+              <select
+                id="locale"
+                name="locale"
+                value={locale}
+                onChange={(event) => event.currentTarget.form?.requestSubmit()}
+              >
+                <option value="en">EN</option>
+                <option value="es">ES</option>
+              </select>
+            </form>
             <span className="avatar">{name.slice(0, 1)}</span>
             <span>
               {name}
@@ -91,11 +184,23 @@ export function Shell({
           </div>
         </header>
         <div className="staging-banner">
-          INCREMENT 1A <span>Master data is active · production execution remains gated</span>
+          INCREMENT 1A{' '}
+          <span>
+            {locale === 'es'
+              ? 'Datos maestros activos · la ejecución de producción sigue bloqueada'
+              : 'Master data is active · production execution remains gated'}
+          </span>
         </div>
         <main>{children}</main>
         <footer>
-          Wholesome food. A brighter tomorrow.<span>REAL INGREDIENTS · REAL PARTNERSHIPS</span>
+          {locale === 'es'
+            ? 'Alimentos sanos. Un mañana mejor.'
+            : 'Wholesome food. A brighter tomorrow.'}
+          <span>
+            {locale === 'es'
+              ? 'INGREDIENTES REALES · ALIANZAS REALES'
+              : 'REAL INGREDIENTS · REAL PARTNERSHIPS'}
+          </span>
         </footer>
       </div>
       <FeedbackDrawer />

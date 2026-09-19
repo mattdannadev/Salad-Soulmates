@@ -1843,6 +1843,16 @@ Prove that a physical/test supplier package can be received, uniquely identified
 - **Necesito ayuda** exception path;
 - spice-ready completion and audited correction.
 
+#### Confirmed worker phone interaction (September 19, 2026)
+
+- The signed-in production worker sees only their own published schedule and assigned production orders.
+- The final assignment action is **Preparar especias / Create spices**, which opens the batch worksheet for the exact assigned 40-gallon mixer batch and its one-to-one spice-prep record.
+- The primary phone interaction is a large, ordered ingredient checklist. Each line shows the reviewed Spanish ingredient name, required amount/unit, completion state and any safety/handling note needed to prepare the spice bucket correctly.
+- The worker records the source ingredient serial or supplier-lot number before checking a line complete.
+- A recipe line accepts multiple source serial/lot contributions when one bag or container runs out and another is opened. Each contribution preserves its own serial/lot, quantity where required, worker and timestamp and remains tied to the same recipe line and mixer batch.
+- Completion is blocked until every required line is satisfied or an authorized exception is recorded. The mobile flow must preserve progress across interruptions and prevent duplicate scans or double-posted consumption.
+- At approximately 390px wide, the worker must be able to read the batch context, advance through the checklist, add another serial/lot to a line and complete spice preparation without horizontal scrolling or administrator navigation.
+
 ### Epic 11 — Mixer execution + holding-tank transfer — Increment 1C
 
 - linked mixer task;
@@ -1895,6 +1905,7 @@ Prove that a physical/test supplier package can be received, uniquely identified
 5. Source scans attach serialized ingredient packages/lots to the correct recipe lines.
 6. Wrong/held/duplicate scans block safely and offer help.
 7. Quantities and multi-source contributions are stored without double-posting inventory.
+   A single recipe line can retain multiple ingredient serial/lot contributions when material comes from more than one bag or container.
 8. Spice prep completes only when required lines are satisfied or an authorized exception exists.
 9. Mixer QC/signoff and transfer to holding tank are recorded.
 10. Completed operational work updates schedule status without allowing calendar-only completion to create inventory/production events.
@@ -1929,4 +1940,3 @@ For each epic:
 The first end-to-end demonstration should prove:
 
 > Create ingredients and supplier pack configuration -> release a recipe -> enter a customer order -> generate a production plan -> see 40-gallon mixer batches and equal spice-bucket count -> calculate ingredient requirements -> compare to inventory/inbound -> calculate shortage -> round to supplier purchase units -> leave contextual feedback.
-

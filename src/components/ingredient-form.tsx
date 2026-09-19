@@ -8,11 +8,15 @@ export function IngredientForm({
   spanish = '',
   allergens = [],
   selected = [],
+  categories = [],
+  locale = 'en',
 }: {
   ingredient?: Ingredient;
   spanish?: string;
   allergens?: { id: string; name: string }[];
   selected?: string[];
+  categories?: { code: string; label_en: string; label_es: string }[];
+  locale?: 'en' | 'es';
 }) {
   const [pending, start] = useTransition();
   const [result, setResult] = useState<ActionResult>();
@@ -65,9 +69,11 @@ export function IngredientForm({
         </label>
         <label>
           Category
-          <select name="category" defaultValue={ingredient?.category ?? 'Dry'}>
-            {['Dry', 'Liquid', 'Refrigerated'].map((x) => (
-              <option key={x}>{x}</option>
+          <select name="category" defaultValue={ingredient?.category ?? categories[0]?.code}>
+            {categories.map((x) => (
+              <option key={x.code} value={x.code}>
+                {locale === 'es' ? x.label_es : x.label_en}
+              </option>
             ))}
           </select>
         </label>

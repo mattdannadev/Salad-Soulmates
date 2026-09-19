@@ -21,6 +21,7 @@ export async function requireProfile() {
 }
 export async function requireAdminShell() {
   const ctx = await requireProfile();
-  if (ctx.profile.role === 'worker' || ctx.profile.role === 'receiver') redirect('/worker');
+  if (ctx.profile.role === 'worker') redirect('/worker');
+  if (ctx.profile.role === 'receiver') redirect('/receiving');
   return ctx;
 }

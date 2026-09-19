@@ -1,5 +1,6 @@
 import 'server-only';
 import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
 export function isConfigured() {
@@ -26,4 +27,13 @@ export async function supabase() {
       },
     },
   );
+}
+
+export function supabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SECRET_KEY;
+  if (!url || !key) throw new Error('Account invitations are not configured.');
+  return createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+  });
 }

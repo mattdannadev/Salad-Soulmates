@@ -23,6 +23,7 @@ export const config = {
   matcher: [
     '/app/:path*',
     '/worker/:path*',
+    '/receiving/:path*',
     '/login',
     '/auth/:path*',
     '/access',

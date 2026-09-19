@@ -7,13 +7,16 @@ import type { ActionResult } from '@/domain/master-data';
 export type Field = {
   name: string;
   label: string;
-  type?: 'text' | 'email' | 'number' | 'textarea' | 'select' | 'checkbox' | 'hidden';
+  type?: 'text' | 'email' | 'number' | 'date' | 'textarea' | 'select' | 'checkbox' | 'hidden';
   value?: string | number | boolean;
   required?: boolean;
   options?: { value: string; label: string }[];
   hint?: string;
   min?: number;
   step?: string;
+  maxLength?: number;
+  readOnly?: boolean;
+  onChange?: (value: string) => void;
 };
 export function RecordForm({
   kind,
@@ -92,7 +95,12 @@ export function RecordForm({
                 <select
                   id={id}
                   name={field.name}
-                  defaultValue={String(field.value ?? '')}
+                  {...(field.onChange
+                    ? { value: String(field.value ?? '') }
+                    : { defaultValue: String(field.value ?? '') })}
+                  onChange={
+                    field.onChange ? (event) => field.onChange?.(event.target.value) : undefined
+                  }
                   required={field.required}
                 >
                   {field.options?.map((option) => (
@@ -108,7 +116,7 @@ export function RecordForm({
                   defaultValue={String(field.value ?? '')}
                   rows={3}
                   required={field.required}
-                  maxLength={2000}
+                  maxLength={field.maxLength ?? 2000}
                 />
               ) : field.type === 'checkbox' ? (
                 <input
@@ -122,11 +130,18 @@ export function RecordForm({
                   id={id}
                   name={field.name}
                   type={field.type ?? 'text'}
-                  defaultValue={String(field.value ?? '')}
+                  {...(field.readOnly
+                    ? { value: String(field.value ?? '') }
+                    : { defaultValue: String(field.value ?? '') })}
+                  readOnly={field.readOnly}
                   required={field.required}
                   min={field.min}
                   step={field.step ?? (field.type === 'number' ? '0.0001' : undefined)}
-                  maxLength={field.type === 'number' ? undefined : 1000}
+                  maxLength={
+                    field.type === 'number' || field.type === 'date'
+                      ? undefined
+                      : (field.maxLength ?? 1000)
+                  }
                 />
               )}
               {field.hint && <small>{field.hint}</small>}

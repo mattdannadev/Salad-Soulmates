@@ -19,24 +19,45 @@ beforeAll(async () => {
  grant execute on function auth.uid() to authenticated,anon;`);
   await db.exec(readFileSync('supabase/migrations/202609180001_foundation.sql', 'utf8'));
   await db.exec(readFileSync('supabase/migrations/202609180003_access_requests.sql', 'utf8'));
-  await db.exec(`insert into auth.users values('${id(1)}'),('${id(2)}'),('${id(3)}'),('${id(4)}'),('${id(5)}');
+  await db.exec(
+    readFileSync('supabase/migrations/20260919154002_access_approval_workflow.sql', 'utf8'),
+  );
+  await db.exec(readFileSync('supabase/migrations/20260919154004_receiving_workflow.sql', 'utf8'));
+  await db.exec(`insert into auth.users values('${id(1)}'),('${id(2)}'),('${id(3)}'),('${id(4)}'),('${id(5)}'),('${id(6)}'),('${id(7)}');
  insert into public.organizations(id,name,slug) values('${id(10)}','A','a'),('${id(20)}','B','b');
  insert into public.facilities(id,organization_id,name) values('${id(11)}','${id(10)}','A'),('${id(21)}','${id(20)}','B'),('${id(12)}','${id(10)}','A2');
  insert into public.profiles(id,organization_id,facility_id,display_name,role) values
  ('${id(1)}','${id(10)}','${id(11)}','Admin A','admin'),('${id(2)}','${id(20)}','${id(21)}','Admin B','admin'),
  ('${id(3)}','${id(10)}','${id(11)}','Worker A','worker'),('${id(4)}','${id(10)}','${id(11)}','Reviewer A','reviewer'),
- ('${id(5)}','${id(10)}','${id(12)}','Admin A2','admin');`);
+ ('${id(5)}','${id(10)}','${id(12)}','Admin A2','admin'),('${id(6)}','${id(10)}','${id(11)}','Receiver A','receiver');`);
+  await db.exec(
+    readFileSync(
+      'supabase/migrations/20260919155843_permissions_and_reference_options.sql',
+      'utf8',
+    ),
+  );
+  await db.exec(
+    readFileSync('supabase/migrations/20260919170000_harden_function_grants.sql', 'utf8'),
+  );
 });
 afterAll(async () => {
   await db?.close();
 });
 describe('foundation migration against PostgreSQL (PGlite)', () => {
-  it('has RLS on all thirteen application tables', async () => {
+  it('has RLS on all twenty application tables', async () => {
     const result = await db.query<{ relrowsecurity: boolean }>(
       "select relrowsecurity from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and relkind='r'",
     );
-    expect(result.rows).toHaveLength(13);
+    expect(result.rows).toHaveLength(20);
     expect(result.rows.every((r) => r.relrowsecurity)).toBe(true);
+  });
+  it('does not expose security-definer trigger helpers for direct execution', async () => {
+    const result = await db.query<{ grantee: string; routine_name: string }>(
+      `select grantee,routine_name from information_schema.routine_privileges
+       where specific_schema='public' and routine_name in ('audit_change','guard_ingredient_unit')
+       and privilege_type='EXECUTE' and grantee in ('PUBLIC','authenticated','anon')`,
+    );
+    expect(result.rows).toHaveLength(0);
   });
   it('saves an ingredient and reviewed Spanish display name atomically', async () => {
     const result = await asUser(1, 'select public.save_ingredient($1::jsonb) as id', [
@@ -73,7 +94,7 @@ describe('foundation migration against PostgreSQL (PGlite)', () => {
     ).rejects.toThrow();
     expect((await asUser(4, 'select * from public.ingredients')).rows).toHaveLength(1);
     await expect(asUser(4, "select public.save_ingredient('{}'::jsonb)")).rejects.toThrow(
-      'Administrator required',
+      'Master data permission required',
     );
   });
   it('prevents self-promotion or changing organization membership', async () => {
@@ -197,5 +218,66 @@ describe('foundation migration against PostgreSQL (PGlite)', () => {
       ).rows,
     ).toEqual([{ status: 'Contacted' }]);
     expect((await asUser(4, 'select * from public.access_requests')).rows).toHaveLength(0);
+  });
+  it('lets an administrator approve a request into a non-admin role and facility', async () => {
+    await db.exec('reset role; set role anon');
+    const requestId = id(800);
+    await db.query(
+      "insert into public.access_requests(id,display_name,contact_kind,contact_value,preferred_locale,requested_role) values($1,'Invited Worker','email','worker@example.com','es','worker')",
+      [requestId],
+    );
+    await db.exec('reset role');
+    const workerProfile = await asUser(
+      1,
+      "select id from public.access_profiles where name='Production Worker'",
+    );
+    await asUser(1, 'select public.approve_access_request($1,$2,$3,$4)', [
+      requestId,
+      id(7),
+      id(11),
+      (workerProfile.rows[0] as { id: string }).id,
+    ]);
+    expect(
+      (await asUser(7, 'select display_name,role,preferred_locale from public.profiles')).rows,
+    ).toEqual([{ display_name: 'Invited Worker', role: 'worker', preferred_locale: 'es' }]);
+    await expect(
+      asUser(1, 'select public.approve_access_request($1,$2,$3,$4)', [
+        requestId,
+        id(7),
+        id(11),
+        id(999),
+      ]),
+    ).rejects.toThrow();
+  });
+  it('posts a supplier receipt and one linked immutable inventory entry', async () => {
+    const supplier = await asUser(
+      1,
+      "insert into public.suppliers(name) values('Receipt Supplier') returning id",
+    );
+    const payload = {
+      supplier_id: (supplier.rows[0] as { id: string }).id,
+      ingredient_id: id(100),
+      quantity: 12,
+      uom: 'lb',
+      received_on: '2026-09-19',
+      supplier_reference: 'PO-12',
+      supplier_lot: 'LOT-A',
+      expiration_date: '2027-01-01',
+      note: 'Dock delivery',
+      request_id: id(900),
+    };
+    await asUser(6, 'select public.post_inventory_receipt($1::jsonb)', [JSON.stringify(payload)]);
+    expect(
+      (
+        await asUser(
+          6,
+          'select event_type,quantity_delta,receipt_line_id is not null as linked from public.inventory_events where request_id=$1',
+          [id(900)],
+        )
+      ).rows,
+    ).toEqual([{ event_type: 'Receipt', quantity_delta: '12.0000', linked: true }]);
+    expect(
+      (await asUser(6, 'select supplier_lot from public.inventory_receipt_lines')).rows,
+    ).toEqual([{ supplier_lot: 'LOT-A' }]);
   });
 });

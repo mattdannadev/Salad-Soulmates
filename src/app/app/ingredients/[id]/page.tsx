@@ -15,16 +15,30 @@ export default async function IngredientDetail({ params }: { params: Promise<{ i
   if (result.error) throw new Error('Unable to load ingredient.');
   if (!result.data) notFound();
   const ingredient = result.data as Ingredient;
-  const [allergens, translations, links, suppliers, allPacks] = await Promise.all([
-    rows<{ id: string; name: string }>(db, 'allergens'),
-    db.from('ingredient_translations').select('display_name').eq('ingredient_id', id).maybeSingle(),
-    db.from('ingredient_allergens').select('allergen_id').eq('ingredient_id', id),
-    rows<Supplier>(db, 'suppliers'),
-    rows<SupplierItem>(db, 'supplier_items'),
-  ]);
-  if (translations.error || links.error) throw new Error('Unable to load ingredient details.');
+  const [allergens, translations, links, suppliers, allPacks, categories, permission] =
+    await Promise.all([
+      rows<{ id: string; name: string }>(db, 'allergens'),
+      db
+        .from('ingredient_translations')
+        .select('display_name')
+        .eq('ingredient_id', id)
+        .maybeSingle(),
+      db.from('ingredient_allergens').select('allergen_id').eq('ingredient_id', id),
+      rows<Supplier>(db, 'suppliers'),
+      rows<SupplierItem>(db, 'supplier_items'),
+      db
+        .from('reference_options')
+        .select('code,label_en,label_es')
+        .eq('list_code', 'ingredient_category')
+        .eq('active', true)
+        .order('sort_order'),
+      db.rpc('has_permission', { requested: 'master_data.write' }),
+    ]);
+  if (translations.error || links.error || categories.error)
+    throw new Error('Unable to load ingredient details.');
   const selected = links.data.map((x) => x.allergen_id);
   const packs = allPacks.filter((p) => p.ingredient_id === id);
+  const canWrite = permission.data === true;
   return (
     <>
       <Link href="/app/ingredients" className="back-link">
@@ -37,12 +51,14 @@ export default async function IngredientDetail({ params }: { params: Promise<{ i
       />
       <section className="panel">
         <h2>Ingredient details</h2>
-        {profile.role === 'admin' ? (
+        {canWrite ? (
           <IngredientForm
             ingredient={ingredient}
             spanish={translations.data?.display_name}
             allergens={allergens}
             selected={selected}
+            categories={categories.data}
+            locale={profile.preferred_locale}
           />
         ) : (
           <dl>
@@ -73,7 +89,7 @@ export default async function IngredientDetail({ params }: { params: Promise<{ i
               {number(Number(pack.pack_quantity))} {pack.pack_quantity_uom} / {pack.purchase_uom}{' '}
               {pack.is_preferred ? '· Preferred' : ''} {!pack.active ? '· Inactive' : ''}
             </summary>
-            {profile.role === 'admin' ? (
+            {canWrite ? (
               <PackForm
                 pack={pack}
                 ingredientId={id}
@@ -85,7 +101,7 @@ export default async function IngredientDetail({ params }: { params: Promise<{ i
             )}
           </details>
         ))}
-        {profile.role === 'admin' &&
+        {canWrite &&
           (suppliers.length ? (
             <details>
               <summary>+ Add supplier pack</summary>

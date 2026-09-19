@@ -10,6 +10,14 @@ export function RequestAccessForm() {
         <input name="display_name" autoComplete="name" required maxLength={120} />
       </label>
       <label>
+        Primary work area
+        <select name="requested_role" defaultValue="worker">
+          <option value="worker">Production worker</option>
+          <option value="receiver">Receiving</option>
+          <option value="reviewer">Operations reviewer</option>
+        </select>
+      </label>
+      <label>
         Email or mobile phone
         <input
           name="contact"

@@ -3,13 +3,14 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { requireProfile } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 import {
   ingredientSchema,
   supplierSchema,
   packSchema,
   inventorySchema,
   feedbackSchema,
+  receiptSchema,
   type ActionResult,
 } from '@/domain/master-data';
 
@@ -42,6 +43,7 @@ export async function requestAccess(
       display_name: z.string().trim().min(2).max(120),
       contact: z.string().trim().min(5).max(254),
       preferred_locale: z.enum(['en', 'es']),
+      requested_role: z.enum(['reviewer', 'worker', 'receiver']),
     })
     .safeParse(Object.fromEntries(form));
   if (!parsed.success)
@@ -60,6 +62,7 @@ export async function requestAccess(
     contact_kind: isEmail ? 'email' : 'phone',
     contact_value: isEmail ? parsed.data.contact.toLowerCase() : phone,
     preferred_locale: parsed.data.preferred_locale,
+    requested_role: parsed.data.requested_role,
   });
   if (error?.code === '23505')
     return { ok: true, message: 'A request for this email or phone number is already pending.' };
@@ -68,6 +71,126 @@ export async function requestAccess(
     ok: true,
     message: 'Request submitted. An administrator will contact you after reviewing access.',
   };
+}
+
+export async function setPreferredLocale(form: FormData) {
+  const parsed = z.enum(['en', 'es']).safeParse(form.get('locale'));
+  if (!parsed.success) return;
+  const { db, profile } = await requireProfile();
+  const { error } = await db
+    .from('profiles')
+    .update({ preferred_locale: parsed.data })
+    .eq('id', profile.id);
+  if (error) throw new Error('Unable to update language.');
+  revalidatePath('/', 'layout');
+}
+
+export async function reviewAccessRequest(
+  _previous: ActionResult,
+  form: FormData,
+): Promise<ActionResult> {
+  const parsed = z
+    .object({
+      id: z.uuid(),
+      decision: z.enum(['Contacted', 'Declined']),
+      note: z.string().trim().max(1000),
+    })
+    .safeParse(Object.fromEntries(form));
+  if (!parsed.success) return { ok: false, message: 'Invalid review.' };
+  const { db, profile } = await requireProfile();
+  const { data: allowed } = await db.rpc('has_permission', { requested: 'access.manage' });
+  if (!allowed) return { ok: false, message: 'Access management permission required.' };
+  const { error } = await db
+    .from('access_requests')
+    .update({
+      status: parsed.data.decision,
+      review_note: parsed.data.note,
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: profile.id,
+    })
+    .eq('id', parsed.data.id)
+    .in('status', ['New', 'Contacted']);
+  if (error) return { ok: false, message: 'Could not update this request.' };
+  revalidatePath('/app/access-requests');
+  return { ok: true, message: 'Request updated.' };
+}
+
+export async function approveAccessRequest(
+  _previous: ActionResult,
+  form: FormData,
+): Promise<ActionResult> {
+  const parsed = z
+    .object({
+      id: z.uuid(),
+      facility_id: z.uuid(),
+      access_profile_id: z.uuid(),
+    })
+    .safeParse(Object.fromEntries(form));
+  if (!parsed.success) return { ok: false, message: 'Choose a facility and access profile.' };
+  const { db, profile } = await requireProfile();
+  const { data: allowed } = await db.rpc('has_permission', { requested: 'access.manage' });
+  if (!allowed) return { ok: false, message: 'Access management permission required.' };
+  const { data: request, error: loadError } = await db
+    .from('access_requests')
+    .select('*')
+    .eq('id', parsed.data.id)
+    .single();
+  if (loadError || !request || request.contact_kind !== 'email')
+    return {
+      ok: false,
+      message: 'Email is required for an invitation. Mark phone requests as contacted.',
+    };
+  let invitedUserId = request.auth_user_id as string | null;
+  if (!invitedUserId) {
+    let admin;
+    try {
+      admin = supabaseAdmin();
+    } catch {
+      return {
+        ok: false,
+        message: 'Invitations need the Supabase secret configured on the server.',
+      };
+    }
+    const host = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+    const { data, error } = await admin.auth.admin.inviteUserByEmail(request.contact_value, {
+      data: { display_name: request.display_name },
+      redirectTo: `${host ? `https://${host}` : 'http://localhost:3000'}/auth/callback?next=/reset-password`,
+    });
+    if (error || !data.user)
+      return {
+        ok: false,
+        message: 'The invitation could not be sent. The email may already have an account.',
+      };
+    invitedUserId = data.user.id;
+    const invited = await db
+      .from('access_requests')
+      .update({
+        status: 'Invited',
+        auth_user_id: invitedUserId,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: profile.id,
+        review_note: 'Invitation sent',
+      })
+      .eq('id', parsed.data.id);
+    if (invited.error)
+      return {
+        ok: false,
+        message: 'Invitation sent, but the request still needs administrator completion.',
+      };
+  }
+  const { error } = await db.rpc('approve_access_request', {
+    request_id: parsed.data.id,
+    invited_user_id: invitedUserId,
+    assigned_facility_id: parsed.data.facility_id,
+    assigned_access_profile_id: parsed.data.access_profile_id,
+  });
+  if (error)
+    return {
+      ok: false,
+      message: 'Invitation exists, but access could not be assigned. Try approval again.',
+    };
+  revalidatePath('/app/access-requests');
+  return { ok: true, message: 'Approved. The invitation was sent and access was assigned.' };
 }
 
 export async function requestPasswordReset(
@@ -118,9 +241,23 @@ export async function signOut() {
 }
 
 export async function saveRecord(kind: string, input: unknown): Promise<ActionResult> {
-  const { db, profile } = await requireProfile();
-  if (kind !== 'feedback' && profile.role !== 'admin')
-    return { ok: false, message: 'Administrator access required.' };
+  const { db } = await requireProfile();
+  const permissionByKind: Record<string, string> = {
+    ingredient: 'master_data.write',
+    supplier: 'master_data.write',
+    pack: 'master_data.write',
+    allergen: 'master_data.write',
+    inventory: 'inventory.adjust',
+    receipt: 'inventory.receive',
+    'feedback-status': 'feedback.manage',
+    'reference-option': 'settings.manage',
+    'access-profile': 'settings.manage',
+  };
+  const requestedPermission = permissionByKind[kind];
+  if (requestedPermission) {
+    const { data: allowed } = await db.rpc('has_permission', { requested: requestedPermission });
+    if (!allowed) return { ok: false, message: 'Your access profile does not allow this action.' };
+  }
   let error: { message: string; code?: string } | null = null;
   let id: string | undefined;
   if (kind === 'ingredient') {
@@ -176,6 +313,46 @@ export async function saveRecord(kind: string, input: unknown): Promise<ActionRe
     }
     error = result.error;
     id = result.data?.id;
+  } else if (kind === 'receipt') {
+    const parsed = receiptSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message };
+    const result = await db.rpc('post_inventory_receipt', { payload: parsed.data });
+    error = result.error;
+    id = result.data;
+  } else if (kind === 'reference-option') {
+    const parsed = z
+      .object({
+        id: z.uuid().optional(),
+        list_code: z.string().min(1).max(80),
+        code: z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]{0,49}$/),
+        label_en: z.string().trim().min(1).max(100),
+        label_es: z.string().trim().min(1).max(100),
+        sort_order: z.number().int().min(0).max(10000),
+        active: z.boolean(),
+      })
+      .safeParse(input);
+    if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message };
+    const { id: optionId, ...values } = parsed.data;
+    const result = optionId
+      ? await db.from('reference_options').update(values).eq('id', optionId).select('id').single()
+      : await db.from('reference_options').insert(values).select('id').single();
+    error = result.error;
+    id = result.data?.id;
+  } else if (kind === 'access-profile') {
+    const parsed = z
+      .object({
+        id: z.uuid().optional(),
+        name: z.string().trim().min(2).max(100),
+        description: z.string().trim().max(500),
+        base_role: z.enum(['admin', 'reviewer', 'worker', 'receiver']),
+        active: z.boolean(),
+        permission_codes: z.array(z.string().min(1)).max(100),
+      })
+      .safeParse(input);
+    if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message };
+    const result = await db.rpc('save_access_profile', { payload: parsed.data });
+    error = result.error;
+    id = result.data;
   } else if (kind === 'feedback') {
     const parsed = feedbackSchema.safeParse(input);
     if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message };
@@ -226,7 +403,9 @@ export async function saveRecord(kind: string, input: unknown): Promise<ActionRe
     message:
       kind === 'feedback'
         ? 'Thank you. Your feedback was saved. / Gracias. Comentario guardado.'
-        : 'Saved successfully.',
+        : kind === 'receipt'
+          ? 'Receipt posted and inventory updated.'
+          : 'Saved successfully.',
     id,
   };
 }
