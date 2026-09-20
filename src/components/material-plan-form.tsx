@@ -55,7 +55,7 @@ export default function MaterialPlanForm({
           />
         </label>
         <label htmlFor={`${prefix}-date`}>
-          {es ? 'Materiales necesarios para' : 'Materials needed by'}
+          {es ? 'Ingredientes necesarios para' : 'Ingredients needed by'}
           <input
             id={`${prefix}-date`}
             type="date"

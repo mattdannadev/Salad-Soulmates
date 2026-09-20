@@ -11,6 +11,8 @@ import {
 import { formatDate, formatNumber } from '@/domain/format';
 import { requireRecipeAccess } from '@/lib/recipe-catalog';
 import { readResult, rows } from '@/lib/data';
+import loadIngredientStock from '@/lib/ingredient-stock';
+import IngredientStock from '@/components/ingredient-stock';
 
 export default async function RecipeDetails({ params, searchParams }: {
   params: Promise<{ id: string }>;
@@ -32,12 +34,13 @@ export default async function RecipeDetails({ params, searchParams }: {
     .sort((left, right) => right.version_number - left.version_number);
   const version = selectRecipeVersion(recipe, versions, query.data.version);
   if (!version && query.data.version) notFound();
-  const [allSections, allLines, allRules, ingredients] = version ? await Promise.all([
+  const [allSections, allLines, allRules, ingredients, stock] = version ? await Promise.all([
     rows(db, 'recipe_sections', recipeSectionRowSchema),
     rows(db, 'recipe_lines', recipeLineRowSchema),
     rows(db, 'recipe_qc_rules', recipeQualityRuleRowSchema),
     rows(db, 'ingredients', rowSchemas.ingredients),
-  ]) : [[], [], [], []];
+    loadIngredientStock(db),
+  ]) : [[], [], [], [], null];
   const sections = allSections.filter((section) => section.recipe_version_id === version?.id)
     .sort((left, right) => left.sequence - right.sequence);
   const lines = allLines.filter((line) => line.recipe_version_id === version?.id);
@@ -91,7 +94,7 @@ export default async function RecipeDetails({ params, searchParams }: {
       </section>
       {sections.map((section) => (
         <section className="panel" key={section.id}>
-          <h2>{section.name}</h2>
+          <h2>{/^Worksheet block \d+$/i.test(section.name.trim()) ? recipeText(locale, 'Ingredients') : section.name}</h2>
           <div className="table-wrap">
             <table>
               <thead>
@@ -108,7 +111,20 @@ export default async function RecipeDetails({ params, searchParams }: {
                     const ingredient = ingredients.find((item) => item.id === line.ingredient_id);
                     return (
                       <tr key={line.id}>
-                        <td>{ingredient?.name ?? recipeText(locale, 'Ingredient details unavailable with your access')}</td>
+                        <td>
+                          {ingredient ? (
+                            <>
+                              <Link href={`/app/ingredients/${ingredient.id}`}>{ingredient.name}</Link>
+                              {stock ? (
+                                <IngredientStock
+                                  quantity={stock[ingredient.id]}
+                                  unit={ingredient.default_uom}
+                                  locale={locale}
+                                />
+                              ) : <p className="muted">{recipeText(locale, 'Inventory details unavailable with your access')}</p>}
+                            </>
+                          ) : recipeText(locale, 'Ingredient details unavailable with your access')}
+                        </td>
                         <td>{line.display_measurement}</td>
                         <td>
                           {formatNumber(line.normalized_quantity)}

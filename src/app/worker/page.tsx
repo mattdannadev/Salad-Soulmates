@@ -7,36 +7,37 @@ import FeedbackDrawer from '@/components/feedback';
 export const dynamic = 'force-dynamic';
 export default async function Worker() {
   const { profile } = await requireProfile();
+  const es = profile.preferred_locale === 'es';
   return (
-    <main className="worker-page" lang="es">
+    <main className="worker-page" lang={profile.preferred_locale}>
       <header className="row">
         <Leaf size={34} />
         <form action={signOut}>
           <button type="submit" className="secondary">
             <LogOut size={18} />
-            Salir
+            {es ? 'Salir' : 'Sign out'}
           </button>
         </form>
       </header>
       <p className="eyebrow">SALAD SOULMATES</p>
       <h1>
-        Hola,
-        {profile.display_name.split(' ')[0]}
+        {`${es ? 'Hola' : 'Hello'}, ${profile.display_name.split(' ')[0]}`}
       </h1>
       <section className="panel">
-        <h2>Tu espacio de trabajo</h2>
-        <p>Estamos preparando esta herramienta.</p>
+        <h2>{es ? 'Tu espacio de trabajo' : 'Your workspace'}</h2>
+        <p>{es ? 'Estamos preparando esta herramienta.' : 'We are preparing this workspace.'}</p>
         <p>
-          Los turnos, las solicitudes de tiempo libre y las hojas de lote aún no están disponibles.
-          Consulta a tu supervisor para el trabajo de hoy.
+          {es
+            ? 'Los turnos, las solicitudes de tiempo libre y las hojas de lote aún no están disponibles. Consulta a tu supervisor para el trabajo de hoy.'
+            : 'Shifts, time-off requests and batch sheets are not available yet. Check with your supervisor for today’s work.'}
         </p>
       </section>
       {(profile.role === 'admin' || profile.role === 'reviewer') && (
         <Link className="button secondary" href="/app">
-          Volver a administración
+          {es ? 'Volver a administración' : 'Back to administration'}
         </Link>
       )}
-      <FeedbackDrawer worker />
+      <FeedbackDrawer locale={profile.preferred_locale} />
     </main>
   );
 }

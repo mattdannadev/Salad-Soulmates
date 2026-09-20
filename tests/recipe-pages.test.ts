@@ -58,6 +58,53 @@ describe('recipe and product screens', () => {
     expect(html).toContain('Synthetic training example only.');
     expect(html).toContain(`version=${fixtureId(402)}`);
     expect(html).toContain('aria-current="page"');
+    expect(html).toContain(`/app/ingredients/${fixtureId(100)}`);
+    expect(html).toContain('On hand: Not recorded');
+    expect(html).toContain('Preparation example');
+  });
+  it('labels imported worksheet blocks as ingredients without changing quantities', async () => {
+    mocks.rows.mockImplementation((db: unknown, table: string) => Promise.resolve(
+      table === 'recipe_sections'
+        ? fixtureRecords.recipe_sections?.map((section) => ({ ...section, name: 'Worksheet block 1' }))
+        : fixtureRecords[table] ?? [],
+    ));
+    const html = renderToStaticMarkup(await details());
+    expect(html).toContain('<h2>Ingredients</h2>');
+    expect(html).not.toContain('Worksheet block');
+    expect(html).toContain('1 lb');
+    expect(html).toContain('2 gal');
+  });
+  it.each([8, 0, -2])('shows the recorded ledger balance %s in the ingredient base unit', async (balance) => {
+    mocks.rows.mockImplementation((db: unknown, table: string) => Promise.resolve(
+      table === 'inventory_events'
+        ? [{ ingredient_id: fixtureId(100), quantity_delta: 10 },
+          { ingredient_id: fixtureId(100), quantity_delta: balance - 10 }]
+        : fixtureRecords[table] ?? [],
+    ));
+    const html = renderToStaticMarkup(await details());
+    expect(html).toContain(`On hand: ${balance} lb`);
+    if (balance < 0) expect(html).toContain('Review negative balance');
+  });
+  it('does not read inventory when the viewer lacks inventory access', async () => {
+    mocks.permission.mockImplementation((db: unknown, permission: string) => Promise.resolve(permission !== 'inventory.read'));
+    const html = renderToStaticMarkup(await details());
+    expect(html).toContain('Inventory details unavailable with your access');
+    expect(html).toContain(`/app/ingredients/${fixtureId(100)}`);
+    expect(mocks.rows.mock.calls.some((call) => call[1] === 'inventory_events')).toBe(false);
+  });
+  it('does not invent links for hidden ingredients or turn failed stock reads into zero', async () => {
+    mocks.rows.mockImplementation((db: unknown, table: string) => Promise.resolve(
+      table === 'ingredients' ? [] : fixtureRecords[table] ?? [],
+    ));
+    const html = renderToStaticMarkup(await details());
+    expect(html).toContain('Ingredient details unavailable with your access');
+    expect(html).not.toContain(`/app/ingredients/${fixtureId(100)}`);
+    mocks.rows.mockImplementation((db: unknown, table: string) => (
+      table === 'inventory_events'
+        ? Promise.reject(new Error('STOCK_READ_FAILED'))
+        : Promise.resolve(fixtureRecords[table] ?? [])
+    ));
+    await expect(details()).rejects.toThrow('STOCK_READ_FAILED');
   });
   it('shows a selected draft without inheriting released ingredient lines', async () => {
     const html = renderToStaticMarkup(await details(fixtureId(400), fixtureId(402)));

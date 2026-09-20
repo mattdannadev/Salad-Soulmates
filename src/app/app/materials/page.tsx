@@ -46,13 +46,22 @@ export default async function Materials({
         eyebrow={
           es ? 'PREPARAR LA PRÓXIMA PRODUCCIÓN' : 'PREPARE THE NEXT PRODUCTION RUN'
         }
-        title={es ? 'Requisitos de materiales' : 'Materials requirements'}
+        title={es ? 'Requisitos de ingredientes' : 'Ingredient requirements'}
         description={
           es
-            ? 'Recetas publicadas, existencias y compras entrantes en una hoja explicable.'
-            : 'Released recipes, stock and incoming purchases in one explainable worksheet.'
+            ? 'Ingresa los lotes previstos y la fecha en que necesitas los ingredientes para calcular faltantes y compras.'
+            : 'Enter planned batch counts and the date ingredients are needed to calculate shortages and purchasing needs.'
         }
       />
+      <p className="notice">
+        {es
+          ? 'Los pedidos de clientes, el cálculo automático de lotes y las fechas de inicio se incorporarán en '
+          : 'Customer orders, automatic batch calculations and production start dates will be available in '}
+        <Link href="/app/planning">{es ? 'Planificación de producción' : 'Production planning'}</Link>
+        {es
+          ? '. Aquí eliges los lotes y la fecha en que necesitas los ingredientes.'
+          : '. Here, you choose batch counts and the date ingredients are needed.'}
+      </p>
       <section className="panel">
         <h2>{es ? 'Hojas guardadas' : 'Saved worksheets'}</h2>
         {!workspace.plans.length && (

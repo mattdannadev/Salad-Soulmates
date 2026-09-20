@@ -254,6 +254,16 @@ createServer((request, response) => {
       return;
     }
     if (url.pathname.endsWith('/profiles')) {
+      if (request.method === 'PATCH') {
+        const update = z.object({ preferred_locale: z.enum(['en', 'es']) }).strict()
+          .safeParse(JSON.parse(payload));
+        if (!update.success || url.searchParams.get('id') !== `eq.${profile.id}`) {
+          response.writeHead(400);
+          response.end(JSON.stringify({ code: 'INVALID_LOCALE_UPDATE' }));
+          return;
+        }
+        profile.preferred_locale = update.data.preferred_locale;
+      }
       response.end(
         JSON.stringify(
           request.headers.accept?.includes('vnd.pgrst.object+json') ? profile : [profile],
@@ -314,7 +324,7 @@ createServer((request, response) => {
       return;
     }
     if (request.method === 'GET' && url.pathname.startsWith('/rest/v1/')) {
-      response.end('[]');
+      response.end(request.headers.accept?.includes('vnd.pgrst.object+json') ? 'null' : '[]');
       return;
     }
     if (url.pathname === '/rest/v1/inventory_events' && request.method === 'POST') {

@@ -9,7 +9,7 @@ import { accessRequestRowSchema, type ActionResult } from '@/domain/master-data'
 import { recordKindSchema } from '@/domain/record-schemas';
 import { recordOperations, recordPermissions } from '@/lib/save-record';
 import hasPermission from '@/lib/permissions';
-import { logFailure, operationError } from '@/lib/operation-error';
+import { logFailure } from '@/lib/operation-error';
 import confirmSignOut from '@/lib/sign-out';
 import authCallbackUrl from '@/domain/auth-callback-url';
 
@@ -72,18 +72,41 @@ export async function requestAccess(
   };
 }
 
-export async function setPreferredLocale(form: FormData) {
+export async function setPreferredLocale(form: FormData): Promise<ActionResult> {
   const parsed = z.enum(['en', 'es']).safeParse(form.get('locale'));
-  if (!parsed.success) throw new Error('Invalid language.');
+  if (!parsed.success) return { ok: false, message: 'Choose English or Spanish.' };
   const { db, profile } = await requireProfile({ readOnly: false });
-  const { error } = await db
-    .from('profiles')
-    .update({ preferred_locale: parsed.data })
-    .eq('id', profile.id)
-    .select('id')
-    .single();
-  if (error) throw operationError('locale_update', 'Unable to update language.', error);
+  const failure = {
+    ok: false,
+    message: profile.preferred_locale === 'es'
+      ? 'No se pudo guardar el idioma. Vuelve a intentarlo.'
+      : 'Could not save the language. Please try again.',
+  };
+  try {
+    const { data, error } = await db
+      .from('profiles')
+      .update({ preferred_locale: parsed.data })
+      .eq('id', profile.id)
+      .select('id,preferred_locale')
+      .single();
+    if (error) {
+      logFailure('locale_update', error);
+      return failure;
+    }
+    const saved = z.object({ id: z.uuid(), preferred_locale: z.enum(['en', 'es']) }).safeParse(data);
+    if (
+      !saved.success || saved.data.id !== profile.id
+      || saved.data.preferred_locale !== parsed.data
+    ) {
+      logFailure('locale_update', { code: 'INVALID_RESPONSE' });
+      return failure;
+    }
+  } catch (error) {
+    logFailure('locale_update', error);
+    return failure;
+  }
   revalidatePath('/', 'layout');
+  return { ok: true, message: parsed.data === 'es' ? 'Idioma actualizado.' : 'Language updated.' };
 }
 
 export async function reviewAccessRequest(

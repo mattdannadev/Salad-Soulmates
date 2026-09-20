@@ -38,7 +38,7 @@ export default async function Purchasing({
         }
         action={(
           <Link className="button" href="/app/materials">
-            {es ? 'Requisitos de materiales' : 'Materials requirements'}
+            {es ? 'Requisitos de ingredientes' : 'Ingredient requirements'}
           </Link>
         )}
       />

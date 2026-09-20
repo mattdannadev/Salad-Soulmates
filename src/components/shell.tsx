@@ -18,8 +18,9 @@ import {
   PackageCheck,
   Settings,
 } from 'lucide-react';
-import { signOut, setPreferredLocale } from '@/app/actions';
+import { signOut } from '@/app/actions';
 import FeedbackDrawer from './feedback';
+import LocaleSwitcher from './locale-switcher';
 
 const links = [
   {
@@ -66,15 +67,15 @@ const links = [
   },
   {
     href: '/app/planning',
-    en: 'Planning',
-    es: 'Planificación',
+    en: 'Production planning',
+    es: 'Planificación de producción',
     icon: CalendarDays,
     permission: 'planning.read',
   },
   {
     href: '/app/materials',
-    en: 'Materials',
-    es: 'Materiales',
+    en: 'Ingredient requirements',
+    es: 'Requisitos de ingredientes',
     icon: ClipboardList,
     permission: 'planning.read',
   },
@@ -142,19 +143,20 @@ export function Shell({
   permissions: string[];
 }) {
   const path = usePathname();
+  const isSpanish = locale === 'es';
   return (
-    <div className="app-shell">
+    <div className="app-shell" lang={locale}>
       <aside className="sidebar">
         <Link href="/app" className="brand">
           <Leaf size={42} />
           <strong>Salad Soulmates</strong>
           <small>
-            GOOD FOOD BRINGS
+            {isSpanish ? 'LA BUENA COMIDA' : 'GOOD FOOD BRINGS'}
             <br />
-            PEOPLE TOGETHER
+            {isSpanish ? 'NOS UNE' : 'PEOPLE TOGETHER'}
           </small>
         </Link>
-        <nav aria-label="Main navigation">
+        <nav aria-label={isSpanish ? 'Navegación principal' : 'Main navigation'}>
           {links
             .filter((link) => !link.permission || permissions.includes(link.permission))
             .map(({
@@ -176,51 +178,38 @@ export function Shell({
         </nav>
         <div className="sidebar-foot">
           <p>
-            Better ingredients.
+            {isSpanish ? 'Mejores ingredientes.' : 'Better ingredients.'}
             <br />
-            <em>Brighter tomorrows.</em>
+            <em>{isSpanish ? 'Un mañana mejor.' : 'Brighter tomorrows.'}</em>
           </p>
-          <span>FAMILY OWNED · FOOD WITH CARE</span>
+          <span>{isSpanish ? 'EMPRESA FAMILIAR · ALIMENTOS CON CUIDADO' : 'FAMILY OWNED · FOOD WITH CARE'}</span>
         </div>
       </aside>
       <div className="app-main">
         <header className="topbar">
           <span className="breadcrumb">
-            Operations
+            {isSpanish ? 'Operaciones' : 'Operations'}
             {' '}
             <ArrowUpRight size={14} />
             {' '}
-            Increment 1A
+            {isSpanish ? 'Etapa 1A' : 'Increment 1A'}
           </span>
           <div className="identity">
-            <form action={setPreferredLocale} className="locale-switcher">
-              <label className="sr-only" htmlFor="locale">
-                Language
-              </label>
-              <select
-                id="locale"
-                name="locale"
-                value={locale}
-                onChange={(event) => event.currentTarget.form?.requestSubmit()}
-              >
-                <option value="en">EN</option>
-                <option value="es">ES</option>
-              </select>
-            </form>
+            <LocaleSwitcher key={locale} locale={locale} />
             <span className="avatar">{name.slice(0, 1)}</span>
             <span>
               {name}
-              <small>{role}</small>
+              <small>{isSpanish && role === 'admin' ? 'Administrador' : role}</small>
             </span>
             <form action={signOut}>
-              <button type="submit" className="icon-button" aria-label="Sign out">
+              <button type="submit" className="icon-button" aria-label={isSpanish ? 'Salir' : 'Sign out'}>
                 <LogOut size={18} />
               </button>
             </form>
           </div>
         </header>
         <div className="staging-banner">
-          INCREMENT 1A
+          {isSpanish ? 'ETAPA 1A' : 'INCREMENT 1A'}
           {' '}
           <span>
             {locale === 'es'
@@ -240,7 +229,7 @@ export function Shell({
           </span>
         </footer>
       </div>
-      <FeedbackDrawer />
+      <FeedbackDrawer locale={locale} />
     </div>
   );
 }

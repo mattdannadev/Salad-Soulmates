@@ -52,7 +52,7 @@ export default async function ReceiverWorkspace() {
         suppliers={suppliers}
         locale={profile.preferred_locale}
       />
-      <FeedbackDrawer worker={es} />
+      <FeedbackDrawer locale={profile.preferred_locale} />
     </main>
   );
 }

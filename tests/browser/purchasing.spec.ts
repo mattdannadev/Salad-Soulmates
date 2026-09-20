@@ -14,8 +14,10 @@ test('materials to supplier draft to partial receipt uses the actual database ru
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/app$/);
   await page.goto('/app/materials');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ingredient requirements');
+  await expect(page.locator('main')).toContainText('Customer orders, automatic batch calculations and production start dates will be available');
   await page.getByLabel('Worksheet name').fill(`Materials ${info.project.name}`);
-  await page.getByLabel('Materials needed by').fill('2026-10-01');
+  await page.getByLabel('Ingredients needed by').fill('2026-10-01');
   await page.getByLabel('Preview Italian dressing · v1').fill('40');
   await page.getByRole('button', { name: 'Calculate & save requirements' }).click();
   await expect(page).toHaveURL(/\/app\/materials\?plan=/);

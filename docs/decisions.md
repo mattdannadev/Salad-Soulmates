@@ -1,5 +1,37 @@
 # Implementation decisions
 
+## 2026-09-20 — Recipe links and ingredient requirements terminology
+
+The owner requested links from recipe lines to tracked ingredient records and an
+on-hand preview. Use the existing ingredient foreign key and the facility-scoped
+inventory ledger, respecting inventory read permission. Unknown stock is shown as
+“Not recorded,” distinct from a recorded zero. The stock summary expands by click,
+tap or keyboard and includes a hover explanation. Ingredient records show the same
+summary. This does not post inventory, change procurement or edit released recipes.
+Imported generic “Worksheet block N” headings display as “Ingredients”; meaningful
+preparation section names and approved instructions remain intact.
+
+The owner found “Materials” confusing with order-driven production planning. Rename
+the navigation and page to “Ingredient requirements,” and clarify that this screen
+uses manually entered batch counts and an ingredient-needed date. “Production
+planning” remains the separately gated customer-order, batch-calculation and
+production-start-date workflow. Keep existing routes and calculation rules.
+
+## 2026-09-20 — Account language and compact navigation feedback
+
+The owner reported that the language selector did not update navigation/dashboard
+content and requested English everywhere for Matt Danna. His existing profile was
+changed from `es` to `en`; no account identity or role changed. The selector now
+captures the chosen value explicitly, verifies the saved response, refreshes the
+layout and reports save failures. Dashboard, shell, feedback and worker-screen
+copy follow the saved account preference. This does not translate business names,
+approved recipes or user-entered records.
+
+The existing responsive navigation moves above the content at 760 CSS pixels or
+less. The reported 691-pixel embedded browser viewport therefore uses the same
+compact navigation as a phone. Wider windows retain the left sidebar; the owner's
+question did not request a navigation redesign.
+
 ## 2026-09-20 — Connected Preview for owner testing
 
 After the candidate passed CI, the owner requested: “Launch so I can test it.”
