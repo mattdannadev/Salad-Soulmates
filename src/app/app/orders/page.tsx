@@ -52,6 +52,7 @@ export default async function Orders({ searchParams }: {
         <>
           <section className="panel">
             <h2>{order ? customerOrderLabel(order) : selected.name}</h2>
+            {order && <p><Link href={`/app/shipping?order=${order.id}`}>{es ? 'Preparar envío / recogida' : 'Prepare shipment / pickup'}</Link></p>}
             <p>{`${es ? 'Necesario para' : 'Needed by'} ${formatDate(selected.needed_on)} · ${selected.status === 'Active' ? activeLabel : cancelledLabel}`}</p>
             {order ? (
               <div className="table-wrap">

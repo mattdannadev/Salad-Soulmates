@@ -74,6 +74,13 @@ authorizes the tested release and supersedes earlier no-merge instructions for
 these candidates. Complete verification and database prerequisites before merging.
 The broader real-Auth and physical printer/scanner acceptance items remain visible.
 
+## Shipping foundation — packaging integration pending
+
+The owner authorized independent shipping work while Packaging is built separately.
+The shipping candidate adds order-linked shipment/pickup drafts only. Confirmation,
+finished inventory deductions, actual fulfillment and returns await packaging.
+See [Shipping foundation](shipping.md). This does not mark phase 7 complete.
+
 ## Approved delivery order
 
 | Order | Build phase                                          | Scope / sequencing                                                                                                                                                               |
