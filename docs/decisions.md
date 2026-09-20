@@ -1,5 +1,20 @@
 # Implementation decisions
 
+## 2026-09-20 — Packaging setup before scheduling
+
+The owner requested packaging next, then selected **Build packaging setup first**
+when asked about its missing production-completion/tank-transfer dependency.
+Implement product packaging configuration and controlled, versioned label content;
+defer physical packaging execution until production/tank genealogy is available.
+The owner confirmed one label per bag, approximately 3 × 5 inches, and may change
+the size later. Initialize width 3 inches and height 5 inches with editable dimensions.
+
+Preserve existing product defaults until a version is explicitly approved. Keep
+saved orders and customer pricing/packaging snapshots unchanged. Use a clearly
+marked sample preview without a real lot. Do not invent printer integration,
+production completion, ingredient consumption or tank-mixing rules. Scheduling
+remains pending. See `packaging-setup.md` for implementation and release boundaries.
+
 ## 2026-09-20 — Order-linked production and authorized merges
 
 The owner requested the customer orders / production planning build step, then

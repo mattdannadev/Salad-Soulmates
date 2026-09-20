@@ -8,6 +8,22 @@ export type Database = {
   };
   public: {
     Tables: {
+      packaging_profile_versions: {
+        Row: {
+          id: string; organization_id: string; product_id: string; version: number;
+          status: string; bag_size_gallons: number; bags_per_case: number;
+          label_width_inches: number; label_height_inches: number; labels_per_bag: number;
+          display_name: string; ingredient_statement: string; template_key: string;
+          created_by: string; created_at: string; approved_by: string | null; approved_at: string | null;
+        };
+        Insert: {
+          id: string; product_id: string; version: number; status: string;
+          bag_size_gallons: number; bags_per_case: number; display_name: string;
+          ingredient_statement?: string; label_width_inches?: number; label_height_inches?: number;
+        };
+        Update: never;
+        Relationships: [];
+      };
       order_production_plans: {
         Row: {
           id: string; organization_id: string; facility_id: string;
@@ -1560,6 +1576,7 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      save_packaging_profile: { Args: { payload: Json }; Returns: string; };
       save_order_production_plan: { Args: { payload: Json }; Returns: string; };
       order_production_batches: { Args: { order_id: string }; Returns: Json; };
       receive_serialized_delivery: { Args: { payload: Json }; Returns: string; };

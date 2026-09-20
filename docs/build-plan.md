@@ -76,6 +76,12 @@ The broader real-Auth and physical printer/scanner acceptance items remain visib
 
 ## Approved delivery order
 
+September 20 owner update: implement **packaging setup** ahead of scheduling,
+including editable bag/case configuration and versioned label content with an
+initial 3 × 5 inch label, one per bag. The owner explicitly deferred production
+completion and tank transfers. Physical packaging execution remains dependent on
+those workflows; scheduling is still pending. See `packaging-setup.md`.
+
 | Order | Build phase                                          | Scope / sequencing                                                                                                                                                               |
 | ----- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1     | Engineering standards and existing-code refactor     | Complete remaining real Auth and independent-review acceptance; preserve CI and mandatory engineering standards.                                                                 |

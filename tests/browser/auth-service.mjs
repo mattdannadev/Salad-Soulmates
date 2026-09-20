@@ -12,6 +12,8 @@ import {
 
 // Local, deliberately minimal Auth/API fixture. It never connects to a hosted service.
 const tables = new Set([
+  'products',
+  'packaging_profile_versions',
   'material_plans',
   'customer_orders',
   'order_production_plans',
@@ -26,6 +28,7 @@ const tables = new Set([
   'serialized_unit_events',
 ]);
 const mutations = new Set([
+  'save_packaging_profile',
   'save_material_plan',
   'save_customer_order',
   'save_order_production_plan',
@@ -53,7 +56,8 @@ async function createDatabase() {
     insert into public.supplier_items(id,supplier_id,ingredient_id,purchase_uom,pack_quantity,pack_quantity_uom,is_preferred)
       values('${fixtureId(210)}','${fixtureId(200)}','${fixtureId(100)}','pail',30,'lb',true),
       ('${fixtureId(211)}','${fixtureId(200)}','${fixtureId(101)}','case',5,'gal',true);
-    insert into public.products(id,name) values('${fixtureId(300)}','Preview Italian dressing');
+    insert into public.products(id,name,product_code,bag_size_gallons,bags_per_case)
+      values('${fixtureId(300)}','Preview Italian dressing','TEST-ITALIAN',2,2);
     insert into public.recipes(id,product_id,name) values('${fixtureId(400)}','${fixtureId(300)}','Preview Italian recipe');
     insert into public.recipe_versions(id,recipe_id,version_number) values('${fixtureId(401)}','${fixtureId(400)}',1);
     insert into public.recipe_sections(id,recipe_version_id,name,sequence) values('${fixtureId(410)}','${fixtureId(401)}','Main',1);
@@ -145,6 +149,7 @@ async function executeRequest(url, method, body) {
   }
   const name = z
     .enum([
+      'save_packaging_profile',
       'save_material_plan',
       'save_customer_order',
       'save_order_production_plan',

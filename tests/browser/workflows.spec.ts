@@ -45,7 +45,8 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
   await expect(page).toHaveURL(/\/app\/orders$/);
   await expect(page.getByRole('navigation').getByRole('link', { name: 'Production planning', exact: true })).toHaveCount(0);
   await page.goto('/app/products');
-  await expect(page.getByText('Preview Italian dressing', { exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: /Preview Italian dressing TEST/ })
+    .getByText('Preview Italian dressing', { exact: true })).toBeVisible();
   await page.goto('/app/ingredients');
   await expect(page.getByRole('heading', { name: 'Ingredients library', exact: true })).toBeVisible();
   await page.goto('/app/inventory');
