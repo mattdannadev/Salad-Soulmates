@@ -4,9 +4,19 @@ Next.js + TypeScript application for order-driven food production planning and a
 
 ## Current status
 
-The foundation app runs locally against the single configured Supabase database. The first administrator is active. Sign-in, ingredient details and Spanish names, allergen setup, suppliers and purchasing packs, opening inventory/adjustments, and contextual feedback are implemented. The worker route is a Spanish availability notice, not a live worksheet. Hosted deployment and signed-in owner review remain pending; the full order-to-purchase vertical slice and later production flows are not enabled.
+Main includes order-driven purchasing and customer packaging/prices, receiving and
+physical serialization, and order-linked production preparation (merged PRs #1,
+#2, #4, #5 and #6). Scheduling and worker schedule is the next feature.
+Real-Auth, independent-review and physical printer/scanner acceptance remain open.
+See the build plan and feature documents for scope and verification evidence.
+Repository merge status does not establish current deployment status.
 
 ## Start here
+
+- [Project index and cross-session workflow](docs/README.md)
+- [Current build plan](docs/build-plan.md)
+- [Continue in Codex or ChatGPT Work](docs/continue-in-codex.md)
+- [Mandatory engineering standards](AGENTS.md)
 
 - [Database setup and verification](docs/database.md)
 - [Review and deployment gates](docs/review.md)
@@ -36,9 +46,9 @@ Keep routes focused on page composition. Put business logic in `domain`, infrast
 
 ## Development
 
-Use Node 24 and npm. `npm ci` installs the locked dependencies. Copy `.env.example` to `.env.local` only on a new checkout and fill in the project URL and publishable key; this machine is already configured. Never commit `.env.local`.
+Use Node 24 and npm. `npm ci` installs the locked dependencies. Copy `.env.example` to `.env.local` only on a new checkout and fill in the project URL and publishable key; verify configuration on each new machine. Never commit `.env.local`.
 
-Commands: `npm run dev`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`. Lint, TypeScript, 18 local database/domain tests, and the production build pass. These checks do not substitute for signed-in owner review against the hosted database. On this Windows network, set `NODE_USE_SYSTEM_CA=1` before starting the app with Node 24.
+Commands: `npm run dev`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`. Use `npm run check` for the full current check suite; consult feature documents and CI for dated verification results. These checks do not substitute for signed-in owner review against the hosted database. On this Windows network, set `NODE_USE_SYSTEM_CA=1` before starting the app with Node 24.
 
 Database tests run in disposable local PostgreSQL through PGlite and never touch the hosted database. Do not run reset or seed commands against the single hosted project.
 
