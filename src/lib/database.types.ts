@@ -124,6 +124,7 @@ export type Database = {
       };
       customers: {
         Row: {
+          contact_name: string; email: string; phone: string; address: string; notes: string; revision: number;
           id: string;
           organization_id: string;
           name: string;
@@ -131,16 +132,14 @@ export type Database = {
           created_at: string;
         };
         Insert: {
+          contact_name?: string; email?: string; phone?: string; address?: string; notes?: string;
           id?: string;
           organization_id?: string;
           name: string;
           created_at?: string;
         };
         Update: {
-          id?: string;
-          organization_id?: string;
-          name?: string;
-          created_at?: string;
+          contact_name?: string; email?: string; phone?: string; address?: string; notes?: string;
         };
         Relationships: [];
       };
@@ -1586,6 +1585,7 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      save_customer_master: { Args: { payload: Json }; Returns: string; };
       save_packaging_profile: { Args: { payload: Json }; Returns: string; };
       save_shipping_draft: { Args: { payload: Json }; Returns: string; };
       save_order_production_plan: { Args: { payload: Json }; Returns: string; };

@@ -4,6 +4,12 @@ Updated: September 20, 2026
 
 ## Current checkpoint
 
+Customer and dashboard follow-up: see [scope and acceptance](customer-dashboard.md).
+Use saved customer lookup and package pricing; calculate batch totals from package
+prices. Label the date Customer pickup date and navigation Orders. Home must show
+real pickups with product names and batch counts, outstanding supplier receipts,
+and owned ingredient balances. Actual shipped records remain gated.
+
 Supplier directory follow-up: show a catalog table and header Add supplier action,
 retaining open purchase-order counts and expandable purchasing/customer demand.
 Verify creation returns to the directory and purchase access remains available

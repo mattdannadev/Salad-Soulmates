@@ -25,7 +25,16 @@ export const customerOptionRowSchema = z.object({
   revision: z.number().int().positive(),
   ...optionFields,
 });
-export const customerRowSchema = z.object({ id: z.uuid(), name: z.string().min(1) });
+export const customerRowSchema = z.object({
+  id: z.uuid(),
+  name: z.string().trim().min(1).max(120),
+  contact_name: z.string().trim().max(120).default(''),
+  email: z.union([z.email().max(254), z.literal('')]).default(''),
+  phone: z.string().trim().max(40).default(''),
+  address: z.string().trim().max(1000).default(''),
+  notes: z.string().trim().max(2000).default(''),
+  revision: z.number().int().nonnegative().default(0),
+});
 export type Customer = z.infer<typeof customerRowSchema>;
 export type CustomerOption = z.infer<typeof customerOptionRowSchema>;
 

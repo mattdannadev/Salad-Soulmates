@@ -93,3 +93,20 @@ it('validates customer prices and requires product-write permission', async () =
   expect(mocks.rpc).toHaveBeenCalledWith('save_customer_product_option', { payload: option });
   expect(mocks.revalidate).toHaveBeenCalledWith('/app/products');
 });
+
+it('validates customer contacts, requires order permission, and invalidates the directory', async () => {
+  const customer = { id, name: 'Customer', email: 'contact@example.test' };
+  expect((await savePurchasing('save-customer', { ...customer, email: 'invalid' })).ok).toBe(false);
+  expect(mocks.rpc).not.toHaveBeenCalled();
+  mocks.permission.mockResolvedValueOnce(false);
+  expect((await savePurchasing('save-customer', customer)).ok).toBe(false);
+  expect(mocks.rpc).not.toHaveBeenCalled();
+  expect((await savePurchasing('save-customer', customer)).ok).toBe(true);
+  expect(mocks.rpc).toHaveBeenCalledWith('save_customer_master', {
+    payload: {
+      ...customer, revision: 0, contact_name: '', phone: '', address: '', notes: '',
+    },
+  });
+  expect(mocks.revalidate).toHaveBeenCalledWith('/app/customers');
+  expect(mocks.revalidate).toHaveBeenCalledWith('/app');
+});

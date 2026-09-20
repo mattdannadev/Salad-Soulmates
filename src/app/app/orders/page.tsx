@@ -12,14 +12,18 @@ import { formatDate, formatNumber } from '@/domain/format';
 import loadPurchasingWorkspace from '@/lib/purchasing-data';
 
 export default async function Orders({ searchParams }: {
-  searchParams: Promise<{ order?: string; estimate?: string }>;
+  searchParams: Promise<{ order?: string; estimate?: string; customer?: string }>;
 }) {
-  const query = z.object({ order: z.uuid().optional(), estimate: z.uuid().optional() })
+  const query = z.object({
+    order: z.uuid().optional(), estimate: z.uuid().optional(), customer: z.uuid().optional(),
+  })
     .refine((value) => !value.order || !value.estimate).safeParse(await searchParams);
   if (!query.success) notFound();
   const selectedId = query.data.order ?? query.data.estimate;
   const workspace = await loadPurchasingWorkspace(selectedId);
   const { selected, requirements, locale } = workspace;
+  if (query.data.customer
+    && !workspace.customers.some((customer) => customer.id === query.data.customer)) notFound();
   const es = locale === 'es';
   const activeLabel = es ? 'Activo' : 'Active';
   const cancelledLabel = es ? 'Cancelado' : 'Cancelled';
@@ -42,10 +46,10 @@ export default async function Orders({ searchParams }: {
     <>
       <PageHeader
         eyebrow={es ? 'DEL PEDIDO A LAS COMPRAS' : 'ORDERS, PURCHASING & PRODUCTION'}
-        title={es ? 'Pedidos de clientes' : 'Customer orders'}
+        title={es ? 'Pedidos' : 'Orders'}
         description={es
-          ? 'Registra productos, lotes y fecha requerida. El pedido calcula ingredientes, revisa inventario y prepara la estimación de compras.'
-          : 'Capture products, batches and the needed date. Each order calculates ingredients, checks inventory and connects purchasing to production preparation.'}
+          ? 'Registra productos, lotes y fecha de recogida. El pedido calcula ingredientes, revisa inventario y prepara la estimación de compras.'
+          : 'Choose a customer, package prices, batches and pickup date. Each order calculates ingredients and connects purchasing to production preparation.'}
         action={selected ? <Link className="button secondary" href="/app/orders">{es ? 'Todos los pedidos / nuevo pedido' : 'All orders / new order'}</Link> : undefined}
       />
       {selected ? (
@@ -53,7 +57,7 @@ export default async function Orders({ searchParams }: {
           <section className="panel">
             <h2>{order ? customerOrderLabel(order) : selected.name}</h2>
             {order && <p><Link href={`/app/shipping?order=${order.id}`}>{es ? 'Preparar envío / recogida' : 'Prepare shipment / pickup'}</Link></p>}
-            <p>{`${es ? 'Necesario para' : 'Needed by'} ${formatDate(selected.needed_on)} · ${selected.status === 'Active' ? activeLabel : cancelledLabel}`}</p>
+            <p>{`${es ? 'Fecha de recogida' : 'Pickup date'} ${formatDate(selected.needed_on)} · ${selected.status === 'Active' ? activeLabel : cancelledLabel}`}</p>
             {order ? (
               <div className="table-wrap">
                 <table>
@@ -130,8 +134,10 @@ export default async function Orders({ searchParams }: {
           </section>
           {workspace.canOrder && (
           <section className="panel">
-            <h2>{es ? 'Nuevo pedido de cliente' : 'New customer order'}</h2>
+            <h2 id="new-order">{es ? 'Nuevo pedido' : 'New order'}</h2>
             <CustomerOrderForm
+              key={query.data.customer ?? 'new'}
+              initialCustomerId={query.data.customer}
               choices={choices}
               customers={workspace.customers}
               options={workspace.customerOptions}

@@ -31,6 +31,7 @@ const tables = new Set([
   'serialized_unit_events',
 ]);
 const mutations = new Set([
+  'save_customer_master',
   'save_packaging_profile',
   'save_material_plan',
   'save_customer_order',
@@ -71,6 +72,22 @@ async function createDatabase() {
     update public.recipe_versions set status='Released',released_by='${gateActor}' where id='${fixtureId(401)}';
     update public.recipes set active_version_id='${fixtureId(401)}' where id='${fixtureId(400)}';
   `);
+  await ['Production customer', 'Shipping customer'].reduce(async (prior, name, index) => {
+    await prior;
+    await db.query('select public.save_customer_product_option($1::jsonb)', [JSON.stringify({
+      id: fixtureId(500 + index),
+      revision: 0,
+      product_id: fixtureId(300),
+      customer_name: name,
+      label: 'Standard case',
+      packaging_mode: 'product_default',
+      unit_name: 'case',
+      gallons_per_unit: 4,
+      unit_price: 24,
+      currency: 'USD',
+      active: true,
+    })]);
+  }, Promise.resolve());
   return db;
 }
 /** A localhost-only bridge to the real migration SQL; synthetic Auth remains separate. */
@@ -162,6 +179,7 @@ async function executeRequest(url, method, body) {
   }
   const name = z
     .enum([
+      'save_customer_master',
       'save_packaging_profile',
       'save_material_plan',
       'save_customer_order',
@@ -260,6 +278,11 @@ createServer((request, response) => {
     response.end('{}');
   });
   request.on('end', () => {
+    if (request.method === 'HEAD') {
+      response.setHeader('Content-Range', '*/0');
+      response.end();
+      return;
+    }
     if (isPurchasingFixtureRequest(url)) {
       purchasingFixtureResponse(url, request.method ?? 'GET', payload)
         .then((result) => {

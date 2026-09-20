@@ -17,7 +17,7 @@ export default function PurchasingForm({
   destination = undefined,
 }: {
   children: React.ReactNode;
-  operation: 'save-option' | 'save-order' | 'cancel-order' | 'create-draft' | 'change-status' | 'cancel-plan';
+  operation: 'save-customer' | 'save-option' | 'save-order' | 'cancel-order' | 'create-draft' | 'change-status' | 'cancel-plan';
   payload: (form: FormData, requestId: string) => unknown;
   label: string;
   locale: 'en' | 'es';

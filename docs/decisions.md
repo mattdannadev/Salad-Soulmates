@@ -302,3 +302,22 @@ available on phones as well as desktop. This does not authorize shared-database
 writes or enable unfinished operational modules. The reattached September 16
 prototype package is retained as requirements context, with later explicit
 business decisions and the current build specification taking precedence.
+
+## 2026-09-20 — Customer directory and operational home
+
+Orders use a customer lookup with Add customer and View customers actions. The
+customer directory holds contact, email, phone, address and notes, plus open
+orders with order and pickup dates. Customer names stay stable to preserve
+existing pricing and order identity; contact edits are revision checked.
+
+The owner clarified that the date is **Customer pickup date**, and navigation
+must say **Orders**. Prices come from customer/product/package records. Batch
+totals are calculated from package price and the number of packages in a
+40-gallon batch; there is no independent batch price or volume discount.
+
+Home becomes a live operations dashboard: pickups, outstanding confirmed supplier
+purchases, ingredient balances, and production preparation. Pickup cards show
+each product and its batch count plus the order total. Recent shipped cards must
+also show products and batch counts when physical fulfillment is implemented.
+Shipping drafts are not actual shipments; the current section explains this gate.
+Owned inventory includes held stock and must not be represented as available stock.

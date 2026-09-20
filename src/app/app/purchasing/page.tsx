@@ -82,7 +82,7 @@ export default async function Purchasing({
               aria-current={selected?.id === saved.id ? 'page' : undefined}
             >
               {planLabel(saved.id)}
-              <small>{`${es ? 'Cliente necesita para' : 'Customer needs by'}: ${formatDate(saved.needed_on)}`}</small>
+              <small>{`${es ? 'Fecha de recogida del cliente' : 'Customer pickup date'}: ${formatDate(saved.needed_on)}`}</small>
             </Link>
           ))}
         </div>

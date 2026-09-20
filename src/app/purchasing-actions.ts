@@ -9,11 +9,12 @@ import {
   purchaseDraftInputSchema,
   purchaseStatusInputSchema,
 } from '@/domain/purchasing';
-import { customerOptionInputSchema } from '@/domain/customer-pricing';
+import { customerOptionInputSchema, customerRowSchema } from '@/domain/customer-pricing';
 import { customerOrderInputSchema } from '@/domain/customer-orders';
 import type { ActionResult } from '@/domain/master-data';
 
 const operationSchema = z.enum([
+  'save-customer',
   'save-option',
   'save-order',
   'cancel-order',
@@ -22,6 +23,7 @@ const operationSchema = z.enum([
   'cancel-plan',
 ]);
 const inputSchemas = {
+  'save-customer': customerRowSchema,
   'save-option': customerOptionInputSchema,
   'save-order': customerOrderInputSchema,
   'cancel-order': z.object({ id: z.uuid() }),
@@ -30,6 +32,8 @@ const inputSchemas = {
   'cancel-plan': z.object({ id: z.uuid() }),
 };
 const safeDatabaseMessages = [
+  'Customer changed; reload before saving',
+  'Customer name cannot be changed here',
   'Cancel production preparation before cancelling this order',
   'Request ID already used with different values',
   'Customer option changed; reload before trying again',
@@ -62,15 +66,12 @@ export default async function savePurchasing(
     };
   }
   const { db } = await requireProfile({ readOnly: false });
-  const requiredPermissions = kind.data === 'save-option'
-    ? ['products.read', 'products.write'] : [
-      ...(kind.data === 'save-order' || kind.data === 'cancel-order' ? ['orders.write', 'orders.read'] : []),
-      'planning.write',
-      'planning.read',
-      'inventory.read',
-      'products.read',
-      'master_data.read',
-    ];
+  let requiredPermissions = [
+    ...(kind.data === 'save-order' || kind.data === 'cancel-order' ? ['orders.write', 'orders.read'] : []),
+    'planning.write', 'planning.read', 'inventory.read', 'products.read', 'master_data.read',
+  ];
+  if (kind.data === 'save-customer') requiredPermissions = ['orders.read', 'orders.write'];
+  if (kind.data === 'save-option') requiredPermissions = ['products.read', 'products.write'];
   const permissions = await Promise.all(
     requiredPermissions.map((permission) => hasPermission(db, permission)),
   );
@@ -78,6 +79,9 @@ export default async function savePurchasing(
   try {
     let result;
     switch (kind.data) {
+      case 'save-customer':
+        result = await db.rpc('save_customer_master', { payload: validated.data });
+        break;
       case 'save-option':
         result = await db.rpc('save_customer_product_option', { payload: validated.data });
         break;
@@ -123,6 +127,8 @@ export default async function savePurchasing(
       };
     }
     revalidatePath('/app/products');
+    revalidatePath('/app/customers');
+    revalidatePath('/app');
     revalidatePath('/app/orders');
     revalidatePath('/app/materials');
     revalidatePath('/app/purchasing');

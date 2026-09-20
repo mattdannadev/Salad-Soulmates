@@ -10,7 +10,7 @@ test('language changes update navigation and dashboard and survive reload', asyn
   await page.locator('#locale').selectOption('es');
   await expect(page.getByRole('navigation').getByRole('link', { name: 'Inicio', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Bienvenido');
-  await expect(page.locator('main')).toContainText('Crea tu catálogo de ingredientes');
+  await expect(page.locator('main')).toContainText('Pedidos para recogida');
   await page.screenshot({ path: info.outputPath('dashboard-spanish.png'), fullPage: true });
   await page.reload();
   await expect(page.locator('#locale')).toHaveValue('es');
@@ -18,17 +18,17 @@ test('language changes update navigation and dashboard and survive reload', asyn
   await page.goto('/worker');
   await expect(page.getByRole('heading', { name: 'Tu espacio de trabajo', exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Volver a administración', exact: true }).click();
-  await page.getByRole('navigation').getByRole('link', { name: 'Pedidos de clientes', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Pedidos de clientes');
+  await page.getByRole('navigation').getByRole('link', { name: 'Pedidos', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Pedidos');
 
   await page.locator('#locale').selectOption('en');
   await expect(page.getByRole('navigation').getByRole('link', { name: 'Home', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Customer orders');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Orders');
   await page.getByRole('navigation').getByRole('link', { name: 'Home', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Welcome');
   await page.reload();
   await expect(page.locator('#locale')).toHaveValue('en');
-  await expect(page.locator('main')).toContainText('Build your ingredient library');
+  await expect(page.locator('main')).toContainText('Pickup orders');
   await page.screenshot({ path: info.outputPath('dashboard-english.png'), fullPage: true });
 
   await page.route('**/app', async (route) => {
