@@ -1,5 +1,25 @@
 # Implementation decisions
 
+## 2026-09-20 — On-hand inventory units follow the receipt ledger
+
+Browser feedback requires every on-hand quantity to display in the unit recorded
+when that ingredient was received, rather than assuming pounds. The inventory
+ledger remains the source of that unit; an ingredient's configured unit is used
+only before it has any inventory history. Inventory entries for one ingredient
+must continue to use one unit, as enforced by the database and checked by the
+application display helper. This is a presentation correction only: it does not
+convert quantities, alter receipt records, or change inventory availability.
+
+## 2026-09-20 — Active recipe details in Products
+
+The owner requested that the Products catalog reveal the active recipe directly
+from its product row. Keep the grid compact: recipe specifics are a collapsed,
+native disclosure beneath the recipe link, with its active released version,
+target yield, preparation sections, and recorded ingredient measurements. The
+catalog remains read-only; it neither duplicates recipe data nor exposes recipe
+editing. Ingredient names respect existing read visibility, and unavailable names
+are described without inventing a link or a replacement value.
+
 ## 2026-09-20 — Collapsible application navigation
 
 The owner requested a collapsible sidebar. The collapsed desktop rail shows the
@@ -190,10 +210,12 @@ supplier transmission, or production application release is authorized.
 
 The owner requested links from recipe lines to tracked ingredient records and an
 on-hand preview. Use the existing ingredient foreign key and the facility-scoped
-inventory ledger, respecting inventory read permission. Unknown stock is shown as
-“Not recorded,” distinct from a recorded zero. The stock summary expands by click,
-tap or keyboard and includes a hover explanation. Ingredient records show the same
-summary. This does not post inventory, change procurement or edit released recipes.
+inventory ledger, respecting inventory read permission. Recipe details render the
+expandable stock summary only when a ledger balance exists; an unrecorded quantity
+does not take up space in an ingredient row. A recorded zero remains meaningful and
+renders as zero. Ingredient records retain their “Not recorded” summary. The stock
+summary expands by click, tap or keyboard and includes a hover explanation. This
+does not post inventory, change procurement or edit released recipes.
 Imported generic “Worksheet block N” headings display as “Ingredients”; meaningful
 preparation section names and approved instructions remain intact.
 

@@ -47,23 +47,43 @@ const details = (id = fixtureId(400), version?: string) => RecipeDetails({
 describe('recipe and product screens', () => {
   it('links products to recipes and preserves the active released version', async () => {
     const products = renderToStaticMarkup(await Products());
-    expect(products).toContain('Preview Italian dressing');
-    expect(products).toContain(`/app/recipes/${fixtureId(400)}`);
+    expect(products).toContain('Preview Italian recipe · v1');
+    expect(products).toContain(`/app/recipes/${fixtureId(400)}?version=${fixtureId(401)}`);
     expect(products).toContain('<th>Packaging</th>');
     expect(products).toContain('Customer pricing &amp; packaging');
     expect(products).toContain('<details class="product-customer-options">');
+    expect(products).toContain('<details class="product-recipe-details">');
+    expect(products).toContain('Active recipe details');
+    expect(products).toContain('Preview garlic powder');
+    expect(products).toContain('Preview Italian recipe · v1 · 40 gal');
     const recipes = renderToStaticMarkup(await Recipes());
     expect(recipes).toContain('v1 · Released');
     expect(recipes).not.toContain('v2 · Draft');
   });
-  it('renders recorded quantities, preparation notes, and version navigation', async () => {
+  it('keeps the recipe link usable when its active version is unavailable', async () => {
+    mocks.rows.mockImplementation((db: unknown, table: string) => Promise.resolve(
+      table === 'recipe_versions' ? [] : fixtureRecords[table] ?? [],
+    ));
+    const products = renderToStaticMarkup(await Products());
+    expect(products).toContain('Preview Italian recipe');
+    expect(products).not.toContain('Preview Italian recipe · v');
+    expect(products).toContain(`href="/app/recipes/${fixtureId(400)}"`);
+  });
+  it('groups recorded ingredients by dry and liquid category without changing their quantities', async () => {
     const html = renderToStaticMarkup(await details());
     expect(html).toContain('Preview garlic powder');
+    expect(html).toContain('<h3>Dry ingredients</h3>');
+    expect(html).toContain('<h3>Liquid ingredients</h3>');
+    expect(html.indexOf('Dry ingredients')).toBeLessThan(html.indexOf('Preview garlic powder'));
+    expect(html.indexOf('Liquid ingredients')).toBeLessThan(html.indexOf('Preview lemon juice'));
+    expect(html).toContain('1 lb');
+    expect(html).toContain('2 gal');
     expect(html).toContain('Synthetic training example only.');
     expect(html).toContain(`version=${fixtureId(402)}`);
     expect(html).toContain('aria-current="page"');
     expect(html).toContain(`/app/ingredients/${fixtureId(100)}`);
-    expect(html).toContain('On hand: Not recorded');
+    expect(html).not.toContain('On hand: Not recorded');
+    expect(html).not.toContain('<details class="ingredient-stock">');
     expect(html).toContain('Preparation example');
   });
   it('labels imported worksheet blocks as ingredients without changing quantities', async () => {

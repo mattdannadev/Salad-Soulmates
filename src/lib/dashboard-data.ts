@@ -10,7 +10,7 @@ import {
 import { productionPlanSchema } from '@/domain/production';
 import { rowSchemas } from '@/domain/master-data';
 import { purchaseProgress } from '@/domain/supplier-orders';
-import inventoryBalances from '@/domain/inventory';
+import inventoryBalances, { inventoryUnits } from '@/domain/inventory';
 import { requireAdminShell } from './auth';
 import hasPermission from './permissions';
 import { rows, readResult } from './data';
@@ -55,6 +55,7 @@ export default async function loadDashboard() {
     'dashboard_demand_coverage',
   ) : [];
   const balances = inventoryBalances(events);
+  const receivedUnits = inventoryUnits(events);
   const demand = new Map<string, number>();
   activePlans.forEach((plan) => plan.requirements.forEach((item) => {
     demand.set(item.ingredient_id, (demand.get(item.ingredient_id) ?? 0) + item.required);
@@ -64,6 +65,7 @@ export default async function loadDashboard() {
     .map((ingredient) => ({
       ...ingredient,
       balance: balances[ingredient.id] ?? null,
+      inventory_uom: receivedUnits[ingredient.id] ?? ingredient.default_uom,
       demand: demand.get(ingredient.id) ?? 0,
     }))
     .toSorted(

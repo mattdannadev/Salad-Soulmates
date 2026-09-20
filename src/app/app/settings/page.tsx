@@ -53,6 +53,15 @@ export default async function SettingsPage() {
                     </span>
                   ))}
               </div>
+              <details>
+                <summary>Configure access areas</summary>
+                <AccessProfileForm
+                  profile={p}
+                  permissions={permissions}
+                  selected={assigned.filter((a) => a.access_profile_id === p.id).map((a) => a.permission_code)}
+                  lockProfile
+                />
+              </details>
             </article>
           ) : (
             <details key={p.id}>

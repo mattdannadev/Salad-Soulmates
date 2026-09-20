@@ -25,12 +25,7 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
   await page.getByRole('link', { name: 'Preview Italian recipe', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Version history' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Preview garlic powder', exact: true })).toBeVisible();
-  const stock = page.locator('details.ingredient-stock').first();
-  await stock.locator('summary').focus();
-  await page.keyboard.press('Enter');
-  await expect(stock.getByText('Recorded stock at your facility.', { exact: false })).toBeVisible();
-  await stock.locator('summary').click();
-  await expect(stock).not.toHaveAttribute('open', '');
+  await expect(page.locator('details.ingredient-stock')).toHaveCount(0);
   await page.screenshot({ path: info.outputPath('recipe-ingredients.png'), fullPage: true });
   await page.getByRole('link', { name: 'Preview garlic powder', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Preview garlic powder');
@@ -47,6 +42,14 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
   await page.goto('/app/products');
   await expect(page.getByRole('cell', { name: /Preview Italian dressing TEST/ })
     .getByText('Preview Italian dressing', { exact: true })).toBeVisible();
+  const recipeDetails = page.locator('details.product-recipe-details');
+  await expect(recipeDetails).not.toHaveAttribute('open', '');
+  await recipeDetails.locator('summary').click();
+  await expect(recipeDetails).toHaveAttribute('open', '');
+  await expect(recipeDetails.getByText('Preview garlic powder', { exact: true })).toBeVisible();
+  await recipeDetails.locator('summary').focus();
+  await page.keyboard.press('Enter');
+  await expect(recipeDetails).not.toHaveAttribute('open', '');
   await page.goto('/app/ingredients');
   await expect(page.getByRole('heading', { name: 'Ingredients library', exact: true })).toBeVisible();
   await page.goto('/app/inventory');

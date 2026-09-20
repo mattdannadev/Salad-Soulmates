@@ -70,10 +70,12 @@ export function AccessProfileForm({
   profile = undefined,
   permissions,
   selected = [],
+  lockProfile = false,
 }: {
   profile?: AccessProfile;
   permissions: Permission[];
   selected?: string[];
+  lockProfile?: boolean;
 }) {
   const [result, setResult] = useState<{ ok: boolean; message: string }>();
   const [pending, start] = useTransition();
@@ -90,8 +92,8 @@ export function AccessProfileForm({
               id: profile?.id,
               name: form.get('name'),
               description: form.get('description'),
-              base_role: form.get('base_role'),
-              active: form.has('active'),
+              base_role: lockProfile ? profile?.base_role : form.get('base_role'),
+              active: lockProfile ? profile?.active ?? true : form.has('active'),
               permission_codes: form.getAll('permission_codes').map(String),
             });
             setResult(response);
@@ -105,11 +107,11 @@ export function AccessProfileForm({
       <div className="form-grid">
         <label>
           Name
-          <input name="name" defaultValue={profile?.name} required maxLength={100} />
+          <input name="name" defaultValue={profile?.name} required maxLength={100} readOnly={lockProfile} />
         </label>
         <label>
           Workspace type
-          <select name="base_role" defaultValue={profile?.base_role ?? 'reviewer'}>
+          <select name="base_role" defaultValue={profile?.base_role ?? 'reviewer'} disabled={lockProfile}>
             <option value="reviewer">Operations</option>
             <option value="worker">Production worker mobile</option>
             <option value="receiver">Receiving mobile</option>
@@ -117,11 +119,11 @@ export function AccessProfileForm({
         </label>
         <label className="wide">
           Description
-          <input name="description" defaultValue={profile?.description} maxLength={500} />
+          <input name="description" defaultValue={profile?.description} maxLength={500} readOnly={lockProfile} />
         </label>
         <label className="check">
           <span>Active</span>
-          <input name="active" type="checkbox" defaultChecked={profile?.active ?? true} />
+          <input name="active" type="checkbox" defaultChecked={profile?.active ?? true} disabled={lockProfile} />
         </label>
       </div>
       <fieldset className="permission-grid">
@@ -152,7 +154,7 @@ export function AccessProfileForm({
         </p>
       ) : null}
       <button type="submit" disabled={pending}>
-        {pending ? 'Saving…' : (profile && 'Save profile') || 'Create profile'}
+        {pending ? 'Saving…' : lockProfile ? 'Save access areas' : (profile && 'Save profile') || 'Create profile'}
       </button>
     </form>
   );

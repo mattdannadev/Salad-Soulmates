@@ -269,7 +269,7 @@ export default async function Home() {
                     <strong>{ingredient.name}</strong>
                     <small>
                       {ingredient.demand > 0
-                        ? `${es ? 'Demanda abierta' : 'Open demand'}: ${formatNumber(ingredient.demand)} ${ingredient.default_uom}`
+                        ? `${es ? 'Demanda abierta' : 'Open demand'}: ${formatNumber(ingredient.demand)} ${ingredient.inventory_uom}`
                         : inventoryLabel}
                     </small>
                   </Link>
@@ -282,7 +282,7 @@ export default async function Home() {
                   >
                     {ingredient.balance === null
                       ? unrecordedLabel
-                      : `${formatNumber(ingredient.balance)} ${ingredient.default_uom}`}
+                      : `${formatNumber(ingredient.balance)} ${ingredient.inventory_uom}`}
                   </span>
                 </li>
               ))}

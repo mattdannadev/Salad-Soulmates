@@ -4,6 +4,12 @@ Updated: September 20, 2026
 
 ## Current checkpoint
 
+Inventory-unit follow-up: the Inventory screen and the dashboard's on-hand
+balances must use the stored receipt/ledger unit for each ingredient. Test gallon
+and ounce balances as well as the existing pound fixture; keep the configured
+ingredient unit as the empty-history fallback and reject inconsistent ledger
+units rather than attempting a conversion.
+
 Navigation follow-up: implement collapse/expand in the shared shell, with a leaf-only
 brand and accessible icon links when collapsed. Verify both states, route changes,
 logo-to-Home navigation and Spanish labels on desktop and phone. Implementation is
@@ -174,8 +180,15 @@ and restores every administrator destination in the isolated Preview.
 See `feature-preservation.md` for the route-by-route inventory and carried-forward
 recipe builder, revision, testing, scheduling and mobile requirements. Recipes and
 Products previously had placeholder screens; new catalog/detail readers expose
-the existing schema without enabling recipe writes. Advanced authoring remains
-part of the build, including taste-test and shelf-life records linked to revisions.
+the existing schema without enabling recipe writes. Recipe ingredient rows show an
+expandable on-hand summary only for recorded balances, including a recorded zero;
+unrecorded balances remain compact. Advanced authoring remains part of the build,
+including taste-test and shelf-life records linked to revisions.
+
+Products also provide a collapsed active-recipe preview with the released version,
+yield, sections and recorded ingredient measurements. Acceptance requires the
+preview to remain collapsed initially, respect recipe/ingredient read visibility,
+and leave formulation editing exclusively on the recipe workflow.
 
 The original continuation baseline passed all 116 tests and the build. Current
 verification results are recorded in `engineering-refactor.md`. Vercel access is
