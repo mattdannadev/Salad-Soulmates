@@ -68,6 +68,14 @@ places, matching the inventory ledger. Unsupported precision is explicitly rejec
 ## Verification
 
 Baseline: clean `npm ci` and `npm run check`, 145 tests and the production build.
+Feature verification: 177 automated tests, strict TypeScript, Airbnb lint, formatting,
+and the production build passed. [CI run 35479540224](https://github.com/mattdannadev/Salad-Soulmates/actions/runs/35479540224)
+also passed all 12 native PostgreSQL concurrency tests and all 8 browser tests across
+desktop and phone. Its four screenshots are available in the `browser-evidence`
+artifact (retained for seven days). Browser suites run sequentially because they
+share one mutable fixture. A read-only audit of the 75 released recipe lines found
+no incompatible base units or quantities exceeding four decimal places.
+
 New coverage exercises persisted requirements, duplicate/conflicting submissions,
 pack selection/rounding, permission failures, supplier snapshots, confirmations,
 partial receipts, over-receipts, cancellation, and facility isolation.
