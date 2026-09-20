@@ -13,7 +13,6 @@ and worker schedule is next. Existing acceptance gaps remain open. Archive stale
 continuation instructions rather than allowing old access failures or local paths
 to direct new sessions. No application or database change is part of this update.
 
-
 ## 2026-09-20 — Order-linked production and authorized merges
 
 The owner requested the customer orders / production planning build step, then

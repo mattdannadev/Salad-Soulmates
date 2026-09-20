@@ -1,6 +1,7 @@
 # Salad Soulmates — current build plan
 
 Updated: September 20, 2026
+
 ## Current checkpoint
 
 GitHub main `3262e179a258c3cf1ae261f4f1bbae55dd5032d1` includes merged PRs

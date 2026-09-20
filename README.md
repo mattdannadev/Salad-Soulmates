@@ -18,7 +18,6 @@ Repository merge status does not establish current deployment status.
 - [Continue in Codex or ChatGPT Work](docs/continue-in-codex.md)
 - [Mandatory engineering standards](AGENTS.md)
 
-
 - [Database setup and verification](docs/database.md)
 - [Review and deployment gates](docs/review.md)
 - [Owner decisions and source precedence](docs/decisions.md)
