@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 test.afterEach(async ({ page }, info) => {
   if (info.status !== info.expectedStatus) console.error('Synthetic browser failure:', await page.locator('main').ariaSnapshot());
@@ -6,10 +6,7 @@ test.afterEach(async ({ page }, info) => {
 
 test('customer packaging and order estimates lead to purchasing and partial receipt', async ({
   page,
-  request,
 }, info) => {
-  const reset = await request.post('http://127.0.0.1:4010/rest/v1/test/purchasing-reset');
-  expect(reset.ok()).toBe(true);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/login');
@@ -99,5 +96,4 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   ).toContainText('50 lb');
   await expect(page.locator('body')).not.toContainText('Application error');
   expect(errors).toEqual([]);
-  await request.post('http://127.0.0.1:4010/rest/v1/test/purchasing-reset');
 });

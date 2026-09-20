@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 test('language changes update navigation and dashboard and survive reload', async ({ page }, info) => {
   await page.goto('/login');

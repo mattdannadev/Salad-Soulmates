@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
 import { z } from 'zod';
+import { expect, test } from './fixtures';
 
 test('login validation, authenticated workflows, and sign-out', async ({ page }, info) => {
   const errors: string[] = [];
