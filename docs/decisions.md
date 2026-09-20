@@ -1,5 +1,18 @@
 # Implementation decisions
 
+## 2026-09-20 — Repository as the durable planning record
+
+The owner requested executing the GitHub documentation workflow so development
+can continue across ChatGPT Work and Codex. Keep the existing engineering policy,
+versioned requirements, build plan and decision log authoritative; do not create
+duplicate differently cased PRD/plan files. docs/README.md is the common entry point.
+Update accepted decisions, plan status and verification evidence with each change.
+
+GitHub confirms PRs #1, #2, #4, #5 and #6 merged at this checkpoint. Scheduling
+and worker schedule is next. Existing acceptance gaps remain open. Archive stale
+continuation instructions rather than allowing old access failures or local paths
+to direct new sessions. No application or database change is part of this update.
+
 ## 2026-09-20 — Order-linked production and authorized merges
 
 The owner requested the customer orders / production planning build step, then
