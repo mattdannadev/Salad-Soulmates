@@ -1,5 +1,27 @@
 # Implementation decisions
 
+## 2026-09-20 — Customer-order Preview rollout verified
+
+Commit `d0881d0` passed the complete CI check (202 tests and production build),
+14 native PostgreSQL concurrency tests and all 10 desktop/phone browser tests in
+[run 35483619273](https://github.com/mattdannadev/Salad-Soulmates/actions/runs/35483619273).
+The browser flow adds two packaging/pricing options for one customer/product,
+saves an order, verifies old prices survive an option edit, drafts/confirms a
+supplier purchase and partially receives it. Language and recipe stock checks
+also pass. Browser evidence remains in the seven-day CI artifact.
+
+The tested additive migration was applied to the existing hosted project as
+`20260920022110_customer_order_estimates.sql`. The filename and disposable loader
+match that applied history; SQL is unchanged from candidate `20260920014459`.
+Do not apply both versions. RLS is enabled; anonymous order writes and direct
+execution of the privileged cancellation trigger are denied. Security advisors
+show no new findings compared with the pre-application baseline. No synthetic
+customer, price, order, inventory or purchase records were inserted.
+
+The isolated validation PR feeds the already authorized feature Preview. PR #2
+stays draft and production main is unchanged. Real Auth acceptance and independent
+review remain open; automated tests use synthetic Auth and disposable databases.
+
 ## 2026-09-20 — Expandable customer packaging and pricing
 
 The owner requested customer-specific packaging and prices without replacing the

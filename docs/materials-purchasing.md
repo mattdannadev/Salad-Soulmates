@@ -45,7 +45,7 @@ requirements using the active released recipe for each product.
 
 ## Customer-order extension
 
-`20260920014459_customer_order_estimates.sql` adds organization-scoped customers,
+`20260920022110_customer_order_estimates.sql` adds organization-scoped customers,
 customer/product pricing options and facility-scoped customer orders. The order
 and internal material snapshot share an ID and save atomically. RLS and triggers
 validate direct writes as well as RPCs. Request IDs protect against duplicate
@@ -53,9 +53,13 @@ orders, and optimistic revisions protect option-price edits. A narrow trigger-on
 privileged lookup prevents old estimate cancellation paths bypassing order-write
 permission. No new privileged browser client or operational seed data is added.
 
-This additive extension must pass disposable database, action, browser and native
-PostgreSQL concurrency checks before it is applied to the connected Preview's
-existing database. No production application release or merge is included.
+The extension passed 202 automated tests, the production build, 14 native
+PostgreSQL concurrency tests and all 10 desktop/phone browser tests in
+[CI run 35483619273](https://github.com/mattdannadev/Salad-Soulmates/actions/runs/35483619273).
+It is applied as `20260920022110` to the existing database, with no synthetic
+operating records. SQL is unchanged from candidate `20260920014459`; the Git
+filename and test loader were reconciled to the applied version. No production
+application release or merge is included.
 
 ## Data and security
 
