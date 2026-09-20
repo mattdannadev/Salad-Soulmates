@@ -1,7 +1,7 @@
-import { expect, test } from '@playwright/test';
 import { z } from 'zod';
+import { expect, test } from './fixtures';
 
-test('login validation, authenticated workflows, and sign-out', async ({ page }) => {
+test('login validation, authenticated workflows, and sign-out', async ({ page }, info) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/login');
@@ -15,7 +15,7 @@ test('login validation, authenticated workflows, and sign-out', async ({ page })
   await expect(page).toHaveURL(/\/app$/);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Welcome');
   await Promise.all([
-    'Recipes', 'Products', 'Orders', 'Planning', 'Team', 'Access requests', 'Settings',
+    'Recipes', 'Products', 'Customer orders', 'Team', 'Access requests', 'Settings',
   ].map(async (label) => {
     await expect(page.getByRole('navigation', { name: 'Main navigation' })
       .getByRole('link', { name: label, exact: true })).toBeVisible();
@@ -24,9 +24,26 @@ test('login validation, authenticated workflows, and sign-out', async ({ page })
   await expect(page.getByRole('heading', { name: 'Recipes', exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Preview Italian recipe', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Version history' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'Preview garlic powder', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Preview garlic powder', exact: true })).toBeVisible();
+  const stock = page.locator('details.ingredient-stock').first();
+  await stock.locator('summary').focus();
+  await page.keyboard.press('Enter');
+  await expect(stock.getByText('Recorded stock at your facility.', { exact: false })).toBeVisible();
+  await stock.locator('summary').click();
+  await expect(stock).not.toHaveAttribute('open', '');
+  await page.screenshot({ path: info.outputPath('recipe-ingredients.png'), fullPage: true });
+  await page.getByRole('link', { name: 'Preview garlic powder', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Preview garlic powder');
+  await expect(page.getByRole('heading', { name: 'On hand', exact: true })).toBeVisible();
+  await expect(page.locator('details.ingredient-stock')).toContainText('On hand: Not recorded');
+  await page.goBack();
   await page.getByRole('link', { name: 'v2 · Draft', exact: true }).click();
   await expect(page.getByText('No preparation sections recorded.', { exact: true })).toBeVisible();
+  await page.goto('/app/materials');
+  await expect(page).toHaveURL(/\/app\/orders$/);
+  await page.goto('/app/planning');
+  await expect(page).toHaveURL(/\/app\/orders$/);
+  await expect(page.getByRole('navigation').getByRole('link', { name: 'Production planning', exact: true })).toHaveCount(0);
   await page.goto('/app/products');
   await expect(page.getByText('Preview Italian dressing', { exact: true })).toBeVisible();
   await page.goto('/app/ingredients');

@@ -8,6 +8,329 @@ export type Database = {
   };
   public: {
     Tables: {
+      receipt_serializations: {
+        Row: {
+          id: string;
+          organization_id: string;
+          facility_id: string;
+          receipt_line_id: string;
+          supplier_item_id: string | null;
+          supplier_item_snapshot: Json | null;
+          packages: Json;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id?: string;
+          facility_id?: string;
+          receipt_line_id?: string;
+          supplier_item_id?: string | null;
+          supplier_item_snapshot?: Json | null;
+          packages?: Json;
+          created_by?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          facility_id?: string;
+          receipt_line_id?: string;
+          supplier_item_id?: string | null;
+          supplier_item_snapshot?: Json | null;
+          packages?: Json;
+          created_by?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      serialized_unit_events: {
+        Row: {
+          id: string;
+          organization_id: string;
+          facility_id: string;
+          unit_id: string;
+          expected_revision: number;
+          remaining_quantity: number;
+          status: string;
+          reason: string;
+          quantity_delta: number;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id?: string;
+          facility_id?: string;
+          unit_id?: string;
+          expected_revision?: number;
+          remaining_quantity?: number;
+          status?: string;
+          reason?: string;
+          quantity_delta?: number;
+          created_by?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          facility_id?: string;
+          unit_id?: string;
+          expected_revision?: number;
+          remaining_quantity?: number;
+          status?: string;
+          reason?: string;
+          quantity_delta?: number;
+          created_by?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      customers: {
+        Row: {
+          id: string;
+          organization_id: string;
+          name: string;
+          name_key: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id?: string;
+          name: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          name?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      customer_product_options: {
+        Row: {
+          id: string;
+          organization_id: string;
+          customer_id: string;
+          product_id: string;
+          label: string;
+          packaging_mode: string;
+          unit_name: string;
+          gallons_per_unit: number;
+          unit_price: number;
+          currency: string;
+          active: boolean;
+          revision: number;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          organization_id?: string;
+          customer_id: string;
+          product_id: string;
+          label: string;
+          packaging_mode: string;
+          unit_name: string;
+          gallons_per_unit: number;
+          unit_price: number;
+          currency?: string;
+          active?: boolean;
+          revision?: number;
+          created_by?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          customer_id?: string;
+          product_id?: string;
+          label?: string;
+          packaging_mode?: string;
+          unit_name?: string;
+          gallons_per_unit?: number;
+          unit_price?: number;
+          currency?: string;
+          active?: boolean;
+          revision?: number;
+          created_by?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      customer_orders: {
+        Row: {
+          id: string;
+          organization_id: string;
+          facility_id: string;
+          customer_id: string;
+          customer_name: string;
+          reference: string;
+          needed_on: string;
+          products: Json;
+          items: Json;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          organization_id?: string;
+          facility_id?: string;
+          customer_id?: string;
+          customer_name: string;
+          reference?: string;
+          needed_on: string;
+          products: Json;
+          items?: Json;
+          created_by?: string;
+          created_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      material_plans: {
+        Row: {
+          id: string;
+          organization_id: string;
+          facility_id: string;
+          name: string;
+          needed_on: string;
+          batches: Json;
+          requirements: Json;
+          status: string;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          organization_id?: string;
+          facility_id?: string;
+          name: string;
+          needed_on: string;
+          batches: Json;
+          requirements?: Json;
+          status?: string;
+          created_by?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          facility_id?: string;
+          name?: string;
+          needed_on?: string;
+          batches?: Json;
+          requirements?: Json;
+          status?: string;
+          created_by?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      purchase_drafts: {
+        Row: {
+          id: string;
+          organization_id: string;
+          facility_id: string;
+          material_plan_id: string;
+          supplier_id: string;
+          expected_on: string;
+          status: string;
+          reference: string;
+          note: string;
+          revision: number;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          organization_id?: string;
+          facility_id?: string;
+          material_plan_id: string;
+          supplier_id: string;
+          expected_on: string;
+          status?: string;
+          reference?: string;
+          note?: string;
+          revision?: number;
+          created_by?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          facility_id?: string;
+          material_plan_id?: string;
+          supplier_id?: string;
+          expected_on?: string;
+          status?: string;
+          reference?: string;
+          note?: string;
+          revision?: number;
+          created_by?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      purchase_draft_lines: {
+        Row: {
+          id: string;
+          organization_id: string;
+          facility_id: string;
+          purchase_draft_id: string;
+          ingredient_id: string;
+          supplier_item_id: string;
+          ingredient_name: string;
+          supplier_sku: string;
+          uom: string;
+          purchase_uom: string;
+          pack_quantity: number;
+          raw_shortage: number;
+          recommended_units: number;
+          purchase_units: number;
+          quantity: number;
+          override_reason: string;
+        };
+        Insert: {
+          id: string;
+          organization_id?: string;
+          facility_id?: string;
+          purchase_draft_id: string;
+          ingredient_id: string;
+          supplier_item_id: string;
+          ingredient_name: string;
+          supplier_sku: string;
+          uom: string;
+          purchase_uom: string;
+          pack_quantity: number;
+          raw_shortage: number;
+          recommended_units: number;
+          purchase_units: number;
+          quantity: number;
+          override_reason?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          facility_id?: string;
+          purchase_draft_id?: string;
+          ingredient_id?: string;
+          supplier_item_id?: string;
+          ingredient_name?: string;
+          supplier_sku?: string;
+          uom?: string;
+          purchase_uom?: string;
+          pack_quantity?: number;
+          raw_shortage?: number;
+          recommended_units?: number;
+          purchase_units?: number;
+          quantity?: number;
+          override_reason?: string;
+        };
+        Relationships: [];
+      };
+
       access_profile_permissions: {
         Row: {
           access_profile_id: string;
@@ -469,6 +792,7 @@ export type Database = {
       };
       inventory_receipt_lines: {
         Row: {
+          purchase_draft_line_id: string | null;
           expiration_date: string | null;
           id: string;
           ingredient_id: string;
@@ -479,6 +803,7 @@ export type Database = {
           uom: string;
         };
         Insert: {
+          purchase_draft_line_id?: string | null;
           expiration_date?: string | null;
           id?: string;
           ingredient_id: string;
@@ -489,6 +814,7 @@ export type Database = {
           uom: string;
         };
         Update: {
+          purchase_draft_line_id?: string | null;
           expiration_date?: string | null;
           id?: string;
           ingredient_id?: string;
@@ -1224,6 +1550,18 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      receive_serialized_delivery: { Args: { payload: Json }; Returns: string; };
+      serialize_receipt_line: { Args: { payload: Json }; Returns: string; };
+      change_serialized_unit: { Args: { payload: Json }; Returns: string; };
+      find_serialized_units: { Args: { search_text?: string; receipt_filter?: string; unit_filter?: string }; Returns: Json; };
+      save_customer_product_option: { Args: { payload: Json }; Returns: string; };
+      save_customer_order: { Args: { payload: Json }; Returns: string; };
+      cancel_customer_order: { Args: { order_id: string }; Returns: string; };
+      cancel_material_plan: { Args: { plan_id: string }; Returns: string; };
+      change_purchase_status: { Args: { payload: Json }; Returns: string; };
+      create_purchase_draft: { Args: { payload: Json }; Returns: string; };
+      save_material_plan: { Args: { payload: Json }; Returns: string; };
+      material_requirements: { Args: { plan_id: string }; Returns: Json; };
       approve_access_request: {
         Args: {
           assigned_access_profile_id: string;

@@ -4,6 +4,7 @@ import {
 
 import {
   saveRecord, signIn, signOut, updatePassword, requestPasswordReset, approveAccessRequest,
+  setPreferredLocale,
 } from '../src/app/actions';
 
 const mocks = vi.hoisted(() => {
@@ -88,6 +89,53 @@ beforeEach(() => {
   mocks.auth.resetPasswordForEmail.mockResolvedValue({ error: null });
   mocks.admin.mockReturnValue({ auth: { admin: { inviteUserByEmail: mocks.invite } } });
   mocks.invite.mockResolvedValue({ data: { user: { id: savedId } }, error: null });
+});
+describe('saved language preference', () => {
+  it('rejects unsupported languages before accessing the profile', async () => {
+    const form = new FormData();
+    form.set('locale', 'fr');
+    expect(await setPreferredLocale(form)).toMatchObject({ ok: false });
+    expect(mocks.profile).not.toHaveBeenCalled();
+    expect(mocks.db.from).not.toHaveBeenCalled();
+  });
+  it.each(['en', 'es'])('saves %s only for the signed-in profile and refreshes the layout', async (locale) => {
+    const form = new FormData();
+    form.set('locale', locale);
+    mocks.execute.mockResolvedValue({
+      data: { id: inventory.ingredient_id, preferred_locale: locale }, error: null,
+    });
+    expect(await setPreferredLocale(form)).toMatchObject({ ok: true });
+    expect(mocks.query.update).toHaveBeenCalledWith({ preferred_locale: locale });
+    expect(mocks.query.eq).toHaveBeenCalledWith('id', inventory.ingredient_id);
+    expect(mocks.revalidate).toHaveBeenCalledWith('/', 'layout');
+  });
+  it('reports denied writes without changing the visible language', async () => {
+    mocks.execute.mockResolvedValue({ data: null, error: { code: '42501', message: 'private' } });
+    const form = new FormData();
+    form.set('locale', 'es');
+    const result = await setPreferredLocale(form);
+    expect(result).toMatchObject({ ok: false });
+    expect(result.message).not.toContain('private');
+    expect(mocks.revalidate).not.toHaveBeenCalled();
+  });
+  it('reports interrupted saves instead of claiming success', async () => {
+    mocks.execute.mockRejectedValue(new Error('Network unavailable'));
+    const form = new FormData();
+    form.set('locale', 'en');
+    expect(await setPreferredLocale(form)).toMatchObject({ ok: false });
+    expect(mocks.revalidate).not.toHaveBeenCalled();
+  });
+  it.each([
+    null,
+    { id: savedId, preferred_locale: 'es' },
+    { id: inventory.ingredient_id, preferred_locale: 'en' },
+  ])('rejects a missing or mismatched saved preference: %j', async (data) => {
+    mocks.execute.mockResolvedValue({ data, error: null });
+    const form = new FormData();
+    form.set('locale', 'es');
+    expect(await setPreferredLocale(form)).toMatchObject({ ok: false });
+    expect(mocks.revalidate).not.toHaveBeenCalled();
+  });
 });
 describe('server action behavior before restructuring', () => {
   it('rejects unknown actions without writes', async () => {

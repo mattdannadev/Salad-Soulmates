@@ -32,7 +32,7 @@ function fieldValue(field: Field, form: FormData): unknown {
   if (field.type === 'number') return typeof value === 'string' && value.trim() ? Number(value) : null;
   return value ?? '';
 }
-function FieldControl({ field, id }: { field: Field; id: string }) {
+export function FieldControl({ field, id }: { field: Field; id: string }) {
   if (field.type === 'select') {
     return (
       <select

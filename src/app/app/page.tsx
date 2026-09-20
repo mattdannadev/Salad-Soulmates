@@ -9,6 +9,7 @@ import { operationError } from '@/lib/operation-error';
 
 export default async function Home() {
   const { db, profile } = await requireAdminShell();
+  const es = profile.preferred_locale === 'es';
   const results = await Promise.all(
     (['ingredients', 'suppliers', 'feedback_items'] as const).map((table) => db.from(table).select('id', { count: 'exact', head: true })),
   );
@@ -17,16 +18,18 @@ export default async function Home() {
     return z.number().int().nonnegative().parse(result.count);
   });
   const cards = [
-    { name: 'Ingredients', icon: Leaf, href: '/app/ingredients' },
-    { name: 'Suppliers', icon: Truck, href: '/app/suppliers' },
-    { name: 'Feedback', icon: MessageCircle, href: '/app/feedback' },
+    { name: es ? 'Ingredientes' : 'Ingredients', icon: Leaf, href: '/app/ingredients' },
+    { name: es ? 'Proveedores' : 'Suppliers', icon: Truck, href: '/app/suppliers' },
+    { name: es ? 'Comentarios' : 'Feedback', icon: MessageCircle, href: '/app/feedback' },
   ];
   return (
     <>
       <PageHeader
-        eyebrow="YOUR OPERATIONS WORKSPACE"
-        title={`Welcome, ${profile.display_name.split(' ')[0]}`}
-        description="Fresh operations, beautifully organized. Start with the ingredients and partners behind your food."
+        eyebrow={es ? 'TU ESPACIO DE OPERACIONES' : 'YOUR OPERATIONS WORKSPACE'}
+        title={`${es ? 'Bienvenido' : 'Welcome'}, ${profile.display_name.split(' ')[0]}`}
+        description={es
+          ? 'Operaciones frescas y bien organizadas. Comienza con los ingredientes y proveedores de tus alimentos.'
+          : 'Fresh operations, beautifully organized. Start with the ingredients and partners behind your food.'}
       />
       <div className="stats">
         {cards.map((c, i) => (
@@ -41,32 +44,41 @@ export default async function Home() {
         ))}
       </div>
       <section className="panel">
-        <p className="eyebrow">LET’S GET THE FOUNDATIONS RIGHT</p>
-        <h2>A good place to begin</h2>
+        <p className="eyebrow">{es ? 'COMENCEMOS CON UNA BUENA BASE' : 'LET’S GET THE FOUNDATIONS RIGHT'}</p>
+        <h2>{es ? 'Un buen lugar para comenzar' : 'A good place to begin'}</h2>
         <div className="steps">
           <Link href="/app/ingredients">
             <span className="step-number">1</span>
             <div>
-              <h3>Build your ingredient library</h3>
-              <p>Set the base unit, reviewed Spanish name, storage notes and allergens.</p>
+              <h3>{es ? 'Crea tu catálogo de ingredientes' : 'Build your ingredient library'}</h3>
+              <p>
+                {es
+                  ? 'Define la unidad base, el nombre revisado en español, las notas de almacenamiento y los alérgenos.'
+                  : 'Set the base unit, reviewed Spanish name, storage notes and allergens.'}
+              </p>
             </div>
             <ArrowRight />
           </Link>
           <Link href="/app/suppliers">
             <span className="step-number">2</span>
             <div>
-              <h3>Add your suppliers</h3>
-              <p>Record contacts and connect purchasing packs from each ingredient’s page.</p>
+              <h3>{es ? 'Agrega tus proveedores' : 'Add your suppliers'}</h3>
+              <p>
+                {es
+                  ? 'Registra contactos y vincula las presentaciones de compra desde la página de cada ingrediente.'
+                  : 'Record contacts and connect purchasing packs from each ingredient’s page.'}
+              </p>
             </div>
             <ArrowRight />
           </Link>
           <Link href="/app/inventory">
             <span className="step-number">3</span>
             <div>
-              <h3>Record starting inventory</h3>
+              <h3>{es ? 'Registra el inventario inicial' : 'Record starting inventory'}</h3>
               <p>
-                Enter reviewed opening quantities for your facility, with a reason for every
-                adjustment.
+                {es
+                  ? 'Ingresa las cantidades iniciales revisadas de tu planta, con un motivo para cada ajuste.'
+                  : 'Enter reviewed opening quantities for your facility, with a reason for every adjustment.'}
               </p>
             </div>
             <ArrowRight />
@@ -74,15 +86,16 @@ export default async function Home() {
         </div>
       </section>
       <section className="panel soft">
-        <h2>What comes next</h2>
+        <h2>{es ? 'Lo que sigue' : 'What comes next'}</h2>
         <p>
-          After the engineering refactor, the next phases cover materials and purchasing,
-          receiving, customer orders and planning, then scheduling. Every standard 40-gallon
-          mixer batch will require one spice bucket.
+          {es
+            ? 'Los pedidos ya calculan ingredientes y compras. Las siguientes fases completan la recepción, la preparación de producción y los horarios. Cada lote estándar de 40 galones requerirá una cubeta de especias.'
+            : 'Customer orders now calculate ingredients and purchasing needs. The next phases complete receiving, production preparation and scheduling. Every standard 40-gallon mixer batch will require one spice bucket.'}
         </p>
         <p>
-          The Spanish worker workspace is reserved for simple phone use. Assignments and batch work
-          become available after their review gates.
+          {es
+            ? 'El espacio del personal está diseñado para el uso sencillo en teléfonos. Las asignaciones y el trabajo por lotes estarán disponibles después de su revisión.'
+            : 'The worker workspace is designed for simple phone use. Assignments and batch work become available after their review gates.'}
         </p>
       </section>
     </>

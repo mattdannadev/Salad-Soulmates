@@ -33,6 +33,9 @@ const EMPTY_TABLES = new Set([
   'recipe_lines', 'inventory_events', 'inventory_receipts', 'inventory_receipt_lines',
   'access_requests', 'reference_lists', 'reference_options', 'ingredient_translations',
   'access_profiles', 'feedback_items', 'recipe_qc_rules', 'permissions',
+  'receipt_serializations', 'serialized_unit_events',
+  'material_plans', 'purchase_drafts', 'purchase_draft_lines',
+  'customers', 'customer_orders', 'customer_product_options',
 ]);
 const credentialsSchema = z.object({
   email: z.literal(FIXTURE_EMAIL),
@@ -142,6 +145,7 @@ export const previewFixtureFetch: typeof fetch = async (input, init) => {
     const permission = z.object({ requested: z.string() }).safeParse(inputBody);
     return json(permission.success && ADMIN_PERMISSIONS.includes(permission.data.requested));
   }
+  if (url.pathname === '/rest/v1/rpc/find_serialized_units') return json([]);
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     return json({ code: 'TEST_WRITE_FAILURE', message: 'Test preview rejects business-data writes' }, 503);
   }

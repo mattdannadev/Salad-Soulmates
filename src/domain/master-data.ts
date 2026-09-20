@@ -61,6 +61,10 @@ export const feedbackSchema = z.object({
   feedback_type: z.enum(['Suggestion', 'Issue', 'Positive', 'Question']),
 });
 export const receiptSchema = z.object({
+  purchase_draft_line_id: z.preprocess(
+    (value) => (value === '' ? null : value),
+    z.uuid().nullable().optional(),
+  ),
   supplier_id: z.uuid(),
   ingredient_id: z.uuid(),
   quantity: z.number().positive().max(1000000).multipleOf(0.0001),
@@ -74,6 +78,7 @@ export const receiptSchema = z.object({
 });
 
 export const ingredientRowSchema = z.object({
+  traceability_mode: z.enum(['future_required', 'not_required']).default('future_required'),
   id: z.uuid(),
   name: z.string(),
   category: z.string(),
@@ -160,6 +165,7 @@ export const receiptRowSchema = z.object({
 });
 export type Receipt = z.infer<typeof receiptRowSchema>;
 export const receiptLineRowSchema = z.object({
+  purchase_draft_line_id: z.uuid().nullable().default(null),
   id: z.uuid(),
   receipt_id: z.uuid(),
   ingredient_id: z.uuid(),

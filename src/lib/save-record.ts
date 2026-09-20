@@ -36,9 +36,15 @@ function saved(result: WriteResult, kind: RecordKind, hasId = true): ActionResul
       23503: 'Choose records belonging to this organization.',
       42501: 'You do not have permission to save this record.',
     };
-    let message = messages[result.error.code ?? ''] ?? 'Could not save. Check the fields and try again.';
+    let message = messages[result.error.code ?? '']
+      ?? 'Could not save. Check the fields and try again.';
     if (result.error.message.includes('Base unit cannot change')) message = 'Base unit cannot change after inventory history exists.';
     if (result.error.message.includes('Inventory unit must match')) message = 'Inventory unit must match the ingredient base unit.';
+    if (result.error.message.includes('Receipt exceeds the outstanding')) message = 'Receipt exceeds the outstanding inbound quantity. Refresh purchasing and check the delivered amount.';
+    if (
+      result.error.message.includes('Receipt must match inbound')
+      || result.error.message.includes('Select confirmed inbound')
+    ) message = 'Choose a confirmed order matching this supplier and ingredient.';
     logFailure(`save_${kind}`, result.error);
     return { ok: false, message };
   }
@@ -47,7 +53,10 @@ function saved(result: WriteResult, kind: RecordKind, hasId = true): ActionResul
     .safeParse(result.data);
   if (hasId && !parsed.success) {
     logFailure(`save_${kind}`, { code: 'INVALID_RESPONSE' });
-    return { ok: false, message: 'The save could not be confirmed. Reload before trying again.' };
+    return {
+      ok: false,
+      message: 'The save could not be confirmed. Reload before trying again.',
+    };
   }
   return {
     ok: true,
@@ -88,7 +97,11 @@ async function saveAllergen(db: Client, input: unknown) {
 async function saveInventory(db: Client, input: unknown): Promise<ActionResult> {
   const parsed = inventorySchema.safeParse(input);
   if (!parsed.success) return invalidInput(parsed.error);
-  const result = await db.from('inventory_events').insert(parsed.data).select('id').single();
+  const result = await db
+    .from('inventory_events')
+    .insert(parsed.data)
+    .select('id')
+    .single();
   if (result.error?.code !== '23505') return saved(result, 'inventory');
   const existing = await db
     .from('inventory_events')
@@ -99,25 +112,32 @@ async function saveInventory(db: Client, input: unknown): Promise<ActionResult> 
     logFailure('inventory_retry_lookup', existing.error);
     return {
       ok: false,
-      message: 'Could not verify the prior entry. Retry these same values with this entry.',
+      message:
+        'Could not verify the prior entry. Retry these same values with this entry.',
     };
   }
   const entry = inventorySchema.safeParse(existing.data);
   if (
     entry.success
-    && Object.entries(parsed.data).every(([key, value]) => Reflect.get(entry.data, key) === value)
+    && Object.entries(parsed.data).every(
+      ([key, value]) => Reflect.get(entry.data, key) === value,
+    )
   ) {
     return { ok: true, message: 'This inventory entry was already saved.' };
   }
   return {
     ok: false,
-    message: 'This entry was already used with different values. Reload before adding a new entry.',
+    message:
+      'This entry was already used with different values. Reload before adding a new entry.',
   };
 }
 async function saveReceipt(db: Client, input: unknown) {
   const parsed = receiptSchema.safeParse(input);
   if (!parsed.success) return invalidInput(parsed.error);
-  return saved(await db.rpc('post_inventory_receipt', { payload: parsed.data }), 'receipt');
+  return saved(
+    await db.rpc('post_inventory_receipt', { payload: parsed.data }),
+    'receipt',
+  );
 }
 async function saveReferenceOption(db: Client, input: unknown) {
   const parsed = referenceOptionSchema.safeParse(input);
@@ -132,7 +152,10 @@ async function saveReferenceOption(db: Client, input: unknown) {
 async function saveAccessProfile(db: Client, input: unknown) {
   const parsed = accessProfileSchema.safeParse(input);
   if (!parsed.success) return invalidInput(parsed.error);
-  return saved(await db.rpc('save_access_profile', { payload: parsed.data }), 'access-profile');
+  return saved(
+    await db.rpc('save_access_profile', { payload: parsed.data }),
+    'access-profile',
+  );
 }
 async function saveFeedback(db: Client, input: unknown) {
   const parsed = feedbackSchema.safeParse(input);

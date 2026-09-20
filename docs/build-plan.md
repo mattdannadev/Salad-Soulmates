@@ -1,6 +1,6 @@
 # Salad Soulmates — current build plan
 
-Updated: September 19, 2026
+Updated: September 20, 2026
 Owner instruction: execute all three supplied engineering documents within the first refactor phase.
 Execution status: **refactor CI passed; production release explicitly authorized; Phase 1 follow-up acceptance remains open.**
 
@@ -11,21 +11,67 @@ for their authoritative hosted versions. This supersedes older access/deployment
 blockers in the historical progress notes below. Real Auth and the remaining
 verification/review items must still be completed before advancing feature phases.
 
+## September 20 owner correction — one order-driven workflow
+
+Customer orders are the single demand-entry point. The owner rejected separate
+Materials worksheets and a separate Production planning entry point. The flow is:
+
+1. Capture the customer/reference, products, whole-batch counts and needed date.
+   Select customer-specific packaging/prices where configured.
+2. Save the order with released recipe versions and calculated ingredient quantities.
+3. Show current inventory, commitments, confirmed inbound and shortages on the order.
+4. Prepare supplier purchasing estimates from that order, with pack rounding and
+   explicit review before recording externally placed supplier orders.
+   Suppliers also show recent purchase orders/statuses, outstanding customer orders
+   with dates, and supplier-specific purchase creation. Supplier contacts/settings
+   stay collapsed separately from purchasing work.
+5. Continue into internal batch preparation, production dates and scheduling as
+   those capabilities are delivered. Do not require demand to be entered again.
+
+Keep the Products grid and its default packaging. Add expandable customer pricing
+and packaging for each product, allowing multiple units/prices per customer and
+preserving selected terms on each saved order. This is part of the current order
+slice, not the later product-grid replacement or physical packaging execution.
+
+Remove the separate Materials/Ingredient requirements and Production planning nav
+items. Keep old URLs usable by routing them into Orders and preserve existing
+estimate/purchasing history. Internal material snapshots are implementation data,
+not a second user-created worksheet. The customer-needed date is the initial
+estimate horizon; production start dates remain unscheduled until the scheduling
+rules are implemented.
+
+The minimum order capture and its purchasing estimate now belong in the current
+Preview slice on `feature/materials-purchasing` (draft PR #2). This supersedes the
+earlier manual batch worksheet sequencing. Preserve the single hosted database and
+real-data Preview decision. Real Auth and independent-review gates remain open;
+no automatic merge or production application deployment is authorized.
+
+## September 20 receiving/serialization candidate
+
+The owner requested the next receiving/serialization build step. The implementation
+is on `feature/receiving-serialization-complete`, stacked on the current purchasing candidate. It
+adds physical package identities, optional unique supplier barcodes, QR labels,
+lookup, partial balances, audited holds/releases and planning availability. See
+`receiving-serialization.md` for scope, verification and release prerequisites.
+This advances implementation under the current owner instruction while preserving
+the open Phase 1 acceptance gates. No acceptance gate is silently marked complete.
+
 ## Approved delivery order
 
-| Order | Build phase                                                       | Scope / sequencing                                                                                                                                                                       |
-| ----- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | Engineering standards, hardening, and full existing-code refactor | All three supplied documents are mandatory scope. Complete this acceptance gate before advancing new feature work. Written instructions or isolated passing tests alone do not close it. |
-| 2     | Materials requirements and purchasing                             | Requirements calculation and purchasing workflows.                                                                                                                                       |
-| 3     | Complete receiving and serialization                              | Preserve existing work; complete remaining behavior and acceptance coverage.                                                                                                             |
-| 4     | Customer orders and production planning                           | Complete the order-to-production planning workflow.                                                                                                                                      |
-| 5     | Scheduling and worker schedule                                    | Administrator assignments plus worker-facing schedules; preserve approved PTO, mobile, and language requirements.                                                                        |
-| 6     | Packaging                                                         | Complete the approved packaging workflow.                                                                                                                                                |
-| 7     | Shipping                                                          | Complete the approved shipping workflow.                                                                                                                                                 |
-| 8     | Dropdown-list / reference-data management                         | Finish reference-data administration after shipping. Preserve existing settings/reference-list implementation during the refactor; do not remove it to match this sequence.              |
-| 9     | Third-party product-grid replacement                              | Replace product display grids with the selected nicer third-party component last; do not bundle a grid redesign into the refactor.                                                       |
+| Order | Build phase                                          | Scope / sequencing                                                                                                                                                               |
+| ----- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | Engineering standards and existing-code refactor     | Complete remaining real Auth and independent-review acceptance; preserve CI and mandatory engineering standards.                                                                 |
+| 2     | Customer orders, inventory assessment and purchasing | Enter customer, products, batch counts and date once. Automatically calculate ingredient needs and supplier purchasing estimates on the order.                                   |
+| 3     | Complete receiving and serialization                 | Preserve existing work; receiving updates stock and outstanding inbound for order estimates.                                                                                     |
+| 4     | Internal production preparation                      | Generate released batch work and spice buckets from saved orders. Keep production readiness and later start-date results attached to the order; no duplicate order-entry module. |
+| 5     | Scheduling and worker schedule                       | Plan production dates and administrator assignments linked to orders, plus worker schedules and approved PTO/mobile/language requirements.                                       |
+| 6     | Packaging                                            | Complete the approved packaging workflow.                                                                                                                                        |
+| 7     | Shipping                                             | Complete the approved shipping workflow.                                                                                                                                         |
+| 8     | Dropdown-list / reference-data management            | Finish administration after shipping while preserving current settings.                                                                                                          |
+| 9     | Third-party product-grid replacement                 | Replace product grids last; keep this separate from workflow changes.                                                                                                            |
 
-The order above is the latest owner direction and supersedes older sequencing, not confirmed business requirements. Existing partially implemented features must remain intact.
+This owner correction changes workflow and sequencing, not confirmed recipe,
+lot/date, inventory, facility isolation, packaging or workforce rules.
 
 ## Phase 1 — all three documents
 

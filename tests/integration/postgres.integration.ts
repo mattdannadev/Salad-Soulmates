@@ -186,7 +186,9 @@ async function draftRecipe() {
     values($1,$2,$3,$4,'fixture',1,'1 lb',1,'lb')`,
     [lineId, versionId, sectionId, ingredientId],
   );
-  return { recipeId, versionId, lineId };
+  return {
+    recipeId, versionId, lineId, productId,
+  };
 }
 const releaseSql = "update public.recipe_versions set status='Released',released_by=$1 where id=$2";
 it('rejects a recipe edit that overlaps release of its version', async () => {
@@ -228,4 +230,222 @@ it('cannot release after a concurrent edit moves the last line to another draft'
     [versionId],
   );
   expect(resultRows.parse(result).rows).toEqual([{ status: 'Draft' }]);
+});
+
+async function purchasingScenario() {
+  const { versionId, lineId } = await draftRecipe();
+  await first.query(releaseSql, [actor, versionId]);
+  const ingredientResult: unknown = await first.query('select ingredient_id from public.recipe_lines where id=$1', [lineId]);
+  const ingredientId = z.object({ rows: z.tuple([z.object({ ingredient_id: z.uuid() })]) })
+    .parse(ingredientResult).rows[0].ingredient_id;
+  const planId = randomUUID();
+  const plan = {
+    id: planId,
+    name: 'Concurrency worksheet',
+    needed_on: '2026-10-01',
+    batches: [{ recipe_version_id: versionId, batch_count: 40 }],
+  };
+  return { plan, ingredientId };
+}
+const savePlanSql = 'select public.save_material_plan($1::jsonb)';
+it('serializes identical material-plan retries into one saved commitment', async () => {
+  const { plan } = await purchasingScenario();
+  const values = [JSON.stringify(plan)];
+  const outcome = await overlap(savePlanSql, values, savePlanSql, values);
+  expect(outcome.error).toBeNull();
+  const result: unknown = await observer.query('select count(*)::int as count from public.material_plans where id=$1', [plan.id]);
+  expect(resultRows.parse(result).rows).toEqual([{ count: 1 }]);
+});
+it('locks base-unit changes behind newly committed material requirements', async () => {
+  const { plan, ingredientId } = await purchasingScenario();
+  const outcome = await overlap(
+    savePlanSql,
+    [JSON.stringify(plan)],
+    "update public.ingredients set default_uom='gal' where id=$1",
+    [ingredientId],
+  );
+  expect(String(outcome.error)).toContain('Base unit cannot change');
+});
+it('revalidates recipe units after an overlapping base-unit change', async () => {
+  const { plan, ingredientId } = await purchasingScenario();
+  const outcome = await overlap(
+    "update public.ingredients set default_uom='gal' where id=$1",
+    [ingredientId],
+    savePlanSql,
+    [JSON.stringify(plan)],
+  );
+  expect(String(outcome.error)).toContain('base unit');
+});
+
+async function confirmedPurchase() {
+  const { plan, ingredientId } = await purchasingScenario();
+  await first.query(savePlanSql, [JSON.stringify(plan)]);
+  const supplierId = randomUUID();
+  const itemId = randomUUID();
+  const draftId = randomUUID();
+  await first.query('insert into public.suppliers(id,name) values($1,$2)', [supplierId, supplierId]);
+  await first.query(`insert into public.supplier_items(id,supplier_id,ingredient_id,purchase_uom,pack_quantity,pack_quantity_uom)
+    values($1,$2,$3,'pail',30,'lb')`, [itemId, supplierId, ingredientId]);
+  await first.query('select public.create_purchase_draft($1::jsonb)', [JSON.stringify({
+    id: draftId,
+    material_plan_id: plan.id,
+    supplier_id: supplierId,
+    expected_on: '2026-09-30',
+    lines: [{
+      ingredient_id: ingredientId, supplier_item_id: itemId, purchase_units: 2, override_reason: '',
+    }],
+  })]);
+  await first.query('select public.change_purchase_status($1::jsonb)', [JSON.stringify({
+    id: draftId, revision: 1, status: 'Confirmed', reference: 'TEST-CONFIRMED', note: '',
+  })]);
+  const result: unknown = await first.query('select id from public.purchase_draft_lines where purchase_draft_id=$1', [draftId]);
+  const purchaseLineResult = z.object({ rows: z.tuple([z.object({ id: z.uuid() })]) });
+  const purchaseLineId = purchaseLineResult.parse(result).rows[0].id;
+  const receipt = {
+    supplier_id: supplierId,
+    ingredient_id: ingredientId,
+    quantity: 40,
+    uom: 'lb',
+    received_on: '2026-09-30',
+    supplier_reference: 'TEST-CONFIRMED',
+    supplier_lot: 'TEST-LOT',
+    expiration_date: '',
+    note: '',
+    request_id: randomUUID(),
+    purchase_draft_line_id: purchaseLineId,
+  };
+  return { draftId, receipt };
+}
+it('rejects the second overlapping receipt when total receiving would exceed the purchase', async () => {
+  const { receipt } = await confirmedPurchase();
+  const outcome = await overlap(
+    receiptSql,
+    [JSON.stringify(receipt)],
+    receiptSql,
+    [JSON.stringify({ ...receipt, request_id: randomUUID() })],
+  );
+  expect(String(outcome.error)).toContain('outstanding inbound quantity');
+});
+it('prevents cancelling a confirmed purchase after an overlapping receipt commits', async () => {
+  const { draftId, receipt } = await confirmedPurchase();
+  const outcome = await overlap(
+    receiptSql,
+    [JSON.stringify(receipt)],
+    'select public.change_purchase_status($1::jsonb)',
+    [JSON.stringify({
+      id: draftId, revision: 2, status: 'Cancelled', reference: 'TEST-CONFIRMED', note: 'Cancellation fixture',
+    })],
+  );
+  expect(String(outcome.error)).toContain('Received purchases cannot be cancelled');
+});
+
+async function serializedReceiptPayload() {
+  return {
+    ...await receiptPayload(),
+    supplier_lot: 'CONCURRENT-LOT',
+    packages: [{ quantity: 1, supplier_barcode: '' }, { quantity: 1, supplier_barcode: '' }],
+  };
+}
+const serializedReceiptSql = 'select public.receive_serialized_delivery($1::jsonb) as id';
+const packageChangeSql = 'select public.change_serialized_unit($1::jsonb) as id';
+it('serializes identical physical receipt retries into one receipt and one set of labels', async () => {
+  const payload = await serializedReceiptPayload();
+  const outcome = await overlap(
+    serializedReceiptSql,
+    [JSON.stringify(payload)],
+    serializedReceiptSql,
+    [JSON.stringify(payload)],
+  );
+  expect(outcome.error).toBeNull();
+  const result: unknown = await first.query(`select count(*)::int as count from public.serialized_units u
+    join public.receipt_serializations s on s.id=u.serialization_id
+    join public.inventory_receipt_lines l on l.id=s.receipt_line_id where l.ingredient_id=$1`, [payload.ingredient_id]);
+  const count = z.object({ rows: z.tuple([z.object({ count: z.number() })]) }).parse(result);
+  expect(count.rows[0].count).toBe(2);
+});
+async function packageChangePayload() {
+  const receipt = await serializedReceiptPayload();
+  await first.query(serializedReceiptSql, [JSON.stringify(receipt)]);
+  const result: unknown = await first.query('select id from public.serialized_unit_balances where ingredient_id=$1 order by ordinal', [receipt.ingredient_id]);
+  const unit = z.object({ rows: z.array(z.object({ id: z.uuid() })) }).parse(result).rows[0];
+  if (!unit) throw new Error('Package fixture was not created.');
+  return {
+    id: randomUUID(),
+    unit_id: unit.id,
+    expected_revision: 0,
+    remaining_quantity: 0.5,
+    status: 'Hold',
+    reason: 'Concurrent quality correction',
+  };
+}
+it('serializes package-change retries and posts the correction exactly once', async () => {
+  const payload = await packageChangePayload();
+  const outcome = await overlap(
+    packageChangeSql,
+    [JSON.stringify(payload)],
+    packageChangeSql,
+    [JSON.stringify(payload)],
+  );
+  expect(outcome.error).toBeNull();
+  const result: unknown = await first.query('select count(*)::int as count from public.inventory_events where serialized_unit_event_id=$1', [payload.id]);
+  const count = z.object({ rows: z.tuple([z.object({ count: z.number() })]) }).parse(result);
+  expect(count.rows[0].count).toBe(1);
+});
+it('rejects an overlapping stale package update after the first revision commits', async () => {
+  const payload = await packageChangePayload();
+  const outcome = await overlap(
+    packageChangeSql,
+    [JSON.stringify(payload)],
+    packageChangeSql,
+    [JSON.stringify({ ...payload, id: randomUUID(), status: 'Quarantined' })],
+  );
+  expect(String(outcome.error)).toContain('Package changed');
+});
+
+it('serializes duplicate customer orders into one order and one ingredient commitment', async () => {
+  const { recipeId, versionId, productId } = await draftRecipe();
+  await first.query(releaseSql, [actor, versionId]);
+  await first.query('update public.recipes set active_version_id=$1 where id=$2', [versionId, recipeId]);
+  const id = randomUUID();
+  const input = JSON.stringify({
+    id,
+    customer_name: `Customer ${id}`,
+    reference: '',
+    needed_on: '2026-10-01',
+    products: [{ product_id: productId, batch_count: 2, customer_product_option_id: null }],
+  });
+  const sql = 'select public.save_customer_order($1::jsonb)';
+  const outcome = await overlap(sql, [input], sql, [input]);
+  expect(outcome.error).toBeNull();
+  const result: unknown = await observer.query('select count(*)::int as count from public.customer_orders where id=$1', [id]);
+  expect(resultRows.parse(result).rows).toEqual([{ count: 1 }]);
+  const plans: unknown = await observer.query('select count(*)::int as count from public.material_plans where id=$1', [id]);
+  expect(resultRows.parse(plans).rows).toEqual([{ count: 1 }]);
+});
+
+it('rejects an overlapping stale customer-price revision', async () => {
+  const { productId } = await draftRecipe();
+  const id = randomUUID();
+  const input = {
+    id,
+    revision: 0,
+    customer_name: `Customer ${id}`,
+    product_id: productId,
+    label: 'Bag',
+    packaging_mode: 'custom',
+    unit_name: 'bag',
+    gallons_per_unit: 2,
+    unit_price: 12.5,
+    currency: 'USD',
+    active: true,
+  };
+  const sql = 'select public.save_customer_product_option($1::jsonb)';
+  await first.query(sql, [JSON.stringify(input)]);
+  const outcome = await overlap(
+    sql,
+    [JSON.stringify({ ...input, revision: 1, unit_price: 15 })],
+    sql,
+    [JSON.stringify({ ...input, revision: 1, unit_price: 18 })],
+  );
+  expect(String(outcome.error)).toContain('Customer option changed');
 });

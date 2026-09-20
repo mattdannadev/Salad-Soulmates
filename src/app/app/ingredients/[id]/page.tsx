@@ -9,6 +9,9 @@ import { operationError } from '@/lib/operation-error';
 import IngredientForm from '@/components/ingredient-form';
 import { PackForm } from '@/components/master-forms';
 import { PageHeader } from '@/components/shell';
+import loadIngredientStock from '@/lib/ingredient-stock';
+import IngredientStock from '@/components/ingredient-stock';
+import recipeText from '@/domain/recipe-text';
 
 export default async function IngredientDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -31,8 +34,11 @@ export default async function IngredientDetail({ params }: { params: Promise<{ i
       .eq('active', true)
       .order('sort_order'),
     hasPermission(db, 'master_data.write'),
+    loadIngredientStock(db),
   ]);
-  const [allergens, translations, links, suppliers, allPacks, categoryResult, canWrite] = details;
+  const [
+    allergens, translations, links, suppliers, allPacks, categoryResult, canWrite, stock,
+  ] = details;
   const translation = readResult(
     translations,
     z.object({ display_name: z.string() }).nullable(),
@@ -59,6 +65,16 @@ export default async function IngredientDetail({ params }: { params: Promise<{ i
         title={ingredient.name}
         description={`Base unit: ${ingredient.default_uom} · ${ingredient.active ? 'Active' : 'Inactive'}`}
       />
+      <section className="panel">
+        <h2>{recipeText(profile.preferred_locale, 'On hand')}</h2>
+        {stock ? (
+          <IngredientStock
+            quantity={stock[id]}
+            unit={ingredient.default_uom}
+            locale={profile.preferred_locale}
+          />
+        ) : <p>{recipeText(profile.preferred_locale, 'Inventory details unavailable with your access')}</p>}
+      </section>
       <section className="panel">
         <h2>Ingredient details</h2>
         {canWrite ? (

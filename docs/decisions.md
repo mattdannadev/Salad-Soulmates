@@ -1,5 +1,161 @@
 # Implementation decisions
 
+## 2026-09-20 — Suppliers open into purchasing work
+
+The owner wants supplier expansion to show purchase orders and their statuses,
+not an edit form. Each supplier now shows its five most recent purchase orders,
+a link to all supplier purchases, and active customer orders grouped by customer
+with order-created, customer-needed and supplier-expected delivery dates.
+Supplier contact/settings and new-supplier entry remain separately collapsed.
+
+New purchase order carries the chosen supplier through customer-order selection
+and limits the composer to that supplier's packs and matching ingredients. It
+uses the existing shortage calculation, draft, confirmation and receiving flow;
+no independent demand worksheet or supplier transmission is introduced.
+
+Partially received and Received are derived from receipt quantities for every
+purchase line. Draft, Confirmed and Cancelled remain the stored workflow states.
+The outstanding-customer list means active customer demand associated by existing
+ingredient IDs or saved purchases. Shipment/fulfillment completion remains future
+work; receiving ingredients does not complete the customer's finished-product order.
+
+Catalog-only viewers retain supplier access without purchase/customer queries.
+Purchasing reads and writes retain their existing permission and RLS boundaries.
+This is a UI/data-read extension with no migration or hosted sample data.
+
+## 2026-09-20 — Customer-order Preview rollout verified
+
+Commit `d0881d0` passed the complete CI check (202 tests and production build),
+14 native PostgreSQL concurrency tests and all 10 desktop/phone browser tests in
+[run 35483619273](https://github.com/mattdannadev/Salad-Soulmates/actions/runs/35483619273).
+The browser flow adds two packaging/pricing options for one customer/product,
+saves an order, verifies old prices survive an option edit, drafts/confirms a
+supplier purchase and partially receives it. Language and recipe stock checks
+also pass. Browser evidence remains in the seven-day CI artifact.
+
+The tested additive migration was applied to the existing hosted project as
+`20260920022110_customer_order_estimates.sql`. The filename and disposable loader
+match that applied history; SQL is unchanged from candidate `20260920014459`.
+Do not apply both versions. RLS is enabled; anonymous order writes and direct
+execution of the privileged cancellation trigger are denied. Security advisors
+show no new findings compared with the pre-application baseline. No synthetic
+customer, price, order, inventory or purchase records were inserted.
+
+The isolated validation PR feeds the already authorized feature Preview. PR #2
+stays draft and production main is unchanged. Real Auth acceptance and independent
+review remain open; automated tests use synthetic Auth and disposable databases.
+
+## 2026-09-20 — Expandable customer packaging and pricing
+
+The owner requested customer-specific packaging and prices without replacing the
+existing Products grid. Keep the Product / Standard batch / Packaging / Recipe
+columns and product default packaging. Add a collapsed customer pricing/packaging
+section beneath each product. A customer may have multiple named options for the
+same product, each with a sales unit, gallons per unit and price per unit.
+
+Customer names resolve to stable organization-scoped customer records. Option
+prices are explicitly USD with two decimal places; packaging quantities have four
+decimal places. Copying product defaults saves the current case configuration;
+custom options leave the product default unchanged. Options can be revised or
+made inactive. Saved orders snapshot the selected packaging, price, whole-unit
+count and line total so later configuration changes do not rewrite order history.
+A default package with no customer price is shown as “Not set,” never as free.
+Fractional packaging-unit results require correcting the batch count or option;
+do not silently round customer quantities. Taxes, freight, invoicing and supplier
+transmission are outside this change.
+
+## 2026-09-20 — Customer orders own requirements and purchasing estimates
+
+The owner rejected a separate materials worksheet and a separate Production
+planning entry point. Capture customer identity/reference, products, whole-batch
+counts and the customer-needed date once on the customer order. Saving the order
+must pin the applicable released recipes, calculate ingredients, check current
+inventory/commitments/inbound and make purchasing estimates available from that
+order. Do not ask users to name or recreate a materials worksheet.
+
+Remove the Materials/Ingredient requirements and Production planning navigation
+entries. Preserve old links by routing them into Orders; preserve prior estimates
+and purchase history without relabeling them as actual customer orders. Existing
+material-plan snapshots can remain an internal calculation/storage mechanism.
+
+This supersedes the earlier manual-worksheet delivery decision and brings the
+minimum customer-order capture into the purchasing slice. Internal production
+preparation and scheduling remain later work attached to orders: released mixer
+batches, one spice bucket per standard batch, start dates, crew assignments and
+worker schedules. A customer due date is not a calculated production start date;
+initial purchasing estimates use it as a stated horizon until scheduling is built.
+No extra order-entry screen, synthetic hosted orders, production consumption,
+supplier transmission, or production application release is authorized.
+
+## 2026-09-20 — Recipe links and ingredient requirements terminology
+
+The owner requested links from recipe lines to tracked ingredient records and an
+on-hand preview. Use the existing ingredient foreign key and the facility-scoped
+inventory ledger, respecting inventory read permission. Unknown stock is shown as
+“Not recorded,” distinct from a recorded zero. The stock summary expands by click,
+tap or keyboard and includes a hover explanation. Ingredient records show the same
+summary. This does not post inventory, change procurement or edit released recipes.
+Imported generic “Worksheet block N” headings display as “Ingredients”; meaningful
+preparation section names and approved instructions remain intact.
+
+The owner found “Materials” confusing with order-driven production planning. Rename
+the navigation and page to “Ingredient requirements,” and clarify that this screen
+uses manually entered batch counts and an ingredient-needed date. “Production
+planning” remains the separately gated customer-order, batch-calculation and
+production-start-date workflow. Keep existing routes and calculation rules.
+
+## 2026-09-20 — Account language and compact navigation feedback
+
+The owner reported that the language selector did not update navigation/dashboard
+content and requested English everywhere for Matt Danna. His existing profile was
+changed from `es` to `en`; no account identity or role changed. The selector now
+captures the chosen value explicitly, verifies the saved response, refreshes the
+layout and reports save failures. Dashboard, shell, feedback and worker-screen
+copy follow the saved account preference. This does not translate business names,
+approved recipes or user-entered records.
+
+The existing responsive navigation moves above the content at 760 CSS pixels or
+less. The reported 691-pixel embedded browser viewport therefore uses the same
+compact navigation as a phone. Wider windows retain the left sidebar; the owner's
+question did not request a navigation redesign.
+
+## 2026-09-20 — Complete receiving and physical serialization candidate
+
+The owner requested execution of the receiving/serialization build step. Continue
+from the materials/purchasing branch so receipt-linked inbound behavior remains.
+Use immutable physical identities and append-only balance/status events, with
+supplier barcode reuse only for unique physical packages. Preserve the current
+single-database decision, mandatory engineering standards and open release gates.
+Build and verify the additive migration in disposable databases; the request to
+build this step does not itself release a new shared-database migration.
+
+## 2026-09-20 — Connected Preview for owner testing
+
+After the candidate passed CI, the owner requested: “Launch so I can test it.”
+Launch the feature as Preview in the existing Vercel project. Under the existing
+single-database decision, the Preview uses real Supabase Auth and operating data.
+The tested additive materials/purchasing migration was applied as a launch
+prerequisite; the user was told that saved Preview entries are real records.
+No synthetic data was inserted and no second hosted database was created.
+
+The hosted migration version is `20260920011508` (`materials_purchasing`). The Git
+filename and disposable-test loader now match it; SQL is unchanged from the tested
+candidate `20260920001513`. Do not apply both versions. The two public Supabase
+connection variables are scoped to the feature Preview branch. No production
+application deployment or PR merge is included. Existing real-Auth acceptance and
+independent-review gates remain open.
+
+## 2026-09-20 — Materials and purchasing candidate
+
+The owner requested the next build step after materials requirements and purchasing
+were identified. Implement it in a draft PR against current production main,
+retaining the open refactor acceptance gates and the single hosted database.
+Use explicit batch counts from released recipes until customer-order-driven
+production planning is built. Purchase drafts do not send supplier orders;
+Confirm records an order already placed outside this app. See
+`materials-purchasing.md`. Production deployment and the new migration require
+separate release authorization.
+
 ## 2026-09-19 — Explicit production release authorization
 
 After CI passed, the owner requested deployment and explicitly confirmed merging
