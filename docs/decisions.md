@@ -1,5 +1,47 @@
 # Implementation decisions
 
+## 2026-09-20 — Expandable customer packaging and pricing
+
+The owner requested customer-specific packaging and prices without replacing the
+existing Products grid. Keep the Product / Standard batch / Packaging / Recipe
+columns and product default packaging. Add a collapsed customer pricing/packaging
+section beneath each product. A customer may have multiple named options for the
+same product, each with a sales unit, gallons per unit and price per unit.
+
+Customer names resolve to stable organization-scoped customer records. Option
+prices are explicitly USD with two decimal places; packaging quantities have four
+decimal places. Copying product defaults saves the current case configuration;
+custom options leave the product default unchanged. Options can be revised or
+made inactive. Saved orders snapshot the selected packaging, price, whole-unit
+count and line total so later configuration changes do not rewrite order history.
+A default package with no customer price is shown as “Not set,” never as free.
+Fractional packaging-unit results require correcting the batch count or option;
+do not silently round customer quantities. Taxes, freight, invoicing and supplier
+transmission are outside this change.
+
+## 2026-09-20 — Customer orders own requirements and purchasing estimates
+
+The owner rejected a separate materials worksheet and a separate Production
+planning entry point. Capture customer identity/reference, products, whole-batch
+counts and the customer-needed date once on the customer order. Saving the order
+must pin the applicable released recipes, calculate ingredients, check current
+inventory/commitments/inbound and make purchasing estimates available from that
+order. Do not ask users to name or recreate a materials worksheet.
+
+Remove the Materials/Ingredient requirements and Production planning navigation
+entries. Preserve old links by routing them into Orders; preserve prior estimates
+and purchase history without relabeling them as actual customer orders. Existing
+material-plan snapshots can remain an internal calculation/storage mechanism.
+
+This supersedes the earlier manual-worksheet delivery decision and brings the
+minimum customer-order capture into the purchasing slice. Internal production
+preparation and scheduling remain later work attached to orders: released mixer
+batches, one spice bucket per standard batch, start dates, crew assignments and
+worker schedules. A customer due date is not a calculated production start date;
+initial purchasing estimates use it as a stated horizon until scheduling is built.
+No extra order-entry screen, synthetic hosted orders, production consumption,
+supplier transmission, or production application release is authorized.
+
 ## 2026-09-20 — Recipe links and ingredient requirements terminology
 
 The owner requested links from recipe lines to tracked ingredient records and an

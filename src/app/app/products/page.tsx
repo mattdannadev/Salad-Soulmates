@@ -1,3 +1,8 @@
+import { Fragment } from 'react';
+import CustomerProductOptions from '@/components/customer-product-options';
+import { customerRowSchema, customerOptionRowSchema } from '@/domain/customer-pricing';
+import { rows } from '@/lib/data';
+import hasPermission from '@/lib/permissions';
 import recipeText from '@/domain/recipe-text';
 import Link from 'next/link';
 import { PageHeader } from '@/components/shell';
@@ -5,7 +10,14 @@ import { loadRecipeCatalog } from '@/lib/recipe-catalog';
 import { formatNumber } from '@/domain/format';
 
 export default async function Products() {
-  const { products, recipes, locale } = await loadRecipeCatalog();
+  const {
+    db, products, recipes, locale,
+  } = await loadRecipeCatalog();
+  const [customers, options, canWrite] = await Promise.all([
+    rows(db, 'customers', customerRowSchema),
+    rows(db, 'customer_product_options', customerOptionRowSchema),
+    hasPermission(db, 'products.write'),
+  ]);
   return (
     <>
       <PageHeader
@@ -31,41 +43,56 @@ export default async function Products() {
                   .map((product) => {
                     const recipe = recipes.find((item) => item.product_id === product.id);
                     return (
-                      <tr key={product.id}>
-                        <td>
-                          <strong>{product.name}</strong>
-                          <p>{product.product_code ?? recipeText(locale, 'No product code')}</p>
-                          <span className={`badge ${product.active ? '' : 'muted'}`}>
-                            {product.active ? recipeText(locale, 'Active') : recipeText(locale, 'Inactive')}
-                          </span>
-                          {product.approved_ingredient_statement && (
+                      <Fragment key={product.id}>
+                        <tr>
+                          <td>
+                            <strong>{product.name}</strong>
+                            <p>{product.product_code ?? recipeText(locale, 'No product code')}</p>
+                            <span className={`badge ${product.active ? '' : 'muted'}`}>
+                              {product.active ? recipeText(locale, 'Active') : recipeText(locale, 'Inactive')}
+                            </span>
+                            {product.approved_ingredient_statement && (
                             <details>
                               <summary>{recipeText(locale, 'Ingredient statement')}</summary>
                               <p>{product.approved_ingredient_statement}</p>
                             </details>
-                          )}
-                        </td>
-                        <td>
-                          {formatNumber(product.standard_batch_gallons)}
-                          {' '}
-                          gal
-                        </td>
-                        <td>
-                          {formatNumber(product.bag_size_gallons)}
-                          {' '}
-                          {recipeText(locale, 'gal per bag')}
-                          <p>
-                            {product.bags_per_case}
+                            )}
+                          </td>
+                          <td>
+                            {formatNumber(product.standard_batch_gallons)}
                             {' '}
-                            {recipeText(locale, 'bags per case')}
-                          </p>
-                        </td>
-                        <td>
-                          {recipe ? (
-                            <Link href={`/app/recipes/${recipe.id}`}>{recipe.name}</Link>
-                          ) : recipeText(locale, 'No recipe linked')}
-                        </td>
-                      </tr>
+                            gal
+                          </td>
+                          <td>
+                            {formatNumber(product.bag_size_gallons)}
+                            {' '}
+                            {recipeText(locale, 'gal per bag')}
+                            <p>
+                              {product.bags_per_case}
+                              {' '}
+                              {recipeText(locale, 'bags per case')}
+                            </p>
+                          </td>
+                          <td>
+                            {recipe ? (
+                              <Link href={`/app/recipes/${recipe.id}`}>{recipe.name}</Link>
+                            ) : recipeText(locale, 'No recipe linked')}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td colSpan={4}>
+                            <CustomerProductOptions
+                              productId={product.id}
+                              productName={product.name}
+                              defaultGallons={product.bag_size_gallons * product.bags_per_case}
+                              customers={customers}
+                              options={options.filter((option) => option.product_id === product.id)}
+                              canWrite={canWrite}
+                              locale={locale}
+                            />
+                          </td>
+                        </tr>
+                      </Fragment>
                     );
                   })}
               </tbody>

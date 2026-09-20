@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/shell';
 import PurchaseComposer from '@/components/purchase-composer';
 import PurchaseStatusForm from '@/components/purchase-status-form';
 import { formatNumber, formatDate, QUANTITY_SCALE } from '@/domain/format';
+import { customerOrderLabel } from '@/domain/customer-orders';
 import { outstandingInbound } from '@/domain/purchasing';
 
 export default async function Purchasing({
@@ -22,6 +23,11 @@ export default async function Purchasing({
   } = workspace;
   if (plan && !selected) notFound();
   const es = locale === 'es';
+  const planLabel = (id: string) => {
+    const order = workspace.orders.find((item) => item.id === id);
+    return order ? customerOrderLabel(order)
+      : `${es ? 'Estimación anterior' : 'Earlier estimate'} · ${workspace.plans.find((item) => item.id === id)?.name ?? ''}`;
+  };
   const drafts = workspace.drafts
     .filter((draft) => !plan || draft.material_plan_id === plan)
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
@@ -37,13 +43,13 @@ export default async function Purchasing({
             : 'Review supplier packs, save purchase drafts and record orders confirmed with suppliers.'
         }
         action={(
-          <Link className="button" href="/app/materials">
-            {es ? 'Requisitos de ingredientes' : 'Ingredient requirements'}
+          <Link className="button" href="/app/orders">
+            {es ? 'Pedidos de clientes' : 'Customer orders'}
           </Link>
         )}
       />
       <section className="panel">
-        <h2>{es ? 'Seleccionar hoja' : 'Choose a worksheet'}</h2>
+        <h2>{es ? 'Seleccionar pedido de cliente' : 'Choose a customer order'}</h2>
         <div className="worksheet-links">
           {workspace.plans
             .filter((saved) => saved.status === 'Active')
@@ -54,21 +60,21 @@ export default async function Purchasing({
                 key={saved.id}
                 aria-current={selected?.id === saved.id ? 'page' : undefined}
               >
-                {saved.name}
+                {planLabel(saved.id)}
               </Link>
             ))}
         </div>
         {!workspace.plans.some((saved) => saved.status === 'Active') && (
           <p>
             {es
-              ? 'Crea una hoja de requisitos antes de preparar compras.'
-              : 'Create a materials worksheet before preparing purchases.'}
+              ? 'Registra un pedido de cliente para calcular las compras.'
+              : 'Enter a customer order to calculate purchasing needs.'}
           </p>
         )}
       </section>
       {selected?.status === 'Active' && (
         <section className="panel">
-          <h2>{selected.name}</h2>
+          <h2>{planLabel(selected.id)}</h2>
           <p>
             {es
               ? 'Solo los pedidos confirmados cuentan como entrada. Los borradores no cambian el inventario.'
@@ -77,8 +83,8 @@ export default async function Purchasing({
           {!requirements.some((requirement) => requirement.shortage > 0) ? (
             <p className="notice">
               {es
-                ? 'No hay faltantes para esta hoja.'
-                : 'No shortages for this worksheet.'}
+                ? 'No hay faltantes para este pedido.'
+                : 'No shortages for this order.'}
             </p>
           ) : (
             canWrite && (
@@ -132,10 +138,9 @@ export default async function Purchasing({
                 {' '}
                 {draft.reference || draft.id.slice(0, 8)}
               </p>
-              <Link href={`/app/materials?plan=${draft.material_plan_id}`}>
+              <Link href={`/app/orders?estimate=${draft.material_plan_id}`}>
                 {
-                  workspace.plans.find((saved) => saved.id === draft.material_plan_id)
-                    ?.name
+                  planLabel(draft.material_plan_id)
                 }
               </Link>
               <div className="table-wrap">

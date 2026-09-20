@@ -7,7 +7,7 @@ export default function IngredientStock({ quantity, unit, locale }: {
   unit: string;
   locale: 'en' | 'es';
 }) {
-  const explanation = recipeText(locale, 'Recorded stock at your facility. Commitments and expiry are checked in Ingredient requirements.');
+  const explanation = recipeText(locale, 'Recorded stock at your facility. Commitments and expiry are checked on customer orders.');
   return (
     <details className="ingredient-stock">
       <summary title={explanation}>

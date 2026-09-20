@@ -20,6 +20,6 @@ export async function loadRecipeCatalog() {
     rows(db, 'recipe_versions', recipeVersionRowSchema),
   ]);
   return {
-    products, recipes, versions, locale: profile.preferred_locale,
+    db, products, recipes, versions, locale: profile.preferred_locale,
   };
 }

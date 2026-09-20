@@ -13,6 +13,9 @@ import {
 // Local, deliberately minimal Auth/API fixture. It never connects to a hosted service.
 const tables = new Set([
   'material_plans',
+  'customer_orders',
+  'customers',
+  'customer_product_options',
   'purchase_drafts',
   'purchase_draft_lines',
   'supplier_items',
@@ -21,6 +24,8 @@ const tables = new Set([
 ]);
 const mutations = new Set([
   'save_material_plan',
+  'save_customer_order',
+  'save_customer_product_option',
   'create_purchase_draft',
   'change_purchase_status',
   'post_inventory_receipt',
@@ -49,6 +54,7 @@ async function createDatabase() {
       values('${fixtureId(401)}','${fixtureId(410)}','${fixtureId(100)}','garlic',1,'1 lb',1,'lb'),
       ('${fixtureId(401)}','${fixtureId(410)}','${fixtureId(101)}','lemon',2,'2 gal',2,'gal');
     update public.recipe_versions set status='Released',released_by='${gateActor}' where id='${fixtureId(401)}';
+    update public.recipes set active_version_id='${fixtureId(401)}' where id='${fixtureId(400)}';
   `);
   return db;
 }
@@ -59,6 +65,7 @@ function isPurchasingFixtureRequest(url) {
   return (
     tables.has(endpoint)
     || endpoint === 'rpc/material_requirements' || endpoint === 'rpc/cancel_material_plan'
+    || endpoint === 'rpc/cancel_customer_order'
     || mutations.has(endpoint.replace('rpc/', ''))
     || endpoint === 'test/purchasing-reset'
   );
@@ -93,6 +100,11 @@ async function executeRequest(url, method, body) {
     return result.rows[0] ?? null;
   }
   const input = JSON.parse(body);
+  if (endpoint === 'rpc/cancel_customer_order') {
+    const args = z.object({ order_id: z.uuid() }).parse(input);
+    const result = await db.query('select public.cancel_customer_order($1) as id', [args.order_id]);
+    return z.object({ id: z.uuid() }).parse(result.rows[0]).id;
+  }
   if (endpoint === 'rpc/cancel_material_plan') {
     const args = z.object({ plan_id: z.uuid() }).parse(input);
     const result = await db.query('select public.cancel_material_plan($1) as id', [args.plan_id]);
@@ -108,6 +120,8 @@ async function executeRequest(url, method, body) {
   const name = z
     .enum([
       'save_material_plan',
+      'save_customer_order',
+      'save_customer_product_option',
       'create_purchase_draft',
       'change_purchase_status',
       'post_inventory_receipt',

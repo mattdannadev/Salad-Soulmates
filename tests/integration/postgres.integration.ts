@@ -186,7 +186,9 @@ async function draftRecipe() {
     values($1,$2,$3,$4,'fixture',1,'1 lb',1,'lb')`,
     [lineId, versionId, sectionId, ingredientId],
   );
-  return { recipeId, versionId, lineId };
+  return {
+    recipeId, versionId, lineId, productId,
+  };
 }
 const releaseSql = "update public.recipe_versions set status='Released',released_by=$1 where id=$2";
 it('rejects a recipe edit that overlaps release of its version', async () => {
@@ -335,4 +337,52 @@ it('prevents cancelling a confirmed purchase after an overlapping receipt commit
     })],
   );
   expect(String(outcome.error)).toContain('Received purchases cannot be cancelled');
+});
+
+it('serializes duplicate customer orders into one order and one ingredient commitment', async () => {
+  const { recipeId, versionId, productId } = await draftRecipe();
+  await first.query(releaseSql, [actor, versionId]);
+  await first.query('update public.recipes set active_version_id=$1 where id=$2', [versionId, recipeId]);
+  const id = randomUUID();
+  const input = JSON.stringify({
+    id,
+    customer_name: `Customer ${id}`,
+    reference: '',
+    needed_on: '2026-10-01',
+    products: [{ product_id: productId, batch_count: 2, customer_product_option_id: null }],
+  });
+  const sql = 'select public.save_customer_order($1::jsonb)';
+  const outcome = await overlap(sql, [input], sql, [input]);
+  expect(outcome.error).toBeNull();
+  const result: unknown = await observer.query('select count(*)::int as count from public.customer_orders where id=$1', [id]);
+  expect(resultRows.parse(result).rows).toEqual([{ count: 1 }]);
+  const plans: unknown = await observer.query('select count(*)::int as count from public.material_plans where id=$1', [id]);
+  expect(resultRows.parse(plans).rows).toEqual([{ count: 1 }]);
+});
+
+it('rejects an overlapping stale customer-price revision', async () => {
+  const { productId } = await draftRecipe();
+  const id = randomUUID();
+  const input = {
+    id,
+    revision: 0,
+    customer_name: `Customer ${id}`,
+    product_id: productId,
+    label: 'Bag',
+    packaging_mode: 'custom',
+    unit_name: 'bag',
+    gallons_per_unit: 2,
+    unit_price: 12.5,
+    currency: 'USD',
+    active: true,
+  };
+  const sql = 'select public.save_customer_product_option($1::jsonb)';
+  await first.query(sql, [JSON.stringify(input)]);
+  const outcome = await overlap(
+    sql,
+    [JSON.stringify({ ...input, revision: 1, unit_price: 15 })],
+    sql,
+    [JSON.stringify({ ...input, revision: 1, unit_price: 18 })],
+  );
+  expect(String(outcome.error)).toContain('Customer option changed');
 });

@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock('server-only', () => ({}));
 vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
   redirect: (path: string) => {
     throw new Error(`REDIRECT:${path}`);
   },
@@ -48,6 +49,9 @@ describe('recipe and product screens', () => {
     const products = renderToStaticMarkup(await Products());
     expect(products).toContain('Preview Italian dressing');
     expect(products).toContain(`/app/recipes/${fixtureId(400)}`);
+    expect(products).toContain('<th>Packaging</th>');
+    expect(products).toContain('Customer pricing &amp; packaging');
+    expect(products).toContain('<details class="product-customer-options">');
     const recipes = renderToStaticMarkup(await Recipes());
     expect(recipes).toContain('v1 · Released');
     expect(recipes).not.toContain('v2 · Draft');

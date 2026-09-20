@@ -4,15 +4,17 @@ import { useId } from 'react';
 import type { PurchaseDraft } from '@/domain/purchasing';
 import PurchasingForm from './purchasing-form';
 
-export function CancelMaterialPlan({ id, locale }: { id: string; locale: 'en' | 'es' }) {
+export function CancelMaterialPlan({ id, locale, customerOrder = false }: {
+  id: string; locale: 'en' | 'es'; customerOrder?: boolean;
+}) {
   return (
     <PurchasingForm
-      operation="cancel-plan"
+      operation={customerOrder ? 'cancel-order' : 'cancel-plan'}
       locale={locale}
       label={
         locale === 'es'
-          ? 'Cancelar hoja y liberar compromisos'
-          : 'Cancel worksheet & release commitments'
+          ? 'Confirmar cancelación'
+          : 'Confirm cancellation'
       }
       payload={() => ({ id })}
     >

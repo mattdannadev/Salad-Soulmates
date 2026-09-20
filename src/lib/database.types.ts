@@ -8,6 +8,109 @@ export type Database = {
   };
   public: {
     Tables: {
+      customers: {
+        Row: {
+          id: string;
+          organization_id: string;
+          name: string;
+          name_key: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id?: string;
+          name: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          name?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      customer_product_options: {
+        Row: {
+          id: string;
+          organization_id: string;
+          customer_id: string;
+          product_id: string;
+          label: string;
+          packaging_mode: string;
+          unit_name: string;
+          gallons_per_unit: number;
+          unit_price: number;
+          currency: string;
+          active: boolean;
+          revision: number;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          organization_id?: string;
+          customer_id: string;
+          product_id: string;
+          label: string;
+          packaging_mode: string;
+          unit_name: string;
+          gallons_per_unit: number;
+          unit_price: number;
+          currency?: string;
+          active?: boolean;
+          revision?: number;
+          created_by?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          customer_id?: string;
+          product_id?: string;
+          label?: string;
+          packaging_mode?: string;
+          unit_name?: string;
+          gallons_per_unit?: number;
+          unit_price?: number;
+          currency?: string;
+          active?: boolean;
+          revision?: number;
+          created_by?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      customer_orders: {
+        Row: {
+          id: string;
+          organization_id: string;
+          facility_id: string;
+          customer_id: string;
+          customer_name: string;
+          reference: string;
+          needed_on: string;
+          products: Json;
+          items: Json;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          organization_id?: string;
+          facility_id?: string;
+          customer_id?: string;
+          customer_name: string;
+          reference?: string;
+          needed_on: string;
+          products: Json;
+          items?: Json;
+          created_by?: string;
+          created_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
       material_plans: {
         Row: {
           id: string;
@@ -1369,6 +1472,9 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      save_customer_product_option: { Args: { payload: Json }; Returns: string; };
+      save_customer_order: { Args: { payload: Json }; Returns: string; };
+      cancel_customer_order: { Args: { order_id: string }; Returns: string; };
       cancel_material_plan: { Args: { plan_id: string }; Returns: string; };
       change_purchase_status: { Args: { payload: Json }; Returns: string; };
       create_purchase_draft: { Args: { payload: Json }; Returns: string; };

@@ -18,12 +18,12 @@ test('language changes update navigation and dashboard and survive reload', asyn
   await page.goto('/worker');
   await expect(page.getByRole('heading', { name: 'Tu espacio de trabajo', exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Volver a administración', exact: true }).click();
-  await page.getByRole('navigation').getByRole('link', { name: 'Requisitos de ingredientes', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Requisitos de ingredientes');
+  await page.getByRole('navigation').getByRole('link', { name: 'Pedidos de clientes', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Pedidos de clientes');
 
   await page.locator('#locale').selectOption('en');
   await expect(page.getByRole('navigation').getByRole('link', { name: 'Home', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Ingredient requirements');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Customer orders');
   await page.getByRole('navigation').getByRole('link', { name: 'Home', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Welcome');
   await page.reload();

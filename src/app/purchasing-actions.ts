@@ -6,26 +6,36 @@ import { requireProfile } from '@/lib/auth';
 import hasPermission from '@/lib/permissions';
 import { logFailure } from '@/lib/operation-error';
 import {
-  materialPlanInputSchema,
   purchaseDraftInputSchema,
   purchaseStatusInputSchema,
 } from '@/domain/purchasing';
+import { customerOptionInputSchema } from '@/domain/customer-pricing';
+import { customerOrderInputSchema } from '@/domain/customer-orders';
 import type { ActionResult } from '@/domain/master-data';
 
 const operationSchema = z.enum([
-  'save-plan',
+  'save-option',
+  'save-order',
+  'cancel-order',
   'create-draft',
   'change-status',
   'cancel-plan',
 ]);
 const inputSchemas = {
-  'save-plan': materialPlanInputSchema,
+  'save-option': customerOptionInputSchema,
+  'save-order': customerOrderInputSchema,
+  'cancel-order': z.object({ id: z.uuid() }),
   'create-draft': purchaseDraftInputSchema,
   'change-status': purchaseStatusInputSchema,
   'cancel-plan': z.object({ id: z.uuid() }),
 };
 const safeDatabaseMessages = [
   'Request ID already used with different values',
+  'Customer option changed; reload before trying again',
+  'Order line value exceeds supported precision',
+  'Choose an active packaging option for this customer and product',
+  'Batch quantity must divide into whole packaging units; review the batch count or packaging',
+  'Each product needs exactly one active released 40-gallon recipe',
   'Purchase changed; reload before trying again',
   'Cancel linked draft purchases before cancelling this worksheet',
   'Recipe ingredient must be active with a validated quantity in its base unit (four decimals)',
@@ -51,21 +61,30 @@ export default async function savePurchasing(
     };
   }
   const { db } = await requireProfile({ readOnly: false });
-  const permissions = await Promise.all(
-    [
+  const requiredPermissions = kind.data === 'save-option'
+    ? ['products.read', 'products.write'] : [
+      ...(kind.data === 'save-order' || kind.data === 'cancel-order' ? ['orders.write', 'orders.read'] : []),
       'planning.write',
       'planning.read',
       'inventory.read',
       'products.read',
       'master_data.read',
-    ].map((permission) => hasPermission(db, permission)),
+    ];
+  const permissions = await Promise.all(
+    requiredPermissions.map((permission) => hasPermission(db, permission)),
   );
-  if (permissions.some((allowed) => !allowed)) return { ok: false, message: 'Purchasing permission required.' };
+  if (permissions.some((allowed) => !allowed)) return { ok: false, message: 'Permission required to save this change.' };
   try {
     let result;
     switch (kind.data) {
-      case 'save-plan':
-        result = await db.rpc('save_material_plan', { payload: validated.data });
+      case 'save-option':
+        result = await db.rpc('save_customer_product_option', { payload: validated.data });
+        break;
+      case 'save-order':
+        result = await db.rpc('save_customer_order', { payload: validated.data });
+        break;
+      case 'cancel-order':
+        result = await db.rpc('cancel_customer_order', { order_id: validated.data.id });
         break;
       case 'create-draft':
         result = await db.rpc('create_purchase_draft', { payload: validated.data });
@@ -86,9 +105,9 @@ export default async function savePurchasing(
       return {
         ok: false,
         message:
-          message
+          message?.replace('this worksheet', 'this order')
           ?? (result.error.code === '23505'
-            ? 'An open draft already exists for this supplier and worksheet. Review it before creating another.'
+            ? 'An entry with these details already exists. Review it before adding another.'
             : 'Could not save. Check the values and retry; your entries are preserved.'),
       };
     }
@@ -102,6 +121,8 @@ export default async function savePurchasing(
         message: 'The save could not be confirmed. Retry with the same entries.',
       };
     }
+    revalidatePath('/app/products');
+    revalidatePath('/app/orders');
     revalidatePath('/app/materials');
     revalidatePath('/app/purchasing');
     revalidatePath('/app/receiving');

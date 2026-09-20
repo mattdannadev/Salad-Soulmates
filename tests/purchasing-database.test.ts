@@ -50,6 +50,8 @@ async function rpc(name: string, payload: unknown) {
   const allowed = z
     .enum([
       'save_material_plan',
+      'save_customer_order',
+      'save_customer_product_option',
       'create_purchase_draft',
       'change_purchase_status',
       'post_inventory_receipt',
@@ -122,6 +124,7 @@ beforeAll(async () => {
     insert into public.recipe_lines(recipe_version_id,recipe_section_id,ingredient_id,source_line_key,sequence,display_measurement,normalized_quantity,normalized_uom)
       values('${id(401)}','${id(402)}','${id(100)}','TEST-1',1,'10 lb',10,'lb');
     update public.recipe_versions set status='Released',released_by='${gateActor}' where id='${id(401)}';
+    update public.recipes set active_version_id='${id(401)}' where id='${id(400)}';
   `);
 }, 60000);
 beforeEach(async () => {
@@ -133,6 +136,133 @@ afterEach(async () => {
 });
 afterAll(async () => {
   await database.close();
+});
+
+const orderInput = (orderId = id(800), count = 4) => ({
+  id: orderId,
+  customer_name: 'Synthetic customer',
+  reference: 'CUSTOMER-123',
+  needed_on: '2026-10-01',
+  products: [{ product_id: id(300), batch_count: count, customer_product_option_id: null }],
+});
+const optionInput = (optionId = id(850)) => ({
+  id: optionId,
+  revision: 0,
+  customer_name: 'Synthetic customer',
+  product_id: id(300),
+  label: '2-gallon bag',
+  packaging_mode: 'custom',
+  unit_name: 'bag',
+  gallons_per_unit: 2,
+  unit_price: 12.5,
+  currency: 'USD',
+  active: true,
+});
+
+describe('customer orders and packaging against actual migration SQL', () => {
+  it('atomically creates one order and ingredient estimate with retry-safe quantities', async () => {
+    await rpc('save_customer_order', orderInput());
+    await rpc('save_customer_order', orderInput());
+    expect((await query('select * from public.customer_orders')).rows).toHaveLength(1);
+    expect((await query('select * from public.material_plans')).rows).toHaveLength(1);
+    expect((await query('select * from public.customers')).rows).toHaveLength(1);
+    expect((await requirements())[0]).toMatchObject({ required: 40, shortage: 40 });
+    expect((await query('select * from public.inventory_events')).rows).toHaveLength(0);
+    await expect(rpc('save_customer_order', orderInput(id(800), 5))).rejects.toThrow('different values');
+  });
+  it('rejects invalid demand without leaving customers or partial estimates', async () => {
+    await expect(rpc('save_customer_order', orderInput(id(800), 1.5))).rejects.toThrow('Batch count');
+    await expect(rpc('save_customer_order', { ...orderInput(), products: [] })).rejects.toThrow('products');
+    await expect(rpc('save_customer_order', {
+      ...orderInput(), products: [...orderInput().products, ...orderInput().products],
+    })).rejects.toThrow('only once');
+    await query('update public.recipes set active_version_id=null where id=$1', [id(400)]);
+    await expect(rpc('save_customer_order', orderInput())).rejects.toThrow('active released');
+    expect((await query('select * from public.customer_orders')).rows).toHaveLength(0);
+    expect((await query('select * from public.material_plans')).rows).toHaveLength(0);
+    expect((await query('select * from public.customers')).rows).toHaveLength(0);
+  });
+  it('supports multiple units and prices per customer/product and pins the selected price', async () => {
+    await rpc('save_customer_product_option', optionInput());
+    await rpc('save_customer_product_option', optionInput());
+    await rpc('save_customer_product_option', {
+      ...optionInput(id(851)), label: 'Default case', packaging_mode: 'product_default', unit_price: 24,
+    });
+    expect((await query('select * from public.customer_product_options')).rows).toHaveLength(2);
+    expect((await query('select * from public.customers')).rows).toHaveLength(1);
+    const input = {
+      ...orderInput(),
+      products: [{ product_id: id(300), batch_count: 4, customer_product_option_id: id(850) }],
+    };
+    await rpc('save_customer_order', input);
+    const saved = await query('select items from public.customer_orders where id=$1', [id(800)]);
+    const snapshot = z.object({
+      items: z.array(z.object({
+        unit_price: z.number(),
+        unit_count: z.number(),
+        line_total: z.number(),
+        unit_name: z.string(),
+        gallons_per_unit: z.number(),
+      })),
+    }).parse(saved.rows[0]);
+    expect(snapshot.items[0]).toMatchObject({
+      unit_price: 12.5, unit_count: 80, line_total: 1000, unit_name: 'bag', gallons_per_unit: 2,
+    });
+    await rpc('save_customer_product_option', { ...optionInput(), revision: 1, unit_price: 15 });
+    await rpc('save_customer_product_option', { ...optionInput(), revision: 1, unit_price: 15 });
+    await rpc('save_customer_order', input);
+    expect((await query('select items from public.customer_orders where id=$1', [id(800)])).rows).toEqual(saved.rows);
+    await expect(rpc('save_customer_product_option', { ...optionInput(), revision: 1, unit_price: 18 })).rejects.toThrow('reload');
+  });
+  it('rejects options belonging to another customer and non-whole packaging quantities', async () => {
+    await rpc('save_customer_product_option', optionInput());
+    await expect(rpc('save_customer_order', {
+      ...orderInput(),
+      customer_name: 'Different customer',
+      products: [{ product_id: id(300), batch_count: 4, customer_product_option_id: id(850) }],
+    })).rejects.toThrow('for this customer and product');
+    await rpc('save_customer_product_option', { ...optionInput(), revision: 1, gallons_per_unit: 3 });
+    await expect(rpc('save_customer_order', {
+      ...orderInput(),
+      products: [{ product_id: id(300), batch_count: 4, customer_product_option_id: id(850) }],
+    })).rejects.toThrow('whole packaging units');
+    expect((await query('select * from public.customer_orders')).rows).toHaveLength(0);
+    expect((await query('select * from public.material_plans')).rows).toHaveLength(0);
+  });
+  it('preserves default product packaging and clearly leaves unconfigured prices unset', async () => {
+    await rpc('save_customer_product_option', { ...optionInput(), packaging_mode: 'product_default' });
+    expect((await query('select unit_name,gallons_per_unit from public.customer_product_options')).rows[0])
+      .toMatchObject({ unit_name: 'case', gallons_per_unit: '4' });
+    await rpc('save_customer_order', orderInput());
+    const saved = await query("select items->0->'unit_price' as price from public.customer_orders");
+    expect(saved.rows[0]).toMatchObject({ price: null });
+    expect((await query('select bag_size_gallons,bags_per_case from public.products where id=$1', [id(300)])).rows[0])
+      .toMatchObject({ bag_size_gallons: '1', bags_per_case: 4 });
+  });
+  it('releases order commitments without deleting history and preserves facility isolation', async () => {
+    await rpc('save_customer_order', orderInput());
+    await query('select public.cancel_customer_order($1)', [id(800)]);
+    await query('select public.cancel_customer_order($1)', [id(800)]);
+    expect(await requirements()).toEqual([]);
+    expect((await query('select * from public.customer_orders')).rows).toHaveLength(1);
+    await expect(query('update public.customer_orders set reference=$1', ['changed'])).rejects.toThrow('permission denied');
+    await actAs(id(2));
+    expect((await query('select * from public.customer_orders')).rows).toHaveLength(1);
+    await expect(rpc('save_customer_order', orderInput(id(801)))).rejects.toThrow('permission');
+    await expect(rpc('save_customer_product_option', optionInput())).rejects.toThrow('permission');
+    await actAs(id(4));
+    expect((await query('select * from public.customer_orders')).rows).toHaveLength(0);
+    await expect(query('select public.cancel_customer_order($1)', [id(800)])).rejects.toThrow('not found');
+  });
+  it('enables RLS and prevents directly calling the privileged cancellation lookup', async () => {
+    await expect(query('select public.guard_customer_order_cancellation()')).rejects.toThrow('permission denied');
+    await database.exec('reset role');
+    const result = await database.query<{ relrowsecurity: boolean }>(
+      "select relrowsecurity from pg_class where relname in ('customers','customer_orders','customer_product_options')",
+    );
+    expect(result.rows).toHaveLength(3);
+    expect(result.rows.every((row) => row.relrowsecurity)).toBe(true);
+  });
 });
 
 describe('materials and purchasing against actual migration SQL', () => {

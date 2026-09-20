@@ -89,8 +89,8 @@ export default async function Home() {
         <h2>{es ? 'Lo que sigue' : 'What comes next'}</h2>
         <p>
           {es
-            ? 'Las siguientes fases completan la recepción, los pedidos de clientes y la planificación, seguidas de los horarios. Cada lote estándar de 40 galones requerirá una cubeta de especias.'
-            : 'The next phases complete receiving, customer orders and production planning, then scheduling. Every standard 40-gallon mixer batch will require one spice bucket.'}
+            ? 'Los pedidos ya calculan ingredientes y compras. Las siguientes fases completan la recepción, la preparación de producción y los horarios. Cada lote estándar de 40 galones requerirá una cubeta de especias.'
+            : 'Customer orders now calculate ingredients and purchasing needs. The next phases complete receiving, production preparation and scheduling. Every standard 40-gallon mixer batch will require one spice bucket.'}
         </p>
         <p>
           {es

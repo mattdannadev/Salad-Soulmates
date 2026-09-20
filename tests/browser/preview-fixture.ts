@@ -34,6 +34,7 @@ const EMPTY_TABLES = new Set([
   'access_requests', 'reference_lists', 'reference_options', 'ingredient_translations',
   'access_profiles', 'feedback_items', 'recipe_qc_rules', 'permissions',
   'material_plans', 'purchase_drafts', 'purchase_draft_lines',
+  'customers', 'customer_orders', 'customer_product_options',
 ]);
 const credentialsSchema = z.object({
   email: z.literal(FIXTURE_EMAIL),

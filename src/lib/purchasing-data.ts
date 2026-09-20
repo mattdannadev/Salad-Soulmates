@@ -7,6 +7,8 @@ import {
   purchaseDraftRowSchema,
   purchaseLineRowSchema,
 } from '@/domain/purchasing';
+import { customerOptionRowSchema, customerRowSchema } from '@/domain/customer-pricing';
+import { customerOrderRowSchema } from '@/domain/customer-orders';
 import { rowSchemas } from '@/domain/master-data';
 import {
   productRowSchema,
@@ -21,6 +23,7 @@ import { rows, readResult } from './data';
 export default async function loadPurchasingWorkspace(selectedId?: string) {
   const { db, profile } = await requireAdminShell();
   const required = [
+    'orders.read',
     'planning.read',
     'inventory.read',
     'products.read',
@@ -42,6 +45,10 @@ export default async function loadPurchasingWorkspace(selectedId?: string) {
     versions,
     canWrite,
     receipts,
+    orders,
+    canOrder,
+    customers,
+    customerOptions,
   ] = await Promise.all([
     rows(db, 'material_plans', materialPlanRowSchema),
     rows(db, 'purchase_drafts', purchaseDraftRowSchema),
@@ -54,6 +61,10 @@ export default async function loadPurchasingWorkspace(selectedId?: string) {
     rows(db, 'recipe_versions', recipeVersionRowSchema),
     hasPermission(db, 'planning.write'),
     rows(db, 'inventory_receipt_lines', rowSchemas.inventory_receipt_lines),
+    rows(db, 'customer_orders', customerOrderRowSchema),
+    hasPermission(db, 'orders.write'),
+    rows(db, 'customers', customerRowSchema),
+    rows(db, 'customer_product_options', customerOptionRowSchema),
   ]);
   const selected = selectedId ? plans.find((plan) => plan.id === selectedId) : undefined;
   const requirements = selected?.status === 'Active'
@@ -64,6 +75,10 @@ export default async function loadPurchasingWorkspace(selectedId?: string) {
     )
     : [];
   return {
+    orders,
+    customers,
+    customerOptions,
+    canOrder: canWrite && canOrder,
     plans,
     receipts,
     drafts,

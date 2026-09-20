@@ -7,41 +7,55 @@ Auth and independent-review gates remain open. Preparing this draft does not mar
 Phase 1 accepted. The later launch request authorized a connected Preview; see
 the launch record below. Production application release remains pending.
 
-## Behavior
+## Current behavior after owner testing
 
-- `/app/materials` saves named worksheets of released 40-gallon recipe versions and
-  batch counts. Ingredient quantities and their contributing recipe lines are
-  snapshotted. Saving reserves planning demand; it never consumes owned stock.
-- Each worksheet shows requirements, usable stock, commitments from other active
-  worksheets, confirmed inbound due by the needed date, and the resulting shortage.
-  The selected worksheet is not subtracted twice. Reopening a worksheet recalculates
-  supply against current receipts and confirmed purchases.
-- Stock from a receipt that expires before the needed date is excluded. Opening
-  balances and adjustments have no lot-expiry metadata; their ledger quantity is
-  included. Holds, staging and consumption are still later workflow work.
-- `/app/purchasing` defaults to an active preferred pack or the only active pack.
-  Multiple unpreferred choices require selection. Incompatible units block drafting;
-  no conversion factor or density is guessed.
-- Supplier drafts preserve SKU, pack size, units, raw shortage, recommended whole
-  packs, purchased quantity, and a required reason for overrides. Drafts do not
-  count as inbound. The database recomputes these values when saving.
-- A user can record an order already placed with a supplier by entering its external
-  reference and marking it Confirmed. No supplier email or order transmission occurs.
-- Receiving can link to a confirmed purchase line. Partial receipts add owned stock
-  and reduce outstanding inbound exactly once. Over-receipts, wrong suppliers,
-  wrong ingredients/units, conflicting retries and cross-facility links are rejected.
-- Saved worksheets are immutable. Cancel and create a replacement to change batch
-  counts; cancellation releases commitments. Cancel any linked Draft first.
-  Confirmed inbound stays on record independently. Received purchases cannot be
-  cancelled; quantity corrections/returns require a later explicit workflow.
-- Drafts are immutable snapshots. Cancel and replace an unreceived draft to change
-  its date/quantities. Additional drafts can cover a remaining shortage after an
-  earlier purchase is confirmed.
+The owner rejected standalone materials worksheets and a separate production
+planning entry point. `/app/orders` is now the single demand-entry point: customer,
+reference, products, whole 40-gallon batch counts, packaging/pricing options and
+the customer-needed date. Saving atomically records the order and its ingredient
+requirements using the active released recipe for each product.
 
-The later customer-order/production-planning phase will supply demand. This slice
-uses explicit batch counts and does not create mixer batches, spice buckets or
-production schedules. Existing approved recipe revisions, testing, scheduling,
-packaging, shipping, reference-data and grid-upgrade scope remains unchanged.
+- Requirements, usable inventory, other commitments, confirmed inbound and
+  shortages appear on the saved order. Saving commits demand without consuming
+  stock. Supply is recalculated on return using current receipts and purchases.
+- The customer-needed date is the estimate horizon. It is not an automatic
+  production start date or supplier arrival deadline; internal production and
+  scheduling remain later order-linked work.
+- `/app/materials` and `/app/planning` lead to Orders. They are removed from the
+  navigation. Historical standalone estimates and purchase links remain readable
+  without manufacturing customer orders for them.
+- The Products grid retains its original four columns and defaults. Expandable
+  customer options support multiple packaging units and USD prices per customer
+  and product. Defaults can be copied as a case or overridden with a named unit
+  and explicit gallons per unit. Options can be edited or inactivated.
+- Orders snapshot chosen packaging and prices. Unconfigured prices stay “Not set.”
+  Batch quantities must divide into whole packaging units; no customer quantity
+  rounding is hidden. Price totals are product line subtotals, excluding taxes and
+  freight. Changing an option cannot alter a saved order.
+- Review purchasing from the order. Supplier selection, whole-pack rounding,
+  override reasons, immutable purchase snapshots and confirmed-inbound rules
+  remain intact. Drafts do not count as inbound; confirming records an order
+  already placed externally and does not transmit it to a supplier.
+- Partial receiving adds owned stock and reduces outstanding inbound once.
+  Expired receipt stock is excluded using the estimate horizon. Existing holds,
+  staging, production consumption and lot execution remain later scope.
+- Cancel and replace a saved customer order to revise demand. Linked open purchase
+  drafts must be cancelled first; confirmed inbound remains independently on
+  record. Customer order history and its estimates are not deleted.
+
+## Customer-order extension
+
+`20260920014459_customer_order_estimates.sql` adds organization-scoped customers,
+customer/product pricing options and facility-scoped customer orders. The order
+and internal material snapshot share an ID and save atomically. RLS and triggers
+validate direct writes as well as RPCs. Request IDs protect against duplicate
+orders, and optimistic revisions protect option-price edits. A narrow trigger-only
+privileged lookup prevents old estimate cancellation paths bypassing order-write
+permission. No new privileged browser client or operational seed data is added.
+
+This additive extension must pass disposable database, action, browser and native
+PostgreSQL concurrency checks before it is applied to the connected Preview's
+existing database. No production application release or merge is included.
 
 ## Data and security
 
