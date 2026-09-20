@@ -53,4 +53,3 @@ export async function initializeGateDatabase(execute: (sql: string) => Promise<u
     }
   }, Promise.resolve());
 }
-
