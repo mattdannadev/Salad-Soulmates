@@ -3,6 +3,7 @@ import {
   beforeEach, expect, it, vi,
 } from 'vitest';
 import Suppliers from '@/app/app/suppliers/page';
+import NewSupplier from '@/app/app/suppliers/new/page';
 import loadSupplierWorkspace from '@/lib/supplier-data';
 import { fixtureId, fixtureRecords } from './browser/fixture-data';
 
@@ -28,6 +29,9 @@ beforeEach(() => {
 it('makes purchase history primary and keeps contact editing collapsed', async () => {
   const html = renderToStaticMarkup(await Suppliers());
   expect(html).toContain('<details class="supplier-orders">');
+  expect(html).toContain('aria-label="Supplier directory"');
+  expect(html).toContain('href="/app/suppliers/new"');
+  expect(html).toContain('<th>Open purchase orders</th>');
   expect(html).toContain('<details class="supplier-profile">');
   expect(html).toContain('No purchase orders for this supplier yet.');
   expect(html).toContain('Outstanding orders by customer');
@@ -66,4 +70,11 @@ it('translates supplier workflow labels according to the account language', asyn
   expect(html).toContain('Pedidos de compra recientes');
   expect(html).toContain('Pedidos pendientes por cliente');
   expect(html).toContain('Nueva orden de compra');
+});
+
+it('provides a dedicated creation form only to supplier editors', async () => {
+  expect(renderToStaticMarkup(await NewSupplier())).toContain('Supplier name');
+  mocks.permission.mockImplementation((_db: unknown, permission: string) => Promise.resolve(permission !== 'master_data.write'));
+  await expect(NewSupplier()).rejects.toThrow('REDIRECT:/app/suppliers');
+  expect(renderToStaticMarkup(await Suppliers())).not.toContain('href="/app/suppliers/new"');
 });

@@ -4,6 +4,11 @@ Updated: September 20, 2026
 
 ## Current checkpoint
 
+Supplier directory follow-up: show a catalog table and header Add supplier action,
+retaining open purchase-order counts and expandable purchasing/customer demand.
+Verify creation returns to the directory and purchase access remains available
+on desktop and phone, using disposable browser fixtures only.
+
 Shipping usability follow-up: unavailable actions must not display a busy cursor.
 Keep confirmation disabled until physical fulfillment is implemented; cover its
 disabled state and cursor in the desktop/phone shipping checks.

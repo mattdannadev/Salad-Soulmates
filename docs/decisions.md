@@ -1,5 +1,14 @@
 # Implementation decisions
 
+## 2026-09-20 — Supplier directory and visible creation action
+
+The owner requested adding suppliers and listing them like the other catalog
+screens, while explicitly retaining open purchase orders. Show supplier name,
+contact details, status and open purchase-order count in a table. Put Add supplier
+in the page header with a dedicated entry form that returns to the directory.
+Keep expandable purchase history, customer demand and contact/settings below each
+supplier. Preserve existing permissions, purchasing logic and saved records.
+
 ## 2026-09-20 — Release packaging setup and all outstanding PRs
 
 The owner explicitly requested finishing packaging, merging all outstanding PRs,
