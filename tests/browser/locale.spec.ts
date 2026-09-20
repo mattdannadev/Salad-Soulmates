@@ -10,7 +10,7 @@ test('language changes update navigation and dashboard and survive reload', asyn
   await page.locator('#locale').selectOption('es');
   await expect(page.getByRole('navigation').getByRole('link', { name: 'Inicio', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Bienvenido');
-  await expect(page.locator('main')).toContainText('Pedidos para recogida');
+  await expect(page.locator('main')).toContainText('Próximas recogidas');
   await page.screenshot({ path: info.outputPath('dashboard-spanish.png'), fullPage: true });
   await page.reload();
   await expect(page.locator('#locale')).toHaveValue('es');
@@ -28,7 +28,7 @@ test('language changes update navigation and dashboard and survive reload', asyn
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Welcome');
   await page.reload();
   await expect(page.locator('#locale')).toHaveValue('en');
-  await expect(page.locator('main')).toContainText('Pickup orders');
+  await expect(page.locator('main')).toContainText('Upcoming pickups');
   await page.screenshot({ path: info.outputPath('dashboard-english.png'), fullPage: true });
 
   await page.route('**/app', async (route) => {

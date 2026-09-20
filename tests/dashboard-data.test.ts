@@ -3,14 +3,17 @@ import {
 } from 'vitest';
 import loadDashboard from '@/lib/dashboard-data';
 
-const mocks = vi.hoisted(() => ({ context: vi.fn(), permission: vi.fn(), rows: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  context: vi.fn(), permission: vi.fn(), rows: vi.fn(), rpc: vi.fn(),
+}));
 vi.mock('server-only', () => ({}));
 vi.mock('@/lib/auth', () => ({ requireAdminShell: mocks.context }));
 vi.mock('@/lib/permissions', () => ({ default: mocks.permission }));
-vi.mock('@/lib/data', () => ({ rows: mocks.rows }));
+vi.mock('@/lib/data', async (original) => ({ ...await original<typeof import('@/lib/data')>(), rows: mocks.rows }));
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.context.mockResolvedValue({ db: {}, profile: { preferred_locale: 'en' } });
+  mocks.context.mockResolvedValue({ db: { rpc: mocks.rpc }, profile: { preferred_locale: 'en' } });
+  mocks.rpc.mockResolvedValue({ data: [], error: null });
   mocks.permission.mockResolvedValue(true);
   mocks.rows.mockResolvedValue([]);
 });

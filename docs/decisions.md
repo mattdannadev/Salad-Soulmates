@@ -1,5 +1,14 @@
 # Implementation decisions
 
+## 2026-09-20 — Collapsible application navigation
+
+The owner requested a collapsible sidebar. The collapsed desktop rail shows the
+leaf logo, an expand icon and page icons; expanding restores the full branding and
+page labels. Logo navigation returns Home. Icon links retain localized accessible
+names and hover labels, active-page indication and existing permission filtering.
+Keep the selected state during app navigation. On phones retain the horizontal
+navigation layout, with the same toggle hiding or showing labels.
+
 ## 2026-09-20 — Supplier directory and visible creation action
 
 The owner requested adding suppliers and listing them like the other catalog
@@ -321,3 +330,21 @@ each product and its batch count plus the order total. Recent shipped cards must
 also show products and batch counts when physical fulfillment is implemented.
 Shipping drafts are not actual shipments; the current section explains this gate.
 Owned inventory includes held stock and must not be represented as available stock.
+
+## 2026-09-20 — Dated demand and supplier purchase generation
+
+Upcoming pickups includes every active order strictly after today's facility date,
+ordered soonest first; today's count and overdue counts remain separate. Product
+names and batch counts stay on every pickup card. The fixed desktop navigation
+must scroll independently so every destination remains reachable.
+
+The owner requested purchasing based on orders and available versus missing
+inventory. One dashboard action generates supplier purchase drafts from current
+cumulative active demand, grouped by supplier and supporting order. It uses the
+preferred active supplier pack (or the sole active choice), rounds to whole packs,
+and flags ambiguous packs and existing drafts for review. It does not mark orders
+placed or transmit supplier messages. Confirmed outstanding inbound counts only
+when due by the production date, or pickup date until production is scheduled.
+Shared supply counts once. Held/expired stock is excluded by existing availability
+rules, and later deliveries cannot conceal an earlier shortage. Expiry treatment
+is conservative: stock must remain usable at each demand horizon.

@@ -1602,6 +1602,8 @@ export type Database = {
       create_purchase_draft: { Args: { payload: Json }; Returns: string; };
       save_material_plan: { Args: { payload: Json }; Returns: string; };
       material_requirements: { Args: { plan_id: string }; Returns: Json; };
+      demand_coverage: { Args: Record<PropertyKey, never>; Returns: Json; };
+      generate_demand_purchases: { Args: { request_id: string }; Returns: Json; };
       approve_access_request: {
         Args: {
           assigned_access_profile_id: string;

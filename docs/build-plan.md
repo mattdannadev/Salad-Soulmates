@@ -4,6 +4,12 @@ Updated: September 20, 2026
 
 ## Current checkpoint
 
+Navigation follow-up: implement collapse/expand in the shared shell, with a leaf-only
+brand and accessible icon links when collapsed. Verify both states, route changes,
+logo-to-Home navigation and Spanish labels on desktop and phone. Implementation is
+in the shared `feature/dashboard-demand` working tree; combined release verification
+and deployment are coordinated with the dashboard candidate.
+
 Customer and dashboard follow-up: see [scope and acceptance](customer-dashboard.md).
 Use saved customer lookup and package pricing; calculate batch totals from package
 prices. Label the date Customer pickup date and navigation Orders. Home must show
@@ -188,3 +194,13 @@ specification places the dedicated recall workspace and QuickBooks in subsequent
 increments; retain them after the approved near-term sequence rather than dropping
 them because those screens are not implemented yet. No invoices or supplier
 messages are to be sent as a side effect of development or testing.
+
+## Dashboard demand follow-up — implementation in progress
+
+Branch `feature/dashboard-demand` adds independently scrolling navigation, all
+future pickups in date order, dated ingredient coverage and automatic supplier
+purchase drafts. Acceptance requires shared-stock allocation, late inbound,
+whole-pack rounding, supplier ambiguity, duplicate/retry protection, permission
+and facility isolation, desktop/phone browser checks and native PostgreSQL
+concurrency checks. Physical production and shipment completion remain gated.
+Verification and release evidence will be recorded in `customer-dashboard.md`.

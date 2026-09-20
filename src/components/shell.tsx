@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import {
   Leaf,
@@ -16,6 +17,8 @@ import {
   ShieldCheck,
   PackageCheck,
   Settings,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { signOut } from '@/app/actions';
 import FeedbackDrawer from './feedback';
@@ -138,12 +141,29 @@ export function Shell({
   permissions: string[];
 }) {
   const path = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
   const isSpanish = locale === 'es';
+  const expandLabel = isSpanish ? 'Expandir navegación' : 'Expand navigation';
+  const collapseLabel = isSpanish ? 'Contraer navegación' : 'Collapse navigation';
+  const toggleLabel = collapsed ? expandLabel : collapseLabel;
   return (
-    <div className="app-shell" lang={locale}>
+    <div className={`app-shell${collapsed ? ' sidebar-collapsed' : ''}`} lang={locale}>
       <aside className="sidebar">
-        <Link href="/app" className="brand">
-          <Leaf size={42} />
+        <button
+          type="button"
+          className="icon-button sidebar-toggle"
+          aria-label={toggleLabel}
+          title={toggleLabel}
+          aria-expanded={!collapsed}
+          aria-controls="main-navigation"
+          onClick={() => setCollapsed((value) => !value)}
+        >
+          {collapsed
+            ? <PanelLeftOpen size={20} aria-hidden />
+            : <PanelLeftClose size={20} aria-hidden />}
+        </button>
+        <Link href="/app" className="brand" aria-label={isSpanish ? 'Salad Soulmates — Inicio' : 'Salad Soulmates — Home'}>
+          <Leaf size={42} aria-hidden />
           <strong>Salad Soulmates</strong>
           <small>
             {isSpanish ? 'LA BUENA COMIDA' : 'GOOD FOOD BRINGS'}
@@ -151,7 +171,7 @@ export function Shell({
             {isSpanish ? 'NOS UNE' : 'PEOPLE TOGETHER'}
           </small>
         </Link>
-        <nav aria-label={isSpanish ? 'Navegación principal' : 'Main navigation'}>
+        <nav id="main-navigation" aria-label={isSpanish ? 'Navegación principal' : 'Main navigation'}>
           {links
             .filter((link) => !link.permission || permissions.includes(link.permission))
             .map(({
@@ -160,14 +180,16 @@ export function Shell({
               <Link
                 key={href}
                 href={href}
+                aria-label={isSpanish ? es : en}
+                title={isSpanish ? es : en}
                 aria-current={
                   (href === '/app' ? path === href : path.startsWith(href))
                     ? 'page'
                     : undefined
                 }
               >
-                <Icon size={20} />
-                {locale === 'es' ? es : en}
+                <Icon size={20} aria-hidden />
+                <span className="nav-label">{isSpanish ? es : en}</span>
               </Link>
             ))}
         </nav>

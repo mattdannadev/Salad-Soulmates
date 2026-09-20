@@ -373,6 +373,9 @@ small,
   min-height: 100vh;
 }
 .sidebar {
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
   width: 242px;
   position: fixed;
   inset: 0 auto 0 0;
@@ -1107,6 +1110,8 @@ dialog::backdrop {
     display: block;
   }
   .sidebar {
+    overflow-y: visible;
+    scrollbar-gutter: auto;
     position: static;
     width: 100%;
     padding: 15px;
@@ -1663,5 +1668,110 @@ dialog::backdrop {
   }
   .packaging-editor {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Compact demand cards remain readable without a horizontally scrolling table. */
+.dashboard-demand {
+  grid-column: 1 / -1;
+  margin-bottom: 1.5rem;
+}
+.demand-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+.demand-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 1rem;
+}
+.demand-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1rem;
+}
+.demand-short {
+  border-left: 4px solid #ad7538;
+  background: #fffdf7;
+}
+.demand-quantities {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+.demand-quantities dt {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.demand-quantities dd {
+  margin: 0;
+  font-weight: 600;
+}
+.demand-purchase-action {
+  margin-top: 1rem;
+}
+.sidebar > * {
+  flex-shrink: 0;
+}
+
+.sidebar-toggle {
+  align-self: flex-end;
+  min-width: 44px;
+  min-height: 44px;
+  margin-bottom: 12px;
+}
+.sidebar nav svg {
+  flex-shrink: 0;
+}
+.sidebar-collapsed .brand strong,
+.sidebar-collapsed .brand small,
+.sidebar-collapsed .nav-label,
+.sidebar-collapsed .sidebar-foot {
+  display: none;
+}
+.sidebar-collapsed .sidebar nav a {
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px;
+  gap: 0;
+}
+@media (min-width: 761px) {
+  .sidebar-collapsed .sidebar {
+    width: 76px;
+    padding: 20px 8px;
+    scrollbar-gutter: auto;
+  }
+  .sidebar-collapsed .sidebar-toggle {
+    align-self: center;
+  }
+  .sidebar-collapsed .brand {
+    margin-bottom: 24px;
+  }
+  .sidebar-collapsed .brand svg {
+    width: 32px;
+    height: 32px;
+  }
+  .sidebar-collapsed .app-main {
+    margin-left: 76px;
+    width: calc(100% - 76px);
+  }
+}
+@media (max-width: 760px) {
+  .sidebar-toggle {
+    position: absolute;
+    top: 8px;
+    right: 15px;
+    margin-bottom: 0;
+  }
+  .sidebar .brand {
+    min-height: 44px;
+    padding-right: 44px;
+  }
+  .sidebar-collapsed .brand {
+    justify-content: flex-start;
   }
 }
