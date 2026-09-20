@@ -16,8 +16,11 @@ reopening confirmed/cancelled preparation. Show shortages against the start date
 confirmation with shortages requires a recorded resolution. Existing single
 material commitments remain authoritative. Do not post inventory during planning.
 
-Release the tested additive migrations before merging the dependent application
-changes into production main. No test records go into the hosted database.
+The owner subsequently requested a Preview of final merged `main` and explicitly
+approved publishing the production-planning branch to `mattdannadev/Salad-Soulmates`.
+PRs #4 and #2 are merged. Apply the tested additive production migration before
+merging dependent code, then build a Preview from the exact final main commit.
+No test records go into the hosted database.
 
 ## 2026-09-20 — Finish receiving and merge into the connected Preview
 

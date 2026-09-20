@@ -2,8 +2,7 @@
 
 Production preparation is part of the saved customer order. The existing order
 entry, customer packaging/prices, ingredient estimates, purchasing and serialized
-receiving remain intact. This candidate includes PRs #2 and #4 and the supplier
-purchase-history improvements.
+receiving remain intact. This includes merged PRs #2 and #4 and the supplier purchase-history improvements.
 
 ## Delivered behavior
 
@@ -29,7 +28,7 @@ purchase-history improvements.
 
 ## Reliability and access
 
-Versioned migration `20260920031816_order_production_planning.sql` is additive and
+Versioned migration `20260920032256_order_production_planning.sql` is additive and
 requires the receiving and customer-order migrations. New tables have explicit
 grants and organization/facility RLS. Invoker functions and table triggers enforce
 validation even for direct API writes. The existing trigger-only cancellation
@@ -53,22 +52,28 @@ is audited. Planning does not create inventory events or duplicate commitments.
   messages, missing acknowledgments, lost connections and Auth redirects.
 - Native PostgreSQL coverage adds overlapping generation, competing revisions and
   cancellation racing generation. CI also exercises the full desktop/phone flow.
-- Local Chromium download timed out. A recovered Chromium executable could not
-  start its browser daemon, and the disposable native PostgreSQL runner could not
-  create or switch to the unprivileged account required by initdb in this runtime.
-  Browser and native PostgreSQL verification remain pending for this feature.
-- The owner explicitly approved publishing this branch to the connected GitHub
-  repository after automatic approval review requested confirmation. Full feature
-  CI runs after publication.
-- PR #4's latest receiving/supplier browser fix is included. Its upstream workflow
-  is separate evidence and does not verify these new production-planning changes.
+- Local Chromium/native PostgreSQL execution was unavailable in this runtime. The
+  published candidate passed all 20 native PostgreSQL cases in CI run
+  `35486368318`, including the three new concurrent production cases.
+- `npm run check` and all 14 desktop/phone browser cases also passed in that
+  CI run. The new browser flow checks draft creation, paired records, shortage
+  rejection/confirmation, revision and cancellation with no page errors or overflow.
+- The owner explicitly approved publication. Terminal Git had no push credentials;
+  the connected GitHub app published the exact verified tree as PR #6.
 
 ## Release and remaining scope
 
-The owner authorized merging this and other completed PRs. Apply tested additive
-migrations to the existing database before releasing dependent application code;
-reconcile repository filenames with the hosted migration versions. No automated
-operating records are written to the hosted database.
+The owner authorized publication, completed PR merges and a Preview of final main.
+The tested additive production migration was applied to the existing hosted
+project as version `20260920032256`; the repository filename and disposable test
+loader match that version. Post-apply inspection confirmed RLS on all three new
+tables, invoker RPCs and no anonymous execution grants. No automated operating
+records were written to the hosted database.
+
+The security advisor reports the same pre-existing items: five authenticated
+[definer helpers](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable)
+and [leaked-password protection disabled](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
+This release introduces no new security-advisor findings.
 
 Worker/crew scheduling is the next build item. Physical production scans, actual
 ingredient consumption, packaging and shipping remain later phases. Existing
