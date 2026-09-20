@@ -16,6 +16,9 @@ test('saves a partial pickup draft, preserves it on reload, and gates physical c
   await expect(page).toHaveURL(/\/app$/);
   await page.goto('/app/shipping');
   await expect(page.getByText('No customer orders yet.')).toBeVisible();
+  const unavailableConfirmation = page.getByRole('button', { name: 'Confirm shipment / pickup — unavailable' });
+  await expect(unavailableConfirmation).toBeDisabled();
+  await expect(unavailableConfirmation).toHaveCSS('cursor', 'not-allowed');
   await page.goto('/app/orders');
   await page.getByLabel('Customer', { exact: true }).fill('Shipping customer');
   await page.getByLabel('Customer order reference (optional)').fill(`Shipping ${info.project.name}`);
