@@ -110,7 +110,8 @@ export default async function Purchasing({
             <PurchaseComposer
               key={`${selected.id}-${supplier ?? 'all'}-${JSON.stringify(requirements)}`}
               planId={selected.id}
-              neededOn={selected.needed_on}
+              neededOn={workspace.production?.status !== 'Cancelled'
+                ? workspace.production?.start_on ?? selected.needed_on : selected.needed_on}
               requirements={requirements}
               packs={packs}
               suppliers={suppliers}

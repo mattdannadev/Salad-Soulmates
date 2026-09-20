@@ -30,6 +30,7 @@ const inputSchemas = {
   'cancel-plan': z.object({ id: z.uuid() }),
 };
 const safeDatabaseMessages = [
+  'Cancel production preparation before cancelling this order',
   'Request ID already used with different values',
   'Customer option changed; reload before trying again',
   'Order line value exceeds supported precision',

@@ -1290,3 +1290,35 @@ dialog::backdrop {
 .purchase-dates dd {
   margin: 0.25rem 0 0;
 }
+
+.production-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0;
+}
+.production-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.production-summary strong {
+  font-size: 1.6rem;
+}
+.production-controls {
+  border: 0;
+  padding: 0;
+  margin: 1rem 0;
+  min-width: 0;
+}
+.production-controls legend {
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+.production-batch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.5rem;
+}

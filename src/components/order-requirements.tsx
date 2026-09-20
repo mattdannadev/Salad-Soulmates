@@ -1,11 +1,14 @@
 import Link from 'next/link';
 import type { MaterialAvailability, MaterialPlan } from '@/domain/purchasing';
-import { formatNumber } from '@/domain/format';
+import { formatDate, formatNumber } from '@/domain/format';
 
-export default function OrderRequirements({ plan, requirements, locale }: {
+export default function OrderRequirements({
+  plan, requirements, locale, productionStart = undefined,
+}: {
   plan: MaterialPlan;
   requirements: MaterialAvailability[];
   locale: 'en' | 'es';
+  productionStart?: string;
 }) {
   const es = locale === 'es';
   return (
@@ -25,11 +28,15 @@ export default function OrderRequirements({ plan, requirements, locale }: {
       </p>
       {plan.status === 'Cancelled' ? (
         <p>{es ? 'Compromisos liberados. Se conserva el historial.' : 'Commitments released. The original requirements remain in history.'}</p>
-      ) : (
+      ) : null}
+      {plan.status !== 'Cancelled' && productionStart && (
+        <p>{`${es ? 'Disponibilidad revisada para el inicio de producción:' : 'Availability checked for production start:'} ${formatDate(productionStart)}`}</p>
+      )}
+      {plan.status !== 'Cancelled' && !productionStart && (
         <p>
           {es
             ? 'La fecha requerida por el cliente es el horizonte de esta estimación. El inicio de producción y las fechas de llegada de ingredientes aún no están programados.'
-            : 'The customer-needed date is the horizon for this estimate. Production start and ingredient arrival deadlines are not yet scheduled.'}
+            : 'The customer-needed date is the horizon for this estimate. Save production dates above to check ingredients against the start date.'}
         </p>
       )}
       <div className="table-wrap">

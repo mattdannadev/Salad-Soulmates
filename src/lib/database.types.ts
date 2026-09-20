@@ -8,6 +8,16 @@ export type Database = {
   };
   public: {
     Tables: {
+      order_production_plans: {
+        Row: {
+          id: string; organization_id: string; facility_id: string;
+          start_on: string; finish_on: string; status: string; revision: number;
+          note: string; shortage_reason: string; created_by: string; created_at: string;
+        };
+        Insert: { id: string; start_on: string; finish_on: string; };
+        Update: { start_on?: string; finish_on?: string; status?: string; revision?: number; note?: string; shortage_reason?: string; };
+        Relationships: [];
+      };
       receipt_serializations: {
         Row: {
           id: string;
@@ -1550,6 +1560,8 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      save_order_production_plan: { Args: { payload: Json }; Returns: string; };
+      order_production_batches: { Args: { order_id: string }; Returns: Json; };
       receive_serialized_delivery: { Args: { payload: Json }; Returns: string; };
       serialize_receipt_line: { Args: { payload: Json }; Returns: string; };
       change_serialized_unit: { Args: { payload: Json }; Returns: string; };

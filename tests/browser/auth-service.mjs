@@ -14,6 +14,7 @@ import {
 const tables = new Set([
   'material_plans',
   'customer_orders',
+  'order_production_plans',
   'customers',
   'customer_product_options',
   'purchase_drafts',
@@ -27,6 +28,7 @@ const tables = new Set([
 const mutations = new Set([
   'save_material_plan',
   'save_customer_order',
+  'save_order_production_plan',
   'save_customer_product_option',
   'create_purchase_draft',
   'change_purchase_status',
@@ -69,8 +71,9 @@ function isPurchasingFixtureRequest(url) {
   const endpoint = url.pathname.replace('/rest/v1/', '');
   return (
     tables.has(endpoint)
-    || endpoint === 'rpc/find_serialized_units' || endpoint === 'rpc/material_requirements' || endpoint === 'rpc/cancel_material_plan'
+    || endpoint === 'rpc/material_requirements' || endpoint === 'rpc/cancel_material_plan'
     || endpoint === 'rpc/cancel_customer_order'
+    || endpoint === 'rpc/find_serialized_units' || endpoint === 'rpc/order_production_batches'
     || mutations.has(endpoint.replace('rpc/', ''))
     || endpoint === 'test/purchasing-reset'
   );
@@ -109,6 +112,16 @@ async function executeRequest(url, method, body) {
     return result.rows[0] ?? null;
   }
   const input = JSON.parse(body);
+  if (endpoint === 'rpc/order_production_batches') {
+    const args = z.object({ order_id: z.uuid() }).parse(input);
+    const result = await db.query('select public.order_production_batches($1) as value', [args.order_id]);
+    return z.object({ value: z.unknown() }).parse(result.rows[0]).value;
+  }
+  if (endpoint === 'rpc/cancel_customer_order') {
+    const args = z.object({ order_id: z.uuid() }).parse(input);
+    const result = await db.query('select public.cancel_customer_order($1) as id', [args.order_id]);
+    return z.object({ id: z.uuid() }).parse(result.rows[0]).id;
+  }
   if (endpoint === 'rpc/find_serialized_units') {
     const args = z.object({
       search_text: z.string().optional(),
@@ -117,11 +130,6 @@ async function executeRequest(url, method, body) {
     }).parse(input);
     const result = await db.query('select public.find_serialized_units($1,$2,$3) as value', [args.search_text ?? '', args.receipt_filter ?? null, args.unit_filter ?? null]);
     return z.object({ value: z.unknown() }).parse(result.rows[0]).value;
-  }
-  if (endpoint === 'rpc/cancel_customer_order') {
-    const args = z.object({ order_id: z.uuid() }).parse(input);
-    const result = await db.query('select public.cancel_customer_order($1) as id', [args.order_id]);
-    return z.object({ id: z.uuid() }).parse(result.rows[0]).id;
   }
   if (endpoint === 'rpc/cancel_material_plan') {
     const args = z.object({ plan_id: z.uuid() }).parse(input);
@@ -139,6 +147,7 @@ async function executeRequest(url, method, body) {
     .enum([
       'save_material_plan',
       'save_customer_order',
+      'save_order_production_plan',
       'save_customer_product_option',
       'create_purchase_draft',
       'change_purchase_status',
