@@ -95,3 +95,16 @@ TypeScript, 345 automated tests and the production build. Four focused installed
 Chrome browser scenarios passed, exercising purchase generation/retry and sidebar
 scrolling on desktop and phone. The complete browser suite and native PostgreSQL
 concurrency CI are the remaining pre-release checks. No hosted test data was used.
+
+PR #13: all 26 installed-Chrome browser scenarios passed (3.4 minutes), including
+supplier draft generation/retry, desktop scrolling and desktop/phone collapse.
+Screenshots of populated desktop/phone dashboards and the icon rail were reviewed;
+independent browser verification found no browser errors. Native PostgreSQL
+concurrency CI passed, including overlapping bulk requests with distinct IDs.
+Migration `20260920124904_dashboard_demand_purchasing` is applied transactionally
+and aligned with the local filename. Read-only hosted checks confirmed request RLS,
+anonymous execution denied and no unscoped coverage. Security advisor findings
+remain the same pre-existing five definer helpers and leaked-password setting.
+No hosted operational records were created or changed by verification. The final
+CI rerun covers migration filename alignment; merge/deploy evidence belongs in PR
+#13. Owner visual/operational acceptance remains separate.

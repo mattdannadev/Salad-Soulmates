@@ -195,7 +195,7 @@ increments; retain them after the approved near-term sequence rather than droppi
 them because those screens are not implemented yet. No invoices or supplier
 messages are to be sent as a side effect of development or testing.
 
-## Dashboard demand follow-up — implementation in progress
+## Dashboard demand follow-up — implemented, release verification
 
 Branch `feature/dashboard-demand` adds independently scrolling navigation, all
 future pickups in date order, dated ingredient coverage and automatic supplier
@@ -203,4 +203,4 @@ purchase drafts. Acceptance requires shared-stock allocation, late inbound,
 whole-pack rounding, supplier ambiguity, duplicate/retry protection, permission
 and facility isolation, desktop/phone browser checks and native PostgreSQL
 concurrency checks. Physical production and shipment completion remain gated.
-Verification and release evidence will be recorded in `customer-dashboard.md`.
+Verification and release evidence is recorded in `customer-dashboard.md` and PR #13.
