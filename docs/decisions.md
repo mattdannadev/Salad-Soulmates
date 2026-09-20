@@ -1,5 +1,16 @@
 # Implementation decisions
 
+## 2026-09-20 — Materials and purchasing candidate
+
+The owner requested the next build step after materials requirements and purchasing
+were identified. Implement it in a draft PR against current production main,
+retaining the open refactor acceptance gates and the single hosted database.
+Use explicit batch counts from released recipes until customer-order-driven
+production planning is built. Purchase drafts do not send supplier orders;
+Confirm records an order already placed outside this app. See
+`materials-purchasing.md`. Production deployment and the new migration require
+separate release authorization.
+
 ## 2026-09-19 — Explicit production release authorization
 
 After CI passed, the owner requested deployment and explicitly confirmed merging

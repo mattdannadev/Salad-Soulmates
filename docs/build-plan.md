@@ -11,6 +11,14 @@ for their authoritative hosted versions. This supersedes older access/deployment
 blockers in the historical progress notes below. Real Auth and the remaining
 verification/review items must still be completed before advancing feature phases.
 
+## September 20 feature candidate
+
+The owner asked to run the next build step. Materials requirements and purchasing
+are now being prepared as a draft implementation on `feature/materials-purchasing`.
+See `materials-purchasing.md` for behavior, schema and verification. This is not a
+Phase 1 acceptance claim: real Auth and independent-review gates remain open,
+and this feature is not merged, deployed or applied to the hosted database.
+
 ## Approved delivery order
 
 | Order | Build phase                                                       | Scope / sequencing                                                                                                                                                                       |

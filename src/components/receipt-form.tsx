@@ -1,5 +1,7 @@
 'use client';
 
+import type { InboundChoice } from '@/domain/purchasing';
+
 import { useMemo, useState } from 'react';
 import { facilityDate } from '@/domain/format';
 import { RecordForm } from './record-form';
@@ -16,12 +18,15 @@ interface Supplier {
 export default function ReceiptForm({
   ingredients,
   suppliers,
+  inbound = [],
   locale = 'en',
 }: {
   ingredients: Ingredient[];
   suppliers: Supplier[];
+  inbound?: InboundChoice[];
   locale?: 'en' | 'es';
 }) {
+  const [supplierId, setSupplierId] = useState(suppliers[0]?.id ?? '');
   const [ingredientId, setIngredientId] = useState(ingredients[0]?.id ?? '');
   const unit = useMemo(
     () => ingredients.find((i) => i.id === ingredientId)?.default_uom ?? 'lb',
@@ -33,12 +38,16 @@ export default function ReceiptForm({
       <h2>{es ? 'Registrar recepción' : 'Post supplier receipt'}</h2>
       <RecordForm
         kind="receipt"
-        submit={es ? 'Registrar y actualizar inventario' : 'Post receipt & update inventory'}
+        submit={
+          es ? 'Registrar y actualizar inventario' : 'Post receipt & update inventory'
+        }
         fields={[
           {
             name: 'supplier_id',
             label: es ? 'Proveedor' : 'Supplier',
             type: 'select',
+            value: supplierId,
+            onChange: setSupplierId,
             options: suppliers.map((s) => ({ value: s.id, label: s.name })),
             required: true,
           },
@@ -62,6 +71,22 @@ export default function ReceiptForm({
             onChange: setIngredientId,
             options: ingredients.map((i) => ({ value: i.id, label: i.name })),
             required: true,
+          },
+          {
+            name: 'purchase_draft_line_id',
+            label: es
+              ? 'Pedido confirmado (opcional)'
+              : 'Confirmed inbound order (optional)',
+            type: 'select',
+            options: [
+              { value: '', label: es ? 'Sin pedido vinculado' : 'No linked order' },
+              ...inbound
+                .filter(
+                  (choice) => choice.ingredient_id === ingredientId
+                    && choice.supplier_id === supplierId,
+                )
+                .map((choice) => ({ value: choice.id, label: choice.label })),
+            ],
           },
           {
             name: 'quantity',

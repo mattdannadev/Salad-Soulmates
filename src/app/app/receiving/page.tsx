@@ -1,3 +1,8 @@
+import {
+  purchaseDraftRowSchema,
+  purchaseLineRowSchema,
+  outstandingInbound,
+} from '@/domain/purchasing';
 import hasPermission from '@/lib/permissions';
 import { rowSchemas } from '@/domain/master-data';
 import { requireAdminShell } from '@/lib/auth';
@@ -8,11 +13,15 @@ import ReceiptHistory from '@/components/receipt-history';
 
 export default async function Receiving() {
   const { db, profile } = await requireAdminShell();
-  const [ingredients, suppliers, receipts, lines] = await Promise.all([
+  const [
+    ingredients, suppliers, receipts, lines, purchaseDrafts, purchaseLines,
+  ] = await Promise.all([
     rows(db, 'ingredients', rowSchemas.ingredients),
     rows(db, 'suppliers', rowSchemas.suppliers),
     rows(db, 'inventory_receipts', rowSchemas.inventory_receipts),
     rows(db, 'inventory_receipt_lines', rowSchemas.inventory_receipt_lines),
+    rows(db, 'purchase_drafts', purchaseDraftRowSchema),
+    rows(db, 'purchase_draft_lines', purchaseLineRowSchema),
   ]);
   const es = profile.preferred_locale === 'es';
   const canReceive = await hasPermission(db, 'inventory.receive');
@@ -30,6 +39,7 @@ export default async function Receiving() {
       {canReceive && (
         <section className="panel">
           <ReceiptForm
+            inbound={outstandingInbound(purchaseDrafts, purchaseLines, lines)}
             ingredients={ingredients.filter((i) => i.active)}
             suppliers={suppliers.filter((s) => s.active)}
             locale={profile.preferred_locale}

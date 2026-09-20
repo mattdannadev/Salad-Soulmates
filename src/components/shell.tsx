@@ -72,6 +72,20 @@ const links = [
     permission: 'planning.read',
   },
   {
+    href: '/app/materials',
+    en: 'Materials',
+    es: 'Materiales',
+    icon: ClipboardList,
+    permission: 'planning.read',
+  },
+  {
+    href: '/app/purchasing',
+    en: 'Purchasing',
+    es: 'Compras',
+    icon: Truck,
+    permission: 'planning.read',
+  },
+  {
     href: '/app/inventory',
     en: 'Inventory',
     es: 'Inventario',
@@ -150,7 +164,9 @@ export function Shell({
                 key={href}
                 href={href}
                 aria-current={
-                  (href === '/app' ? path === href : path.startsWith(href)) ? 'page' : undefined
+                  (href === '/app' ? path === href : path.startsWith(href))
+                    ? 'page'
+                    : undefined
                 }
               >
                 <Icon size={20} />

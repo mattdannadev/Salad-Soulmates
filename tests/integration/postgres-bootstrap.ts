@@ -12,6 +12,7 @@ const migrations = [
   '20260919170000_harden_function_grants.sql',
   '20260919231113_refactor_reliability.sql',
   '20260919231118_serialize_inventory_units.sql',
+  '20260920001513_materials_purchasing.sql',
 ];
 
 /** Apply migrations and synthetic identity data only inside the newly created test database. */
