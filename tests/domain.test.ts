@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { planBatches, availability, purchaseUnits } from '../src/domain/planning';
-import inventoryBalances from '../src/domain/inventory';
+import inventoryBalances, { inventoryUnits } from '../src/domain/inventory';
 import { inventorySchema, packSchema } from '../src/domain/master-data';
 
 describe('operating rules', () => {
@@ -50,6 +50,17 @@ describe('operating rules', () => {
         { ingredient_id: 'b', quantity_delta: -3.5 },
       ]),
     ).toEqual({ a: 0.3, b: 21.5 });
+  });
+  it('uses the recorded receiving unit for each inventory balance', () => {
+    expect(inventoryUnits([
+      { ingredient_id: 'oil', quantity_delta: 2, uom: 'gal' },
+      { ingredient_id: 'oil', quantity_delta: -0.5, uom: 'gal' },
+      { ingredient_id: 'spice', quantity_delta: 16, uom: 'oz' },
+    ])).toEqual({ oil: 'gal', spice: 'oz' });
+    expect(() => inventoryUnits([
+      { ingredient_id: 'oil', quantity_delta: 2, uom: 'gal' },
+      { ingredient_id: 'oil', quantity_delta: 16, uom: 'oz' },
+    ])).toThrow('Inventory entries for an ingredient must use one unit.');
   });
   it('rejects incomplete and invalid inventory and supplier pack input', () => {
     expect(inventorySchema.safeParse({ quantity_delta: NaN }).success).toBe(false);

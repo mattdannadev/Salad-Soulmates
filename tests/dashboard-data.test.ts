@@ -43,18 +43,20 @@ it('prioritizes open-order ingredients and distinguishes unknown from zero owned
       { id: 'cancelled', status: 'Cancelled', requirements: [{ ingredient_id: 'a', required: 99 }] },
     ],
     ingredients: [
-      { id: 'a', name: 'A', active: true }, { id: 'b', name: 'B', active: true },
-      { id: 'c', name: 'C', active: false },
+      { id: 'a', name: 'A', active: true, default_uom: 'lb' },
+      { id: 'b', name: 'B', active: true, default_uom: 'gal' },
+      { id: 'c', name: 'C', active: false, default_uom: 'oz' },
     ],
     inventory_events: [
-      { ingredient_id: 'b', quantity_delta: 10 }, { ingredient_id: 'b', quantity_delta: -10 },
+      { ingredient_id: 'b', quantity_delta: 10, uom: 'gal' },
+      { ingredient_id: 'b', quantity_delta: -10, uom: 'gal' },
     ],
   };
   mocks.rows.mockImplementation((_db: unknown, table: string) => records[table] ?? []);
   const dashboard = await loadDashboard();
   expect(dashboard.openOrders.map((order) => order.id)).toEqual(['open']);
   expect(dashboard.stock.map((ingredient) => [
-    ingredient.id, ingredient.balance, ingredient.demand,
+    ingredient.id, ingredient.balance, ingredient.inventory_uom, ingredient.demand,
   ]))
-    .toEqual([['b', 0, 2], ['a', null, 0]]);
+    .toEqual([['b', 0, 'gal', 2], ['a', null, 'lb', 0]]);
 });

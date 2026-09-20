@@ -53,6 +53,11 @@ export const recipeQualityRuleRowSchema = z.object({
   sequence: z.number().int().positive(),
 }).refine((rule) => rule.max_value >= rule.min_value, 'Invalid quality-control range.');
 
+export type Recipe = z.infer<typeof recipeRowSchema>;
+export type RecipeVersion = z.infer<typeof recipeVersionRowSchema>;
+export type RecipeSection = z.infer<typeof recipeSectionRowSchema>;
+export type RecipeLine = z.infer<typeof recipeLineRowSchema>;
+
 /** An explicit version must belong to this recipe; an active pointer must remain valid. */
 export function selectRecipeVersion(
   recipeInput: unknown,

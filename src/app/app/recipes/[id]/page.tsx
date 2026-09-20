@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { z } from 'zod';
 import { PageHeader } from '@/components/shell';
 import { rowSchemas } from '@/domain/master-data';
+import type { Ingredient } from '@/domain/master-data';
 import {
   recipeRowSchema, recipeVersionRowSchema, recipeSectionRowSchema,
   recipeLineRowSchema, recipeQualityRuleRowSchema, selectRecipeVersion,
@@ -13,6 +14,66 @@ import { requireRecipeAccess } from '@/lib/recipe-catalog';
 import { readResult, rows } from '@/lib/data';
 import loadIngredientStock from '@/lib/ingredient-stock';
 import IngredientStock from '@/components/ingredient-stock';
+
+type RecipeLine = z.infer<typeof recipeLineRowSchema>;
+
+function RecipeIngredientGroup({
+  title, lines, ingredients, stock, locale,
+}: {
+  title: string;
+  lines: RecipeLine[];
+  ingredients: Ingredient[];
+  stock: Record<string, number> | null;
+  locale: 'en' | 'es';
+}) {
+  return (
+    <section className="recipe-ingredient-group" aria-label={title}>
+      <h3>{title}</h3>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>{recipeText(locale, 'Ingredient')}</th>
+              <th>{recipeText(locale, 'Recipe measure')}</th>
+              <th>{recipeText(locale, 'Base quantity')}</th>
+              <th>{recipeText(locale, 'Instructions')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map((line) => {
+              const ingredient = ingredients.find((item) => item.id === line.ingredient_id);
+              return (
+                <tr key={line.id}>
+                  <td>
+                    {ingredient ? (
+                      <>
+                        <Link href={`/app/ingredients/${ingredient.id}`}>{ingredient.name}</Link>
+                        {stock && stock[ingredient.id] !== undefined ? (
+                          <IngredientStock
+                            quantity={stock[ingredient.id]}
+                            unit={ingredient.default_uom}
+                            locale={locale}
+                          />
+                        ) : <p className="muted">{recipeText(locale, 'Inventory details unavailable with your access')}</p>}
+                      </>
+                    ) : recipeText(locale, 'Ingredient details unavailable with your access')}
+                  </td>
+                  <td>{line.display_measurement}</td>
+                  <td>
+                    {formatNumber(line.normalized_quantity)}
+                    {' '}
+                    {line.normalized_uom}
+                  </td>
+                  <td>{line.operator_note ?? '—'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
 
 export default async function RecipeDetails({ params, searchParams }: {
   params: Promise<{ id: string }>;
@@ -92,54 +153,39 @@ export default async function RecipeDetails({ params, searchParams }: {
           </>
         ) : <p>{recipeText(locale, 'No versions have been recorded for this recipe.')}</p>}
       </section>
-      {sections.map((section) => (
-        <section className="panel" key={section.id}>
-          <h2>{/^Worksheet block \d+$/i.test(section.name.trim()) ? recipeText(locale, 'Ingredients') : section.name}</h2>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>{recipeText(locale, 'Ingredient')}</th>
-                  <th>{recipeText(locale, 'Recipe measure')}</th>
-                  <th>{recipeText(locale, 'Base quantity')}</th>
-                  <th>{recipeText(locale, 'Instructions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lines.filter((line) => line.recipe_section_id === section.id)
-                  .sort((left, right) => left.sequence - right.sequence).map((line) => {
-                    const ingredient = ingredients.find((item) => item.id === line.ingredient_id);
-                    return (
-                      <tr key={line.id}>
-                        <td>
-                          {ingredient ? (
-                            <>
-                              <Link href={`/app/ingredients/${ingredient.id}`}>{ingredient.name}</Link>
-                              {stock ? (
-                                <IngredientStock
-                                  quantity={stock[ingredient.id]}
-                                  unit={ingredient.default_uom}
-                                  locale={locale}
-                                />
-                              ) : <p className="muted">{recipeText(locale, 'Inventory details unavailable with your access')}</p>}
-                            </>
-                          ) : recipeText(locale, 'Ingredient details unavailable with your access')}
-                        </td>
-                        <td>{line.display_measurement}</td>
-                        <td>
-                          {formatNumber(line.normalized_quantity)}
-                          {' '}
-                          {line.normalized_uom}
-                        </td>
-                        <td>{line.operator_note ?? '—'}</td>
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ))}
+      {sections.map((section) => {
+        const sectionLines = lines.filter((line) => line.recipe_section_id === section.id)
+          .sort((left, right) => left.sequence - right.sequence);
+        const dryLines = sectionLines.filter((line) => (
+          ingredients.find((ingredient) => ingredient.id === line.ingredient_id)?.category !== 'Liquid'
+        ));
+        const liquidLines = sectionLines.filter((line) => (
+          ingredients.find((ingredient) => ingredient.id === line.ingredient_id)?.category === 'Liquid'
+        ));
+        return (
+          <section className="panel" key={section.id}>
+            <h2>{/^Worksheet block \d+$/i.test(section.name.trim()) ? recipeText(locale, 'Ingredients') : section.name}</h2>
+            {dryLines.length ? (
+              <RecipeIngredientGroup
+                title={recipeText(locale, 'Dry ingredients')}
+                lines={dryLines}
+                ingredients={ingredients}
+                stock={stock}
+                locale={locale}
+              />
+            ) : null}
+            {liquidLines.length ? (
+              <RecipeIngredientGroup
+                title={recipeText(locale, 'Liquid ingredients')}
+                lines={liquidLines}
+                ingredients={ingredients}
+                stock={stock}
+                locale={locale}
+              />
+            ) : null}
+          </section>
+        );
+      })}
       {version && !sections.length && <section className="panel"><p>{recipeText(locale, 'No preparation sections recorded.')}</p></section>}
       <section className="panel">
         <h2>{recipeText(locale, 'Quality checks')}</h2>

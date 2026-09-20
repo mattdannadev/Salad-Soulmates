@@ -5,7 +5,7 @@ import { requireAdminShell } from '@/lib/auth';
 import {
   rows, number, date, readResult,
 } from '@/lib/data';
-import inventoryBalances from '@/domain/inventory';
+import inventoryBalances, { inventoryUnits } from '@/domain/inventory';
 import InventoryForm from '@/components/inventory-form';
 import { PageHeader } from '@/components/shell';
 
@@ -18,6 +18,7 @@ export default async function Inventory() {
   ]);
   const facilityData = readResult(facility, z.object({ name: z.string() }), 'inventory_facility');
   const balances = inventoryBalances(events);
+  const receivedUnits = inventoryUnits(events);
   const recent = [...events].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 50);
   return (
     <>
@@ -51,7 +52,7 @@ export default async function Inventory() {
                     <td>
                       {number(balances[i.id] ?? 0)}
                       {' '}
-                      {i.default_uom}
+                      {receivedUnits[i.id] ?? i.default_uom}
                     </td>
                     <td>
                       {(balances[i.id] ?? 0) < 0 ? (

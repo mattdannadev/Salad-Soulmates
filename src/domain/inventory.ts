@@ -10,6 +10,7 @@ const eventSchema = z.object({
       .regex(/^-?\d+(\.\d{1,4})?$/)
       .transform(Number),
   ]),
+  uom: z.string().trim().min(1).optional(),
 });
 /** Integer ticks preserve the database's four-decimal quantities without display drift. */
 export default function inventoryBalances(
@@ -24,4 +25,24 @@ export default function inventoryBalances(
     balances.set(event.ingredient_id, total);
   });
   return Object.fromEntries([...balances].map(([id, ticks]) => [id, ticks / QUANTITY_SCALE]));
+}
+
+/**
+ * Returns the stored ledger unit for each ingredient. Inventory entries for one ingredient must
+ * share a unit; the database enforces that invariant before entries are written.
+ */
+export function inventoryUnits(
+  events: { ingredient_id: string; quantity_delta: number | string; uom?: string }[],
+) {
+  const validated = z.array(eventSchema).parse(events);
+  const units = new Map<string, string>();
+  validated.forEach((event) => {
+    if (!event.uom) return;
+    const existing = units.get(event.ingredient_id);
+    if (existing && existing !== event.uom) {
+      throw new Error('Inventory entries for an ingredient must use one unit.');
+    }
+    units.set(event.ingredient_id, event.uom);
+  });
+  return Object.fromEntries(units);
 }

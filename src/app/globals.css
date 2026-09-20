@@ -708,6 +708,10 @@ tr:last-child td {
 .empty h3 {
   color: var(--ink);
 }
+.order-empty-state {
+  padding: 12px 0 0;
+  text-align: left;
+}
 .record-form {
   margin-top: 20px;
 }
@@ -1362,6 +1366,21 @@ dialog::backdrop {
   outline-offset: 2px;
 }
 
+.recipe-ingredient-group + .recipe-ingredient-group {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.recipe-ingredient-group h3 {
+  margin: 20px 0 0;
+  font-size: 1rem;
+}
+
+.recipe-ingredient-group .table-wrap {
+  margin-top: 10px;
+}
+
 /* Materials and purchasing keep the existing desktop/mobile shell. */
 .purchasing-fields {
   border: 0;
@@ -1653,6 +1672,44 @@ dialog::backdrop {
   color: #92400e;
   background: #fffbeb;
   padding: 0.35rem;
+}
+.product-recipe-details {
+  border: 0;
+  margin-top: 0.5rem;
+  padding: 0;
+}
+.product-recipe-details summary {
+  min-height: auto;
+  font-size: 0.875rem;
+}
+.product-recipe-meta {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+.product-recipe-content {
+  margin-top: 0.5rem;
+}
+.product-recipe-content section + section {
+  margin-top: 0.75rem;
+}
+.product-recipe-content h4 {
+  font-size: 0.875rem;
+  margin: 0;
+}
+.product-recipe-content ul {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+}
+.product-recipe-content li {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+.product-recipe-content li span:last-child {
+  color: var(--muted);
+  white-space: nowrap;
 }
 @media (max-width: 760px) {
   .product-catalog {

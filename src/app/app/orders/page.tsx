@@ -115,7 +115,7 @@ export default async function Orders({ searchParams }: {
         <>
           <section className="panel">
             <h2>{es ? 'Pedidos guardados' : 'Saved customer orders'}</h2>
-            {!workspace.orders.length && <p className="empty">{es ? 'Aún no hay pedidos de clientes.' : 'No customer orders yet.'}</p>}
+            {!workspace.orders.length && <p className="empty order-empty-state">{es ? 'Aún no hay pedidos de clientes.' : 'No customer orders yet.'}</p>}
             <div className="worksheet-links">
               {workspace.orders.toSorted((a, b) => b.created_at.localeCompare(a.created_at))
                 .map((item) => (
