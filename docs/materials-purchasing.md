@@ -4,7 +4,8 @@ Implementation branch: `feature/materials-purchasing`, based on production main 
 
 This is the next feature candidate requested on September 20. The existing real
 Auth and independent-review gates remain open. Preparing this draft does not mark
-Phase 1 accepted or authorize a production deployment/database migration.
+Phase 1 accepted. The later launch request authorized a connected Preview; see
+the launch record below. Production application release remains pending.
 
 ## Behavior
 
@@ -44,10 +45,11 @@ packaging, shipping, reference-data and grid-upgrade scope remains unchanged.
 
 ## Data and security
 
-Migration: `20260920001513_materials_purchasing.sql`, generated with Supabase CLI
-2.102.0. It adds `material_plans`, `purchase_drafts`, `purchase_draft_lines`, and an
+Migration: `20260920011508_materials_purchasing.sql`, originally generated with
+Supabase CLI 2.102.0 and renamed to match the applied hosted version. It adds `material_plans`, `purchase_drafts`, `purchase_draft_lines`, and an
 optional purchase-line reference on receiving lines. It contains no operational
-seed data and has not been applied to the hosted project.
+seed data. It was applied transactionally to the existing hosted project on
+September 20 after the owner requested a test launch.
 
 RLS restricts organization and facility; existing `planning.read`/`planning.write`
 permissions govern worksheets and purchases. Receiving users can read purchase
@@ -90,11 +92,27 @@ retained as a CI artifact. This fixture is not real Supabase Auth verification.
 
 1. Review the schema and candidate diff; finish the carried-forward real Auth and
    independent-review gates. Native concurrency coverage targets READ COMMITTED.
-2. Explicitly authorize and apply the single additive migration to the existing
-   hosted project, after checking its migration history.
+2. The additive migration is applied as `20260920011508`. Do not replay the earlier
+   candidate filename `20260920001513` as another migration.
 3. Deploy the corresponding application commit. New receiving readers depend on
    these tables, so the migration must precede deploying this application version.
 4. Validate with approved real operational records. Do not seed sample orders,
    balances, receipts or purchases into the shared project.
 
-No merge, production deployment or hosted migration occurred in this feature build.
+## Connected Preview launch — September 20
+
+The owner requested: “Launch so I can test it.” The existing Vercel project hosts
+this feature as Preview. Its two public Supabase connection settings are scoped to
+`feature/materials-purchasing`. It uses the existing real database and sign-in;
+records saved in this Preview are real operational records.
+
+The applied migration preserves the exact tested SQL. All three new tables have
+RLS enabled, anonymous RPC execution is denied, and receipt trigger helpers are
+not directly executable by authenticated clients. Post-application checks found
+zero worksheets or receipts; no test records were inserted. Security advisors
+reported only the pre-existing privileged authorization-function and leaked-password
+protection findings, with no new findings from this migration.
+
+PR #2 remains draft. No merge or production application deployment occurred.
+Real Auth acceptance and independent review remain open; a connected Preview does
+not claim those gates passed.

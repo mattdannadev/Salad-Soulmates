@@ -1,5 +1,21 @@
 # Implementation decisions
 
+## 2026-09-20 — Connected Preview for owner testing
+
+After the candidate passed CI, the owner requested: “Launch so I can test it.”
+Launch the feature as Preview in the existing Vercel project. Under the existing
+single-database decision, the Preview uses real Supabase Auth and operating data.
+The tested additive materials/purchasing migration was applied as a launch
+prerequisite; the user was told that saved Preview entries are real records.
+No synthetic data was inserted and no second hosted database was created.
+
+The hosted migration version is `20260920011508` (`materials_purchasing`). The Git
+filename and disposable-test loader now match it; SQL is unchanged from the tested
+candidate `20260920001513`. Do not apply both versions. The two public Supabase
+connection variables are scoped to the feature Preview branch. No production
+application deployment or PR merge is included. Existing real-Auth acceptance and
+independent-review gates remain open.
+
 ## 2026-09-20 — Materials and purchasing candidate
 
 The owner requested the next build step after materials requirements and purchasing

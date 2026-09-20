@@ -1,6 +1,6 @@
 # Salad Soulmates — current build plan
 
-Updated: September 19, 2026
+Updated: September 20, 2026
 Owner instruction: execute all three supplied engineering documents within the first refactor phase.
 Execution status: **refactor CI passed; production release explicitly authorized; Phase 1 follow-up acceptance remains open.**
 
@@ -14,10 +14,13 @@ verification/review items must still be completed before advancing feature phase
 ## September 20 feature candidate
 
 The owner asked to run the next build step. Materials requirements and purchasing
-are now being prepared as a draft implementation on `feature/materials-purchasing`.
+are implemented in draft PR #2 on `feature/materials-purchasing`.
 See `materials-purchasing.md` for behavior, schema and verification. This is not a
 Phase 1 acceptance claim: real Auth and independent-review gates remain open,
-and this feature is not merged, deployed or applied to the hosted database.
+and this feature is not merged or deployed to production. The owner subsequently
+requested a test launch: the connected Preview uses the existing database, and
+the tested additive migration is applied as `20260920011508`. Preview saves are
+real records; see `decisions.md`.
 
 ## Approved delivery order
 
