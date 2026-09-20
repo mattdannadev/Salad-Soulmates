@@ -1,4 +1,6 @@
 import 'server-only';
+import { z } from 'zod';
+import { demandCoverageSchema } from '@/domain/demand-coverage';
 import { customerOrderRowSchema } from '@/domain/customer-orders';
 import {
   materialPlanRowSchema,
@@ -11,17 +13,20 @@ import { purchaseProgress } from '@/domain/supplier-orders';
 import inventoryBalances from '@/domain/inventory';
 import { requireAdminShell } from './auth';
 import hasPermission from './permissions';
-import { rows } from './data';
+import { rows, readResult } from './data';
 
 /** Each operational panel checks all permissions needed to interpret its records. */
 export default async function loadDashboard() {
   const { db, profile } = await requireAdminShell();
-  const permissions = ['orders.read', 'planning.read', 'inventory.read', 'master_data.read'];
+  const permissions = ['orders.read', 'planning.read', 'inventory.read', 'master_data.read', 'products.read', 'planning.write'];
   const allowed = await Promise.all(permissions.map((permission) => hasPermission(db, permission)));
-  const [orderAccess, planningAccess, inventoryAccess, masterAccess] = allowed;
+  const [
+    orderAccess, planningAccess, inventoryAccess, masterAccess, productAccess, purchasingWrite,
+  ] = allowed;
   const canOrders = orderAccess && planningAccess;
   const canPurchases = orderAccess && planningAccess && inventoryAccess && masterAccess;
   const canStock = inventoryAccess && masterAccess;
+  const canCoverage = canPurchases && productAccess;
   const [
     orders, plans, purchases, lines, receipts, suppliers, ingredients, events, production,
   ] = await Promise.all([
@@ -44,6 +49,11 @@ export default async function loadDashboard() {
     .map((purchase) => ({ ...purchase, progress: purchaseProgress(purchase, lines, receipts) }))
     .filter((purchase) => purchase.progress.open)
     .toSorted((a, b) => a.expected_on.localeCompare(b.expected_on));
+  const coverage = canCoverage ? readResult(
+    await db.rpc('demand_coverage'),
+    z.array(demandCoverageSchema),
+    'dashboard_demand_coverage',
+  ) : [];
   const balances = inventoryBalances(events);
   const demand = new Map<string, number>();
   activePlans.forEach((plan) => plan.requirements.forEach((item) => {
@@ -67,6 +77,9 @@ export default async function loadDashboard() {
     canOrders,
     canPurchases,
     canStock,
+    canCoverage,
+    canGeneratePurchases: Boolean(canCoverage && purchasingWrite),
+    coverage,
     openOrders,
     incoming,
     suppliers,

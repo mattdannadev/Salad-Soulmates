@@ -6,10 +6,16 @@ import Home from '../src/app/app/page';
 
 const mocks = vi.hoisted(() => ({ load: vi.fn() }));
 vi.mock('../src/lib/dashboard-data', () => ({ default: mocks.load }));
+vi.mock('../src/components/demand-purchase-button', () => ({ default: () => null }));
+vi.mock('../src/domain/format', async (original) => ({
+  ...await original<typeof import('../src/domain/format')>(), facilityDate: () => '2026-09-20',
+}));
 const base = {
   canOrders: true,
   canPurchases: true,
   canStock: true,
+  canCoverage: true,
+  coverage: [],
   openOrders: [],
   incoming: [],
   suppliers: [],
@@ -18,8 +24,8 @@ const base = {
 };
 describe('operations dashboard', () => {
   it.each([
-    ['en', 'Welcome, Matt', 'Pickup orders', 'Recently shipped'],
-    ['es', 'Bienvenido, Matt', 'Pedidos para recogida', 'Envíos recientes'],
+    ['en', 'Welcome, Matt', 'Upcoming pickups', 'Recently shipped'],
+    ['es', 'Bienvenido, Matt', 'Próximas recogidas', 'Envíos recientes'],
   ])('uses the saved %s preference', async (locale, greeting, pickups, shipped) => {
     mocks.load.mockResolvedValue({
       ...base,
@@ -58,4 +64,31 @@ describe('operations dashboard', () => {
     mocks.load.mockRejectedValue(new Error('Read failed'));
     await expect(Home()).rejects.toThrow('Read failed');
   });
+});
+
+it('shows all future pickups in date order, excluding today and overdue orders', async () => {
+  const orders = Array.from({ length: 9 }, (_, index) => ({
+    id: `order-${index}`,
+    customer_name: `Customer ${index}`,
+    reference: '',
+    items: [],
+    needed_on: `2026-10-${String(index + 1).padStart(2, '0')}`,
+  }));
+  mocks.load.mockResolvedValue({
+    ...base,
+    profile: { display_name: 'Matt', preferred_locale: 'en' },
+    openOrders: [...orders.toReversed(),
+      {
+        ...orders[0], id: 'past', customer_name: 'Past customer', needed_on: '2026-09-19',
+      },
+      {
+        ...orders[0], id: 'today', customer_name: 'Today customer', needed_on: '2026-09-20',
+      }],
+  });
+  const html = renderToStaticMarkup(await Home());
+  const pickups = html.slice(html.indexOf('dashboard-pickups'), html.indexOf('SUPPLIER ARRIVALS'));
+  expect(pickups).not.toContain('Past customer');
+  expect(pickups).not.toContain('Today customer');
+  expect(pickups).toContain('Customer 8');
+  expect(pickups.indexOf('Customer 0')).toBeLessThan(pickups.indexOf('Customer 8'));
 });

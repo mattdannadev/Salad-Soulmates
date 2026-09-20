@@ -3,6 +3,7 @@ import {
   ArrowUpRight, CalendarDays, Truck, Leaf, PackageCheck, ClipboardList,
 } from 'lucide-react';
 import loadDashboard from '@/lib/dashboard-data';
+import DemandCoveragePanel from '@/components/demand-coverage-panel';
 import { facilityDate, formatDate, formatNumber } from '@/domain/format';
 import { purchaseStatusLabel } from '@/domain/supplier-orders';
 
@@ -14,6 +15,9 @@ export default async function Home() {
     canOrders,
     canPurchases,
     canStock,
+    canCoverage,
+    canGeneratePurchases,
+    coverage,
     openOrders,
     incoming,
     suppliers,
@@ -22,6 +26,8 @@ export default async function Home() {
   } = await loadDashboard();
   const es = profile.preferred_locale === 'es';
   const today = facilityDate();
+  const futurePickups = openOrders.filter((order) => order.needed_on > today)
+    .toSorted((a, b) => a.needed_on.localeCompare(b.needed_on) || a.id.localeCompare(b.id));
   const upcomingLabel = es ? 'Próximas recogidas' : 'Upcoming customer pickups';
   const lateLabel = es ? 'Fecha vencida' : 'Past pickup date';
   const todayLabel = es ? 'Hoy' : 'Today';
@@ -35,9 +41,7 @@ export default async function Home() {
   }
   const overdue = openOrders.filter((order) => order.needed_on < today).length;
   const dueToday = openOrders.filter((order) => order.needed_on === today).length;
-  const stockChecks = stock.filter(
-    (ingredient) => ingredient.balance === null || ingredient.balance <= 0,
-  ).length;
+
   const unprepared = openOrders.filter(
     (order) => !production.some((plan) => plan.id === order.id && plan.status === 'Confirmed'),
   );
@@ -66,11 +70,11 @@ export default async function Home() {
       note: es ? 'Confirmadas, aún pendientes' : 'Confirmed, not fully received',
     },
     {
-      title: es ? 'Revisar inventario' : 'Stock checks',
-      value: canStock ? stockChecks : '—',
+      title: es ? 'Ingredientes con faltantes' : 'Ingredients short',
+      value: canCoverage ? coverage.filter((line) => line.shortage > 0).length : '—',
       icon: Leaf,
-      href: '/app/inventory',
-      note: es ? 'Sin saldo o con saldo no positivo' : 'Unrecorded or nonpositive balances',
+      href: '#ingredient-demand',
+      note: es ? 'Demanda abierta frente a disponibilidad' : 'Open demand versus usable supply',
     },
   ];
   const unavailable = es
@@ -115,17 +119,18 @@ export default async function Home() {
           </Link>
         ))}
       </div>
+
       <div className="dashboard-columns">
         <section className="panel dashboard-pickups">
           <div className="dashboard-panel-heading">
             <div>
               <p className="eyebrow">{es ? 'PRÓXIMAS SALIDAS' : 'UP NEXT'}</p>
-              <h2>{es ? 'Pedidos para recogida' : 'Pickup orders'}</h2>
+              <h2>{es ? 'Próximas recogidas' : 'Upcoming pickups'}</h2>
             </div>
             <CalendarDays size={24} />
           </div>
           {!canOrders && <p>{unavailable}</p>}
-          {canOrders && (!openOrders.length ? (
+          {canOrders && (!futurePickups.length ? (
             <div className="dashboard-empty">
               <CalendarDays size={30} />
               <h3>{es ? 'Sin recogidas pendientes' : 'No pickups on the board'}</h3>
@@ -140,7 +145,7 @@ export default async function Home() {
             </div>
           ) : (
             <div className="dashboard-order-list">
-              {openOrders.slice(0, DASHBOARD_LIMIT).map((order) => (
+              {futurePickups.map((order) => (
                 <Link
                   className="dashboard-order"
                   href={`/app/orders?order=${order.id}`}
@@ -235,6 +240,9 @@ export default async function Home() {
             <ArrowUpRight size={16} />
           </Link>
         </section>
+        {canCoverage && (
+          <DemandCoveragePanel coverage={coverage} es={es} canGenerate={canGeneratePurchases} />
+        )}
         <section className="panel">
           <div className="dashboard-panel-heading">
             <div>

@@ -543,3 +543,22 @@ it('prevents overlapping order cancellation from orphaning newly generated produ
   );
   expect(String(outcome.error)).toContain('Cancel production preparation');
 });
+
+it('serializes bulk purchasing across distinct requests without duplicate supplier drafts', async () => {
+  const { plan, ingredientId } = await purchasingScenario();
+  await first.query(savePlanSql, [JSON.stringify(plan)]);
+  const supplierId = randomUUID();
+  await first.query('insert into public.suppliers(id,name) values($1,$2)', [supplierId, supplierId]);
+  await first.query(`insert into public.supplier_items(supplier_id,ingredient_id,purchase_uom,pack_quantity,pack_quantity_uom)
+    values($1,$2,'pail',30,'lb')`, [supplierId, ingredientId]);
+  const sql = 'select public.generate_demand_purchases($1) as result';
+  const request = randomUUID();
+  const outcome = await overlap(sql, [request], sql, [randomUUID()]);
+  expect(outcome.error).toBeNull();
+  const saved: unknown = await first.query(`select count(*)::int count from public.purchase_draft_lines
+    where ingredient_id=$1`, [ingredientId]);
+  expect(resultRows.parse(saved).rows).toEqual([{ count: 1 }]);
+  const initial: unknown = await first.query(sql, [request]);
+  const retry: unknown = await second.query(sql, [request]);
+  expect(resultRows.parse(retry)).toEqual(resultRows.parse(initial));
+});

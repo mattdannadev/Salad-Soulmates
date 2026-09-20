@@ -533,3 +533,114 @@ describe('materials and purchasing against actual migration SQL', () => {
     );
   });
 });
+
+async function coverage() {
+  const result = await query('select public.demand_coverage() as value');
+  return z.object({
+    value: z.array(z.object({
+      demand: z.number(),
+      shortage: z.number(),
+      usable: z.number(),
+      inbound: z.number(),
+      neededOn: z.string(),
+      supplyDate: z.string(),
+    })),
+  }).parse(result.rows[0]).value;
+}
+async function generatePurchases(request = id(990)) {
+  const result = await query('select public.generate_demand_purchases($1) as value', [request]);
+  return z.object({
+    value: z.object({
+      created: z.array(z.uuid()),
+      skipped: z.array(z.object({ ingredient: z.string(), reason: z.string() })),
+    }),
+  }).parse(result.rows[0]).value;
+}
+describe('dated demand and automatic supplier purchases', () => {
+  it('allocates shared inventory once and rounds cumulative demand to supplier packs', async () => {
+    await rpc('save_material_plan', planInput(id(800), 4, '2026-10-01'));
+    await rpc('save_material_plan', planInput(id(801), 2, '2026-11-01'));
+    await query(`insert into public.inventory_events(ingredient_id,event_type,quantity_delta,uom,reason_note,request_id)
+      values($1,'OpeningBalance',15,'lb','Opening quantity',$2)`, [id(100), id(999)]);
+    expect(await coverage()).toEqual([
+      expect.objectContaining({ demand: 60, usable: 15, shortage: 45 }),
+    ]);
+    const generated = await generatePurchases();
+    expect(generated.created).toHaveLength(1);
+    expect(generated.skipped).toEqual([]);
+    expect((await query('select purchase_units,quantity,status from public.purchase_draft_lines l join public.purchase_drafts d on d.id=l.purchase_draft_id')).rows)
+      .toEqual([{ purchase_units: 2, quantity: '60.0000', status: 'Draft' }]);
+    expect(await generatePurchases()).toEqual(generated);
+    const another = await generatePurchases(id(991));
+    expect(another.created).toEqual([]);
+    expect(another.skipped[0]?.reason).toBe('Review existing draft');
+    expect((await coverage())[0]?.shortage).toBe(45);
+  });
+  it('does not let late inbound conceal an earlier shortage', async () => {
+    await rpc('save_material_plan', planInput(id(800), 4, '2026-10-01'));
+    await rpc('save_material_plan', planInput(id(801), 2, '2026-11-01'));
+    await rpc('create_purchase_draft', { ...draftInput(), expected_on: '2026-10-15' });
+    await rpc('change_purchase_status', {
+      id: id(900), status: 'Confirmed', revision: 1, reference: 'Placed', note: '',
+    });
+    expect(await coverage()).toEqual([expect.objectContaining({
+      demand: 60, inbound: 0, shortage: 40, neededOn: '2026-10-01', supplyDate: '2026-10-01',
+    })]);
+    expect((await generatePurchases()).created).toHaveLength(1);
+  });
+  it('skips ambiguous supplier selection and makes no inventory postings', async () => {
+    await rpc('save_material_plan', planInput());
+    await query('update public.supplier_items set is_preferred=false where id=$1', [id(201)]);
+    await query(`insert into public.supplier_items(supplier_id,ingredient_id,purchase_uom,pack_quantity,pack_quantity_uom)
+      values($1,$2,'case',10,'lb')`, [id(200), id(100)]);
+    const result = await generatePurchases();
+    expect(result.created).toEqual([]);
+    expect(result.skipped[0]?.reason).toBe('Choose a preferred supplier pack');
+    expect((await query('select * from public.inventory_events')).rows).toEqual([]);
+  });
+  it('does not expose other facilities and rejects unauthorized generation', async () => {
+    await rpc('save_material_plan', planInput());
+    await actAs(id(4));
+    expect(await coverage()).toEqual([]);
+    expect(await generatePurchases()).toEqual({ created: [], skipped: [] });
+    await actAs(id(2));
+    await expect(generatePurchases()).rejects.toThrow('Purchasing permissions required');
+    await actAs(gateActor);
+    await expect(generatePurchases()).rejects.toThrow('duplicate key');
+    expect((await query('select * from public.purchase_drafts')).rows).toEqual([]);
+  });
+});
+
+it('does not recreate a subsequently cancelled draft when retrying its original request', async () => {
+  await rpc('save_material_plan', planInput());
+  const result = await generatePurchases();
+  await rpc('change_purchase_status', {
+    id: result.created[0], status: 'Cancelled', revision: 1, reference: '', note: 'Review changed demand',
+  });
+  expect(await generatePurchases()).toEqual(result);
+  expect((await query("select * from public.purchase_drafts where status='Draft'")).rows).toEqual([]);
+});
+
+it('creates separate supplier drafts automatically for independent ingredients', async () => {
+  await query('insert into public.ingredients(id,name,default_uom) values($1,\'Synthetic oil\',\'gal\')', [id(101)]);
+  await query('insert into public.suppliers(id,name) values($1,\'Second supplier\')', [id(202)]);
+  await query(`insert into public.supplier_items(supplier_id,ingredient_id,purchase_uom,pack_quantity,pack_quantity_uom)
+    values($1,$2,'case',5,'gal')`, [id(202), id(101)]);
+  await query('insert into public.recipe_versions(id,recipe_id,version_number) values($1,$2,2)', [id(403), id(400)]);
+  await query('insert into public.recipe_sections(id,recipe_version_id,name,sequence) values($1,$2,\'Ingredients\',1)', [id(404), id(403)]);
+  await query(`insert into public.recipe_lines(recipe_version_id,recipe_section_id,ingredient_id,source_line_key,sequence,display_measurement,normalized_quantity,normalized_uom)
+    values($1,$2,$3,'OIL',1,'3 gal',3,'gal')`, [id(403), id(404), id(101)]);
+  await query('update public.recipe_versions set status=\'Released\',released_by=$1 where id=$2', [gateActor, id(403)]);
+  await rpc('save_material_plan', {
+    ...planInput(),
+    batches: [
+      { recipe_version_id: id(401), batch_count: 4 },
+      { recipe_version_id: id(403), batch_count: 2 },
+    ],
+  });
+  expect((await generatePurchases()).created).toHaveLength(2);
+  const purchases = await query('select supplier_id,status from public.purchase_drafts order by supplier_id');
+  expect(purchases.rows).toEqual([
+    { supplier_id: id(200), status: 'Draft' }, { supplier_id: id(202), status: 'Draft' },
+  ]);
+});

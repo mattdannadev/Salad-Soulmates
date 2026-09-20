@@ -97,6 +97,7 @@ function isPurchasingFixtureRequest(url) {
   return (
     tables.has(endpoint)
     || endpoint === 'rpc/material_requirements' || endpoint === 'rpc/cancel_material_plan'
+    || endpoint === 'rpc/demand_coverage' || endpoint === 'rpc/generate_demand_purchases'
     || endpoint === 'rpc/cancel_customer_order'
     || endpoint === 'rpc/find_serialized_units' || endpoint === 'rpc/order_production_batches'
     || mutations.has(endpoint.replace('rpc/', ''))
@@ -175,6 +176,15 @@ async function executeRequest(url, method, body) {
     const result = await db.query('select public.material_requirements($1) as value', [
       args.plan_id,
     ]);
+    return z.object({ value: z.unknown() }).parse(result.rows[0]).value;
+  }
+  if (endpoint === 'rpc/demand_coverage') {
+    const result = await db.query('select public.demand_coverage() as value');
+    return z.object({ value: z.unknown() }).parse(result.rows[0]).value;
+  }
+  if (endpoint === 'rpc/generate_demand_purchases') {
+    const args = z.object({ request_id: z.uuid() }).parse(input);
+    const result = await db.query('select public.generate_demand_purchases($1) as value', [args.request_id]);
     return z.object({ value: z.unknown() }).parse(result.rows[0]).value;
   }
   const name = z

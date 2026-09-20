@@ -53,6 +53,18 @@ test('customer master lookup fills order details and dashboard shows product bat
   await expect(pickups).toContainText('Preview Italian dressing');
   await expect(pickups).toContainText('3 batches');
   await expect(pickups).toContainText('3 total batches');
+  const demand = page.locator('.dashboard-demand');
+  await expect(demand).toContainText('2 ingredients short');
+  await expect(demand).toContainText('Preview garlic powder');
+  await expect(demand).toContainText('Preview lemon juice');
+  await demand.getByRole('button', { name: 'Generate supplier purchase drafts' }).click();
+  await expect(demand.getByRole('status')).toContainText('1 purchase drafts created.');
+  await expect(demand.getByRole('button')).toBeDisabled();
+  await page.reload();
+  await demand.getByRole('button', { name: 'Generate supplier purchase drafts' }).click();
+  await expect(demand.getByRole('status')).toContainText('0 purchase drafts created.');
+  await expect(demand.getByRole('status')).toContainText('Review existing draft');
+  await expect(demand.getByRole('button')).toHaveText('Generate supplier purchase drafts');
   await expect(page.locator('main'))
     .toContainText('Shipment confirmation is not available yet');
   const fits = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);

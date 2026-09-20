@@ -60,3 +60,51 @@ confirmed the directory and Add supplier link.
 Final CI reruns cover the supplier layout adjustment and migration filename
 alignment before merge. Production deployment and owner acceptance are still
 separate from these pre-merge checks; final release evidence is recorded in PR #12.
+
+## Demand coverage and purchasing follow-up
+
+- Every future pickup appears, sorted earliest first, with products and batches.
+  Today and overdue counts remain available in the metrics and Orders screen.
+- Ingredient coverage uses one database snapshot for all active material plans,
+  including overdue commitments. Supply excludes held/expired material and only
+  includes confirmed outstanding purchases due by each production/pickup date.
+  Cumulative demand allocates shared supply once; the worst dated gap determines
+  the shortage. Later inbound cannot mask an earlier gap. Expiry is conservative
+  across horizons; these are planning estimates, not physical reservations.
+- Generate supplier purchase drafts recalculates this snapshot transactionally,
+  selects preferred/sole active supplier packs, and rounds to whole packs. Drafts
+  group by supplier and supporting order, with arrival requested by the first
+  shortfall. Review arrival feasibility, quantities and pricing before placement.
+- Existing drafts for an ingredient are flagged rather than duplicated or treated
+  as inbound. Ambiguous/missing/unit-mismatched supplier packs are also flagged.
+  The transaction records a retry receipt; a lost response can be retried without
+  buying twice, including after subsequent draft confirmation/cancellation.
+- Ordinary draft writes and bulk generation serialize through a short purchase
+  table lock. No supplier calls or inventory postings occur in the transaction.
+- Dashboard read failures surface as errors, not zero demand. Purchasing requires
+  the existing planning write and supporting read permissions; RLS remains active.
+
+Pending: final combined verification, PR, merge and production deployment.
+
+## Combined release verification — demand and navigation
+
+Branch `feature/dashboard-demand` includes the demand follow-up and the separately
+requested collapsible navigation. Clean `npm ci --no-audit --no-fund --offline=false`
+installed 429 pinned packages. `npm run check` passed formatting, ESLint, strict
+TypeScript, 345 automated tests and the production build. Four focused installed-
+Chrome browser scenarios passed, exercising purchase generation/retry and sidebar
+scrolling on desktop and phone. The complete browser suite and native PostgreSQL
+concurrency CI are the remaining pre-release checks. No hosted test data was used.
+
+PR #13: all 26 installed-Chrome browser scenarios passed (3.4 minutes), including
+supplier draft generation/retry, desktop scrolling and desktop/phone collapse.
+Screenshots of populated desktop/phone dashboards and the icon rail were reviewed;
+independent browser verification found no browser errors. Native PostgreSQL
+concurrency CI passed, including overlapping bulk requests with distinct IDs.
+Migration `20260920124904_dashboard_demand_purchasing` is applied transactionally
+and aligned with the local filename. Read-only hosted checks confirmed request RLS,
+anonymous execution denied and no unscoped coverage. Security advisor findings
+remain the same pre-existing five definer helpers and leaked-password setting.
+No hosted operational records were created or changed by verification. The final
+CI rerun covers migration filename alignment; merge/deploy evidence belongs in PR
+#13. Owner visual/operational acceptance remains separate.
