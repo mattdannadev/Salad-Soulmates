@@ -72,6 +72,13 @@ const links = [
     permission: 'planning.read',
   },
   {
+    href: '/app/shipping',
+    en: 'Shipping',
+    es: 'Envíos',
+    icon: Truck,
+    permission: 'orders.read',
+  },
+  {
     href: '/app/inventory',
     en: 'Inventory',
     es: 'Inventario',
