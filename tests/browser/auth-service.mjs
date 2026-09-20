@@ -260,6 +260,11 @@ createServer((request, response) => {
     response.end('{}');
   });
   request.on('end', () => {
+    if (request.method === 'HEAD') {
+      response.setHeader('Content-Range', '*/0');
+      response.end();
+      return;
+    }
     if (isPurchasingFixtureRequest(url)) {
       purchasingFixtureResponse(url, request.method ?? 'GET', payload)
         .then((result) => {
