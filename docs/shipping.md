@@ -45,6 +45,12 @@ control explains the packaging dependency. Shipping remains an incomplete build 
 
 ## Verification
 
+September 20 follow-up: the owner reported a spinner over the unavailable
+confirmation button. The deployed button was disabled with no runtime errors;
+the global disabled-button style incorrectly used the busy `wait` cursor.
+Disabled actions now use `not-allowed`. Desktop/phone regression coverage checks
+both the disabled state and cursor. Shipment confirmation remains unavailable.
+
 Validation results are recorded at completion of this candidate. Tests use disposable
 PGlite and synthetic local Auth/API fixtures, never the shared database. Real Auth,
 packaging integration and native multi-session shipping concurrency remain open.

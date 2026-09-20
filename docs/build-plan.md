@@ -4,6 +4,10 @@ Updated: September 20, 2026
 
 ## Current checkpoint
 
+Shipping usability follow-up: unavailable actions must not display a busy cursor.
+Keep confirmation disabled until physical fulfillment is implemented; cover its
+disabled state and cursor in the desktop/phone shipping checks.
+
 The owner subsequently prioritized packaging setup and authorized releasing all
 outstanding PRs: #7 (continuity), #8 (shipping preparation), #9 (packaging setup).
 See `packaging-setup.md`, `shipping.md` and PR #9 for this release and verification.
