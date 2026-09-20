@@ -18,8 +18,8 @@ physical fulfillment after packaging is ready. This candidate starts from main
   with different content fails. The form holds the attempted payload after an uncertain response.
 - English/Spanish UI, desktop/phone layout and honest empty/error states.
 
-Apply `supabase/migrations/20260920043639_shipping_drafts.sql` before deploying this
-candidate. It is additive and has **not** been applied to the hosted database.
+Apply `supabase/migrations/20260920051826_shipping_drafts.sql` before deploying this
+release. It was applied to the existing hosted database on September 20 under explicit owner release authorization. SQL is unchanged; do not replay the old candidate timestamp.
 Reads require `orders.read` and `planning.read`; preparation also requires
 `orders.write` and `planning.write` to use the existing order-cancellation lock safely.
 No operational records were inserted into the hosted database.
