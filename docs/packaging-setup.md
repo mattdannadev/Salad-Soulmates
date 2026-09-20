@@ -27,7 +27,7 @@ stock, margins and font sizing remain part of production-label implementation.
 
 ## Data and access
 
-`20260920043402_packaging_setup.sql` adds `packaging_profile_versions` and the
+`20260920051807_packaging_setup.sql` adds `packaging_profile_versions` and the
 invoker RPC `save_packaging_profile`. Product setup is organization-scoped, like
 the existing Products catalog; it is shared by facilities within that organization.
 Reading requires `products.read`; writing also requires `products.write`.
@@ -64,7 +64,7 @@ checkout conversion; `.gitattributes` now preserves LF to match the existing
 mandatory lint rules without weakening them.
 
 The migration must be applied before deploying the dependent Products page.
-No hosted migration, merge or deployment is included in this setup change.
+The owner subsequently authorized all outstanding PR merges and deployment. The additive migration was applied to the existing hosted project on September 20. SQL is unchanged from candidate 20260920043402; do not apply both timestamps. Hosted RLS and immutable grants are verified, with no new security-advisor findings and no sample records.
 Real Auth acceptance, independent review and physical printer checks remain open.
 This does not implement filled-bag recording, waste, tank transfers, finished-goods
 inventory, production-lot labels, print events or shipping. Those require the
