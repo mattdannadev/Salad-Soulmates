@@ -1,7 +1,8 @@
 # Continue Salad Soulmates development
 
-Start with [the project index](README.md) and [root engineering policy](../AGENTS.md).
-Use the existing repository `mattdannadev/Salad-Soulmates`.
+Start with [the task-scoped documentation index](README.md) and [root engineering
+policy](../AGENTS.md). Use the existing repository
+`mattdannadev/Salad-Soulmates`.
 
 ## Verified repository checkpoint — September 20, 2026
 
@@ -34,7 +35,10 @@ sequencing decision before it displaces a scheduled phase.
 ## Every session
 
 1. Inspect current main, open PRs, local changes and nested AGENTS instructions.
-2. Read decisions.md, build-plan.md and the relevant feature/acceptance documents.
+2. Use [the documentation index](README.md) to load only the source, tests and
+   documentation relevant to the task. Read `build-plan.md` for roadmap, sequencing,
+   completion-status, or next-task work; read relevant `decisions.md` portions for
+   product decisions or requirement conflicts.
 3. Work in a focused branch. Reconcile concurrent changes; preserve existing work.
 4. Implement the approved scope and keep plan, decisions and acceptance evidence
    current in the same PR.
