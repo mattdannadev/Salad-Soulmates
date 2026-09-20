@@ -14,7 +14,7 @@ test('receive physical packages, print labels, resolve a barcode, and preserve a
   await page.getByLabel('Expiration date').fill('2099-10-01');
   await page.getByLabel('Quantity in each physical package').fill('30 | SUPPLIER-ONE\n19');
   await page.getByRole('button', { name: 'Post receipt & update inventory' }).click();
-  await expect(page.getByRole('alert')).toContainText('Package quantities must equal');
+  await expect(page.locator('main').getByRole('alert')).toContainText('Package quantities must equal');
   await page.getByLabel('Quantity in each physical package').fill('30 | SUPPLIER-ONE\n20');
   await page.getByRole('button', { name: 'Post receipt & update inventory' }).click();
   await expect(page.getByRole('status')).toContainText('packages serialized');

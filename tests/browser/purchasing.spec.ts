@@ -74,8 +74,8 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await page.goto('/app/suppliers');
   const supplier = page.locator('details.supplier-orders').filter({ hasText: 'Preview supplier' });
   await expect(supplier).not.toHaveAttribute('open', '');
-  await supplier.locator(':scope > summary').focus();
-  await page.keyboard.press('Enter');
+  await supplier.locator(':scope > summary').press('Enter');
+  await expect(supplier).toHaveAttribute('open', '');
   await expect(supplier.getByText('No purchase orders for this supplier yet.', { exact: true })).toBeVisible();
   await expect(supplier.getByLabel('Supplier name', { exact: true })).not.toBeVisible();
   await expect(supplier.getByRole('heading', { name: 'Preview customer', exact: true })).toBeVisible();
