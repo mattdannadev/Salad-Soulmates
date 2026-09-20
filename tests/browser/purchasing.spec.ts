@@ -1,5 +1,9 @@
 import { expect, test } from '@playwright/test';
 
+test.afterEach(async ({ page }, info) => {
+  if (info.status !== info.expectedStatus) console.error('Synthetic browser failure:', await page.locator('main').ariaSnapshot());
+});
+
 test('customer packaging and order estimates lead to purchasing and partial receipt', async ({
   page,
   request,

@@ -39,15 +39,15 @@ export default function CustomerOptionForm({
         <label htmlFor={`${prefix}-customer`}>
           {es ? 'Cliente' : 'Customer'}
           <input id={`${prefix}-customer`} list={`${prefix}-customers`} name="customer_name" required maxLength={120} readOnly={Boolean(option)} defaultValue={customers.find((customer) => customer.id === option?.customer_id)?.name ?? ''} />
-          <datalist id={`${prefix}-customers`}>{customers.map((customer) => <option key={customer.id} value={customer.name}>{customer.name}</option>)}</datalist>
         </label>
+        <datalist id={`${prefix}-customers`}>{customers.map((customer) => <option key={customer.id} value={customer.name}>{customer.name}</option>)}</datalist>
         <label htmlFor={`${prefix}-label`}>
           {es ? 'Nombre de la opción' : 'Option name'}
           <input id={`${prefix}-label`} name="label" required maxLength={120} defaultValue={option?.label ?? ''} placeholder={es ? 'Bolsa de 2 galones' : '2-gallon bag'} />
         </label>
         <label htmlFor={`${prefix}-mode`}>
           {es ? 'Empaque' : 'Packaging'}
-          <select id={`${prefix}-mode`} name="packaging_mode" value={mode} onChange={(event) => setMode(event.currentTarget.value)}>
+          <select aria-label={es ? 'Empaque' : 'Packaging'} id={`${prefix}-mode`} name="packaging_mode" value={mode} onChange={(event) => setMode(event.currentTarget.value)}>
             <option value="product_default">{es ? 'Copiar empaque predeterminado (caja)' : 'Copy default packaging (case)'}</option>
             <option value="custom">{es ? 'Empaque específico del cliente' : 'Customer-specific packaging'}</option>
           </select>
@@ -70,7 +70,7 @@ export default function CustomerOptionForm({
         </label>
         <label htmlFor={`${prefix}-active`}>
           {es ? 'Disponibilidad' : 'Availability'}
-          <select id={`${prefix}-active`} name="active" defaultValue={option?.active === false ? 'false' : 'true'}>
+          <select aria-label={es ? 'Disponibilidad' : 'Availability'} id={`${prefix}-active`} name="active" defaultValue={option?.active === false ? 'false' : 'true'}>
             <option value="true">{es ? 'Activa' : 'Active'}</option>
             <option value="false">{es ? 'Inactiva' : 'Inactive'}</option>
           </select>

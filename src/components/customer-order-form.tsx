@@ -42,8 +42,8 @@ export default function CustomerOrderForm({
         <label htmlFor={`${prefix}-customer`}>
           {es ? 'Cliente' : 'Customer'}
           <input id={`${prefix}-customer`} name="customer_name" list={`${prefix}-customers`} required maxLength={120} value={customerName} onChange={(event) => setCustomerName(event.currentTarget.value)} />
-          <datalist id={`${prefix}-customers`}>{customers.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}</datalist>
         </label>
+        <datalist id={`${prefix}-customers`}>{customers.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}</datalist>
         <label htmlFor={`${prefix}-reference`}>
           {es ? 'Referencia del pedido (opcional)' : 'Customer order reference (optional)'}
           <input id={`${prefix}-reference`} name="reference" maxLength={120} />
@@ -64,7 +64,7 @@ export default function CustomerOrderForm({
             </label>
             <label htmlFor={`${prefix}-${choice.id}-packaging`}>
               {es ? 'Empaque y precio' : 'Packaging & price'}
-              <select key={customer?.id ?? 'new'} id={`${prefix}-${choice.id}-packaging`} name={`${choice.id}-packaging`} defaultValue="">
+              <select aria-label={es ? 'Empaque y precio' : 'Packaging & price'} key={customer?.id ?? 'new'} id={`${prefix}-${choice.id}-packaging`} name={`${choice.id}-packaging`} defaultValue="">
                 <option value="">{es ? 'Empaque predeterminado · precio sin configurar' : 'Default packaging · price not set'}</option>
                 {options.filter((option) => option.active && option.product_id === choice.id
                   && option.customer_id === customer?.id).map((option) => (
