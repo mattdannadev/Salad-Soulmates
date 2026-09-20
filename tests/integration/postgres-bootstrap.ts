@@ -17,6 +17,7 @@ const migrations = [
   '20260920031357_receiving_serialization.sql',
   '20260920032256_order_production_planning.sql',
   '20260920051807_packaging_setup.sql',
+  '20260920051826_shipping_drafts.sql',
 ];
 
 /** Apply migrations and synthetic identity data only inside the newly created test database. */

@@ -24,6 +24,16 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      shipping_drafts: {
+        Row: {
+          id: string; organization_id: string; facility_id: string; order_id: string;
+          planned_on: string; method: string; note: string; lines: Json;
+          created_by: string; created_at: string;
+        };
+        Insert: { id: string; order_id: string; planned_on: string; method: string; note: string; lines: Json; };
+        Update: never;
+        Relationships: [];
+      };
       order_production_plans: {
         Row: {
           id: string; organization_id: string; facility_id: string;
@@ -1577,6 +1587,7 @@ export type Database = {
     };
     Functions: {
       save_packaging_profile: { Args: { payload: Json }; Returns: string; };
+      save_shipping_draft: { Args: { payload: Json }; Returns: string; };
       save_order_production_plan: { Args: { payload: Json }; Returns: string; };
       order_production_batches: { Args: { order_id: string }; Returns: Json; };
       receive_serialized_delivery: { Args: { payload: Json }; Returns: string; };
