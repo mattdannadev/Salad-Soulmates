@@ -7,16 +7,27 @@ This file is the canonical engineering policy. Do not silently weaken it.
 
 ## Project continuity
 
-At the start of each task read `docs/README.md`, `docs/decisions.md`,
-`docs/build-plan.md` and the relevant feature requirements. Inspect current main
-and open PRs; do not use chat memory or historical scratch paths as repository state.
-Keep this policy authoritative across ChatGPT Work, Codex, IDEs and human changes.
+At the start of each task inspect the current repository/branch state, open PRs,
+working-tree changes, applicable `AGENTS.md` instructions, and only the source,
+tests, and documentation relevant to the requested work. Do not use chat memory
+or historical scratch paths as repository state. Keep this policy authoritative
+across ChatGPT Work, Codex, IDEs and human changes.
 
-Record accepted requirement changes in the decision log and update build-plan
-scope and acceptance criteria in the same PR. Preserve versioned source documents
-and identify overrides. Every implementation handoff must record its PR/commit,
-verification results, remaining gates and next step. Distinguish implementation,
-merge, deployment and owner acceptance. Do not mark a phase complete from memory.
+Use [the documentation index](docs/README.md) to route the task to the minimum
+needed context. Read `docs/build-plan.md` when determining roadmap status,
+sequencing, completion status, or the next task. Read the relevant portions of
+`docs/decisions.md` when existing product/business decisions apply or requirements
+conflict. Read the applicable feature specification for feature implementation.
+Read the full PRD or build specification only for broad, cross-cutting,
+architectural, or genuinely ambiguous work that cannot be resolved from narrower
+sources. Expand context incrementally only when needed.
+
+For accepted requirement changes, record the change in the decision log and update
+affected build-plan scope and acceptance criteria in the same PR. Preserve
+versioned source documents and identify overrides. Every implementation handoff
+must record its PR/commit, verification results, remaining gates and next step.
+Distinguish implementation, merge, deployment and owner acceptance. Do not mark a
+phase complete from memory.
 
 ## Coding standards and style
 
@@ -99,16 +110,18 @@ failure paths. Do not approve incomplete enforcement as complete compliance.
 
 ## Salad Soulmates preservation requirements
 
-Read `docs/decisions.md` and current owner decisions before older requirements
-or mockups. Preserve incremental delivery, approved lot/date rules and facility
-timezone, units/conversions, recipe/version invariants, inventory history,
-tenant isolation, scheduling, and mobile/worker workflows. Follow the existing
-one-hosted-database decision; database tests use disposable local databases and
-must not write sample records to the shared hosted database.
+When a task relies on product requirements, read relevant current owner decisions
+in `docs/decisions.md` before older requirements or mockups. Preserve incremental
+delivery, approved lot/date rules and facility timezone, units/conversions,
+recipe/version invariants, inventory history, tenant isolation, scheduling, and
+mobile/worker workflows. Follow the existing one-hosted-database decision;
+database tests use disposable local databases and must not write sample records to
+the shared hosted database.
 
-See `docs/engineering-refactor.md` for completed changes and remaining acceptance
-criteria. These standards are mandatory; that audit must distinguish the target
-standard from what has actually been implemented and verified.
+For refactor work, read `docs/engineering-refactor.md` for completed changes and
+remaining acceptance criteria. These standards are mandatory; that audit must
+distinguish the target standard from what has actually been implemented and
+verified.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
