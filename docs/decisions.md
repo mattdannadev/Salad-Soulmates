@@ -1,5 +1,37 @@
 # Implementation decisions
 
+## 2026-09-20 — Release packaging setup and all outstanding PRs
+
+The owner explicitly requested finishing packaging, merging all outstanding PRs,
+building, deploying and providing a Preview. This authorizes PRs #7 (continuity),
+#8 (shipping preparation) and #9 (packaging setup), plus their tested additive
+migrations in the existing hosted database. Packaging remains setup only, with
+one label per bag and editable 3-by-5-inch defaults. Shipping remains preparation
+only; production completion, tank transfers and actual fulfillment stay deferred.
+
+Hosted migrations are `20260920051807_packaging_setup` and
+`20260920051826_shipping_drafts`. Their SQL is unchanged from the tested candidates;
+do not replay the old candidate timestamps. RLS is enabled, anonymous inserts and
+authenticated updates/deletes are denied, and neither table contains test records.
+Security advisors match the previous baseline. Combined checks and deployment
+evidence are recorded in PR #9. Real Auth acceptance, independent review and
+physical printer/scanner acceptance remain open.
+
+## 2026-09-20 — Packaging setup before scheduling
+
+The owner requested packaging next, then selected **Build packaging setup first**
+when asked about its missing production-completion/tank-transfer dependency.
+Implement product packaging configuration and controlled, versioned label content;
+defer physical packaging execution until production/tank genealogy is available.
+The owner confirmed one label per bag, approximately 3 × 5 inches, and may change
+the size later. Initialize width 3 inches and height 5 inches with editable dimensions.
+
+Preserve existing product defaults until a version is explicitly approved. Keep
+saved orders and customer pricing/packaging snapshots unchanged. Use a clearly
+marked sample preview without a real lot. Do not invent printer integration,
+production completion, ingredient consumption or tank-mixing rules. Scheduling
+remains pending. See `packaging-setup.md` for implementation and release boundaries.
+
 ## 2026-09-20 — Repository as the durable planning record
 
 The owner requested executing the GitHub documentation workflow so development

@@ -473,6 +473,42 @@ async function productionOrderPayload() {
   };
 }
 const productionSql = 'select public.save_order_production_plan($1::jsonb)';
+const packagingSql = 'select public.save_packaging_profile($1::jsonb)';
+async function packagingPayload() {
+  const { productId } = await draftRecipe();
+  return {
+    id: randomUUID(),
+    product_id: productId,
+    expected_version: 0,
+    status: 'Approved',
+    bag_size_gallons: 1,
+    bags_per_case: 4,
+    label_width_inches: 3,
+    label_height_inches: 5,
+    display_name: 'Synthetic label',
+    ingredient_statement: 'Approved test wording',
+  };
+}
+it('serializes duplicate packaging approvals into one immutable version', async () => {
+  const payload = await packagingPayload();
+  const values = [JSON.stringify(payload)];
+  const outcome = await overlap(packagingSql, values, packagingSql, values);
+  expect(outcome.error).toBeNull();
+  const result: unknown = await first.query('select count(*)::int count from public.packaging_profile_versions where product_id=$1', [payload.product_id]);
+  expect(resultRows.parse(result).rows).toEqual([{ count: 1 }]);
+});
+it('rejects overlapping packaging edits without replacing approved defaults', async () => {
+  const payload = await packagingPayload();
+  const outcome = await overlap(
+    packagingSql,
+    [JSON.stringify(payload)],
+    packagingSql,
+    [JSON.stringify({ ...payload, id: randomUUID(), bag_size_gallons: 2 })],
+  );
+  expect(String(outcome.error)).toContain('Packaging setup changed');
+  const result: unknown = await first.query('select bag_size_gallons::float gallons from public.products where id=$1', [payload.product_id]);
+  expect(resultRows.parse(result).rows).toEqual([{ gallons: 1 }]);
+});
 it('serializes duplicate production generation into exactly one set of mixer and spice records', async () => {
   const payload = await productionOrderPayload();
   const outcome = await overlap(

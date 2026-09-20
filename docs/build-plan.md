@@ -4,6 +4,15 @@ Updated: September 20, 2026
 
 ## Current checkpoint
 
+The owner subsequently prioritized packaging setup and authorized releasing all
+outstanding PRs: #7 (continuity), #8 (shipping preparation), #9 (packaging setup).
+See `packaging-setup.md`, `shipping.md` and PR #9 for this release and verification.
+The two additive setup migrations are applied to the existing hosted database.
+Scheduling remains pending. Physical packaging and shipment confirmation still
+require production completion, tank genealogy and actual finished inventory.
+
+The following main checkpoint predates those release candidates:
+
 GitHub main `3262e179a258c3cf1ae261f4f1bbae55dd5032d1` includes merged PRs
 #1 (refactor), #2 (orders/purchasing), #4 (receiving), #5 (migration alignment),
 and #6 (order-linked production preparation), verified September 20.
@@ -89,6 +98,12 @@ finished inventory deductions, actual fulfillment and returns await packaging.
 See [Shipping foundation](shipping.md). This does not mark phase 7 complete.
 
 ## Approved delivery order
+
+September 20 owner update: implement **packaging setup** ahead of scheduling,
+including editable bag/case configuration and versioned label content with an
+initial 3 × 5 inch label, one per bag. The owner explicitly deferred production
+completion and tank transfers. Physical packaging execution remains dependent on
+those workflows; scheduling is still pending. See `packaging-setup.md`.
 
 | Order | Build phase                                          | Scope / sequencing                                                                                                                                                               |
 | ----- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

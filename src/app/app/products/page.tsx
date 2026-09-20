@@ -1,4 +1,6 @@
 import { Fragment } from 'react';
+import PackagingSetup from '@/components/packaging-setup';
+import { packagingVersionSchema } from '@/domain/packaging';
 import CustomerProductOptions from '@/components/customer-product-options';
 import { customerRowSchema, customerOptionRowSchema } from '@/domain/customer-pricing';
 import { rows } from '@/lib/data';
@@ -13,10 +15,11 @@ export default async function Products() {
   const {
     db, products, recipes, locale,
   } = await loadRecipeCatalog();
-  const [customers, options, canWrite] = await Promise.all([
+  const [customers, options, canWrite, packagingVersions] = await Promise.all([
     rows(db, 'customers', customerRowSchema),
     rows(db, 'customer_product_options', customerOptionRowSchema),
     hasPermission(db, 'products.write'),
+    rows(db, 'packaging_profile_versions', packagingVersionSchema),
   ]);
   return (
     <>
@@ -29,7 +32,7 @@ export default async function Products() {
       <section className="panel">
         {products.length ? (
           <div className="table-wrap">
-            <table>
+            <table className="product-catalog">
               <thead>
                 <tr>
                   <th>{recipeText(locale, 'Product')}</th>
@@ -77,6 +80,18 @@ export default async function Products() {
                             {recipe ? (
                               <Link href={`/app/recipes/${recipe.id}`}>{recipe.name}</Link>
                             ) : recipeText(locale, 'No recipe linked')}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td colSpan={4}>
+                            <PackagingSetup
+                              product={product}
+                              versions={packagingVersions.filter(
+                                (version) => version.product_id === product.id,
+                              )}
+                              canWrite={canWrite && product.active}
+                              locale={locale}
+                            />
                           </td>
                         </tr>
                         <tr>

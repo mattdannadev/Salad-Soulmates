@@ -5,6 +5,11 @@ Use the existing repository `mattdannadev/Salad-Soulmates`.
 
 ## Verified repository checkpoint — September 20, 2026
 
+The latest owner instruction authorizes merging PRs #7, #8 and #9 and deploying
+the combined packaging-setup/shipping-preparation release. Both additive hosted
+migrations are applied; see the decision log and PR #9 for final release checks.
+Inspect current GitHub state before using the earlier checkpoint below.
+
 Main was inspected at `3262e179a258c3cf1ae261f4f1bbae55dd5032d1`.
 GitHub reports PRs [#1](https://github.com/mattdannadev/Salad-Soulmates/pull/1),
 [#2](https://github.com/mattdannadev/Salad-Soulmates/pull/2),
