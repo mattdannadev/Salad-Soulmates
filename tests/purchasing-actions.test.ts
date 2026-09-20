@@ -42,6 +42,7 @@ it('preserves request identity and invalidates purchasing and receiving after su
   expect(await savePurchasing('save-order', input)).toMatchObject({ ok: true, id });
   expect(mocks.rpc).toHaveBeenCalledWith('save_customer_order', { payload: input });
   expect(mocks.revalidate).toHaveBeenCalledWith('/app/receiving');
+  expect(mocks.revalidate).toHaveBeenCalledWith('/app/suppliers');
 });
 it('does not report SDK errors or malformed write acknowledgements as success', async () => {
   mocks.rpc.mockResolvedValueOnce({

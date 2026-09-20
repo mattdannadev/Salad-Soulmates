@@ -22,6 +22,9 @@ Materials worksheets and a separate Production planning entry point. The flow is
 3. Show current inventory, commitments, confirmed inbound and shortages on the order.
 4. Prepare supplier purchasing estimates from that order, with pack rounding and
    explicit review before recording externally placed supplier orders.
+   Suppliers also show recent purchase orders/statuses, outstanding customer orders
+   with dates, and supplier-specific purchase creation. Supplier contacts/settings
+   stay collapsed separately from purchasing work.
 5. Continue into internal batch preparation, production dates and scheduling as
    those capabilities are delivered. Do not require demand to be entered again.
 

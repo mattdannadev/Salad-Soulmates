@@ -125,6 +125,7 @@ export default async function savePurchasing(
     revalidatePath('/app/orders');
     revalidatePath('/app/materials');
     revalidatePath('/app/purchasing');
+    revalidatePath('/app/suppliers');
     revalidatePath('/app/receiving');
     revalidatePath('/receiving');
     return { ok: true, id: saved.data, message: 'Saved successfully.' };

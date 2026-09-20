@@ -1,5 +1,28 @@
 # Implementation decisions
 
+## 2026-09-20 — Suppliers open into purchasing work
+
+The owner wants supplier expansion to show purchase orders and their statuses,
+not an edit form. Each supplier now shows its five most recent purchase orders,
+a link to all supplier purchases, and active customer orders grouped by customer
+with order-created, customer-needed and supplier-expected delivery dates.
+Supplier contact/settings and new-supplier entry remain separately collapsed.
+
+New purchase order carries the chosen supplier through customer-order selection
+and limits the composer to that supplier's packs and matching ingredients. It
+uses the existing shortage calculation, draft, confirmation and receiving flow;
+no independent demand worksheet or supplier transmission is introduced.
+
+Partially received and Received are derived from receipt quantities for every
+purchase line. Draft, Confirmed and Cancelled remain the stored workflow states.
+The outstanding-customer list means active customer demand associated by existing
+ingredient IDs or saved purchases. Shipment/fulfillment completion remains future
+work; receiving ingredients does not complete the customer's finished-product order.
+
+Catalog-only viewers retain supplier access without purchase/customer queries.
+Purchasing reads and writes retain their existing permission and RLS boundaries.
+This is a UI/data-read extension with no migration or hosted sample data.
+
 ## 2026-09-20 — Customer-order Preview rollout verified
 
 Commit `d0881d0` passed the complete CI check (202 tests and production build),

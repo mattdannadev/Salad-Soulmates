@@ -1,13 +1,15 @@
 # Receiving and physical package serialization
 
 Candidate branch: `feature/receiving-serialization-complete`, stacked on the materials
-and purchasing candidate (`8d34023`). This implements the next owner-requested build
+and purchasing candidate (`2f2a7c0`). This implements the next owner-requested build
 step. It does not close the carried-forward Auth, independent review or release
 acceptance gates.
 
-The resumed candidate preserves the latest customer orders, packaging/pricing,
+The resumed candidate preserves the latest supplier purchase-order expansion,
+customer orders, packaging/pricing,
 order-driven ingredient estimates, account-language fixes and recipe-to-ingredient
-links. Receiving and package changes invalidate order estimates and package views.
+links. Receiving and package changes invalidate supplier purchase progress, order
+estimates and package views.
 The receiving browser suite uses the shared isolated-database setup, verifies
 invalid package totals and label reprints, and resolves the actual selected
 package serial without assuming a random UUID sort order.
@@ -75,7 +77,8 @@ package-change retries and stale competing revisions.
 
 Local `npm ci --offline` and `npm run check` passed after integrating the current
 purchasing branch: 232 automated tests, formatting, Airbnb lint, strict TypeScript
-and the production build. Final candidate CI results are recorded when complete.
+and the production build. Final candidate results, including the later supplier integration, are recorded in
+[draft PR #4](https://github.com/mattdannadev/Salad-Soulmates/pull/4).
 GitHub Actions runs Chromium at desktop and 390px phone sizes and an isolated
 PostgreSQL 17 service for true concurrent transactions. PGlite tests are not
 presented as native concurrency or real Auth verification. All automated records

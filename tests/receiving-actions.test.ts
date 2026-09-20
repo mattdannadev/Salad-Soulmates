@@ -44,6 +44,7 @@ it('preserves request identity and invalidates inventory and receiving after suc
   expect(mocks.rpc).toHaveBeenCalledWith('change_serialized_unit', { payload: input });
   expect(mocks.revalidate).toHaveBeenCalledWith('/app/receiving');
   expect(mocks.revalidate).toHaveBeenCalledWith('/app/orders');
+  expect(mocks.revalidate).toHaveBeenCalledWith('/app/suppliers');
   expect(mocks.revalidate).toHaveBeenCalledWith('/receiving/packages');
   expect(mocks.revalidate).toHaveBeenCalledWith('/receiving/packages/[id]', 'page');
 });

@@ -64,7 +64,7 @@ export default async function saveReceiving(
       logFailure(`receiving_${kind.data}`, { code: 'INVALID_RESPONSE' });
       return { ok: false, message: 'Save could not be confirmed. Retry with the same entries.' };
     }
-    ['/app/receiving', '/receiving', '/app/inventory', '/app/materials', '/app/orders', '/app/purchasing', '/receiving/packages', '/receiving/labels']
+    ['/app/receiving', '/receiving', '/app/inventory', '/app/materials', '/app/orders', '/app/purchasing', '/app/suppliers', '/receiving/packages', '/receiving/labels']
       .forEach((path) => revalidatePath(path));
     revalidatePath('/receiving/packages/[id]', 'page');
     return {
