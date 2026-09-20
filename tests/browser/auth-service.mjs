@@ -2,6 +2,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { Buffer } from 'node:buffer';
 import { createServer } from 'node:http';
 import { z } from 'zod';
+import { supplierSchema } from '../../src/domain/master-data.ts';
 import { initializeGateDatabase, gateActor } from '../integration/postgres-bootstrap.ts';
 import {
   fixtureId,
@@ -12,6 +13,7 @@ import {
 
 // Local, deliberately minimal Auth/API fixture. It never connects to a hosted service.
 const tables = new Set([
+  'suppliers',
   'products',
   'packaging_profile_versions',
   'material_plans',
@@ -118,6 +120,15 @@ async function executeRequest(url, method, body) {
     return result.rows[0] ?? null;
   }
   const input = JSON.parse(body);
+  if (endpoint === 'suppliers' && method === 'POST') {
+    const supplier = supplierSchema.parse(input);
+    const result = await db.query(
+      'insert into public.suppliers(name,contact_name,email,phone,lead_time_days,active) values($1,$2,$3,$4,$5,$6) returning id',
+      [supplier.name, supplier.contact_name, supplier.email,
+        supplier.phone, supplier.lead_time_days, supplier.active],
+    );
+    return z.object({ id: z.uuid() }).parse(result.rows[0]);
+  }
   if (endpoint === 'rpc/order_production_batches') {
     const args = z.object({ order_id: z.uuid() }).parse(input);
     const result = await db.query('select public.order_production_batches($1) as value', [args.order_id]);
@@ -249,6 +260,11 @@ createServer((request, response) => {
     response.end('{}');
   });
   request.on('end', () => {
+    if (request.method === 'HEAD') {
+      response.setHeader('Content-Range', '*/0');
+      response.end();
+      return;
+    }
     if (isPurchasingFixtureRequest(url)) {
       purchasingFixtureResponse(url, request.method ?? 'GET', payload)
         .then((result) => {
