@@ -71,13 +71,33 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await expect(
     page.getByRole('heading', { name: 'Purchasing', exact: true }),
   ).toBeVisible();
+  await page.goto('/app/suppliers');
+  const supplier = page.locator('details.supplier-orders').filter({ hasText: 'Preview supplier' });
+  await expect(supplier).not.toHaveAttribute('open', '');
+  await supplier.locator(':scope > summary').focus();
+  await page.keyboard.press('Enter');
+  await expect(supplier.getByText('No purchase orders for this supplier yet.', { exact: true })).toBeVisible();
+  await expect(supplier.getByLabel('Supplier name', { exact: true })).not.toBeVisible();
+  await expect(supplier.getByRole('heading', { name: 'Preview customer', exact: true })).toBeVisible();
+  await expect(supplier.locator('.supplier-demand')).toContainText('Oct 1, 2026');
+  await expect(supplier.locator('.supplier-demand')).toContainText('No purchase order yet');
+  await supplier.getByRole('link', { name: 'New purchase order', exact: true }).click();
+  await expect(page).toHaveURL(/supplier=/);
+  await expect(page.getByText('Selected supplier: Preview supplier', { exact: false })).toBeVisible();
+  await page.locator('.worksheet-links').getByRole('link', { name: `Preview customer · Order ${info.project.name}`, exact: false }).click();
+  await expect(page).toHaveURL(/plan=.*supplier=/);
   await page.getByRole('button', { name: 'Create draft for Preview supplier' }).click();
+  await expect(page.getByRole('article').getByText('Draft', { exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Back to suppliers', exact: true }).click();
+  await supplier.locator(':scope > summary').click();
   const draft = page.getByRole('article').filter({ hasText: 'Preview supplier' });
   await expect(draft).toContainText('60 lb');
   await draft.getByText('Update status', { exact: true }).click();
   await draft.getByLabel('External order reference').fill(`PO-${info.project.name}`);
   await draft.getByRole('button', { name: 'Save purchase status' }).click();
   await expect(draft.getByText('Confirmed', { exact: true })).toBeVisible();
+  await expect(draft).toContainText('Customer needs by');
+  await expect(draft).toContainText('Expected delivery');
   await page.screenshot({ path: info.outputPath('purchasing.png'), fullPage: true });
   await page.goto('/app/receiving');
   await page.getByLabel('Quantity received').fill('10');
@@ -94,6 +114,16 @@ test('customer packaging and order estimates lead to purchasing and partial rece
       .getByRole('row')
       .filter({ hasText: 'Preview garlic powder' }),
   ).toContainText('50 lb');
+  await page.goto('/app/suppliers');
+  await supplier.locator(':scope > summary').click();
+  await expect(supplier.getByRole('article').getByText('Partially received', { exact: true })).toBeVisible();
+  await expect(supplier.getByRole('article')).toContainText('50 lb');
+  await expect(supplier.locator(':scope > summary')).toContainText('Open purchase orders: 1');
+  const fitsScreen = await page.evaluate(
+    () => document.documentElement.scrollWidth <= window.innerWidth,
+  );
+  expect(fitsScreen).toBe(true);
+  await page.screenshot({ path: info.outputPath('supplier-purchase-orders.png'), fullPage: true });
   await expect(page.locator('body')).not.toContainText('Application error');
   expect(errors).toEqual([]);
 });

@@ -1148,3 +1148,49 @@ dialog::backdrop {
   min-width: 12rem;
   margin: 4px 0 8px;
 }
+
+.supplier-orders > summary strong {
+  margin-right: 0.75rem;
+}
+.supplier-order-count {
+  display: block;
+  margin-top: 0.35rem;
+  color: #576452;
+  font-size: 0.85rem;
+}
+.supplier-purchases,
+.supplier-profile {
+  margin-top: 1rem;
+}
+.supplier-demand {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #d8decf;
+}
+.supplier-customer {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f7f8f3;
+  border-radius: 0.5rem;
+}
+.supplier-customer h4 {
+  margin: 0 0 0.75rem;
+}
+.supplier-customer-order + .supplier-customer-order {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #d8decf;
+}
+.purchase-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem 1.5rem;
+  margin: 1rem 0;
+}
+.purchase-dates dt {
+  font-size: 0.8rem;
+  color: #576452;
+}
+.purchase-dates dd {
+  margin: 0.25rem 0 0;
+}

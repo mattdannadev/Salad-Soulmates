@@ -4,71 +4,93 @@ import { z } from 'zod';
 import loadPurchasingWorkspace from '@/lib/purchasing-data';
 import { PageHeader } from '@/components/shell';
 import PurchaseComposer from '@/components/purchase-composer';
-import PurchaseStatusForm from '@/components/purchase-status-form';
-import { formatNumber, formatDate, QUANTITY_SCALE } from '@/domain/format';
+import PurchaseOrderCard from '@/components/purchase-order-card';
+import { formatDate } from '@/domain/format';
 import { customerOrderLabel } from '@/domain/customer-orders';
-import { outstandingInbound } from '@/domain/purchasing';
 
 export default async function Purchasing({
   searchParams,
 }: {
-  searchParams: Promise<{ plan?: string }>;
+  searchParams: Promise<{ plan?: string | string[]; supplier?: string | string[] }>;
 }) {
-  const { plan } = await searchParams;
-  if (plan && !z.uuid().safeParse(plan).success) notFound();
+  const query = z.object({ plan: z.uuid().optional(), supplier: z.uuid().optional() })
+    .safeParse(await searchParams);
+  if (!query.success) notFound();
+  const { plan, supplier } = query.data;
   const workspace = await loadPurchasingWorkspace(plan);
-  const { receipts } = workspace;
-  const {
-    selected, requirements, canWrite, locale,
-  } = workspace;
-  if (plan && !selected) notFound();
+  const { selected, canWrite, locale } = workspace;
+  const selectedSupplier = supplier
+    ? workspace.suppliers.find((item) => item.id === supplier) : undefined;
+  if ((plan && !selected) || (supplier && !selectedSupplier)) notFound();
   const es = locale === 'es';
+  const suppliers = workspace.suppliers.filter((item) => !supplier || item.id === supplier);
+  const packs = workspace.packs.filter((item) => !supplier || item.supplier_id === supplier);
+  const suppliedIngredients = new Set(packs.filter((pack) => pack.active)
+    .map((pack) => pack.ingredient_id));
+  const plans = workspace.plans.filter((saved) => !supplier
+    || saved.requirements.some((requirement) => suppliedIngredients.has(requirement.ingredient_id))
+    || workspace.drafts.some((draft) => draft.supplier_id === supplier
+      && draft.material_plan_id === saved.id));
+  if (plan && supplier && !plans.some((saved) => saved.id === plan)) notFound();
+  const requirements = workspace.requirements.filter((requirement) => !supplier
+    || suppliedIngredients.has(requirement.ingredient_id));
   const planLabel = (id: string) => {
     const order = workspace.orders.find((item) => item.id === id);
     return order ? customerOrderLabel(order)
       : `${es ? 'Estimación anterior' : 'Earlier estimate'} · ${workspace.plans.find((item) => item.id === id)?.name ?? ''}`;
   };
   const drafts = workspace.drafts
-    .filter((draft) => !plan || draft.material_plan_id === plan)
+    .filter((draft) => (!plan || draft.material_plan_id === plan)
+      && (!supplier || draft.supplier_id === supplier))
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
-  const inbound = outstandingInbound(workspace.drafts, workspace.lines, receipts);
+  const supplierBack = es ? 'Volver a proveedores' : 'Back to suppliers';
+  const ordersBack = es ? 'Pedidos de clientes' : 'Customer orders';
+  let description = es
+    ? 'Revisa presentaciones, guarda borradores y registra pedidos confirmados con proveedores.'
+    : 'Review supplier packs, save purchase drafts and record orders confirmed with suppliers.';
+  if (selectedSupplier) description = `${es ? 'Pedidos de compra para' : 'Purchase orders for'} ${selectedSupplier.name}`;
+  const inactiveSupplier = selectedSupplier && !selectedSupplier.active;
+  const hasShortages = requirements.some((requirement) => requirement.shortage > 0);
+  let noShortages = es ? 'No hay faltantes para este pedido.' : 'No shortages for this order.';
+  if (supplier) noShortages = es ? 'No hay faltantes para este proveedor en el pedido.' : 'No shortages for this supplier on this order.';
   return (
     <>
       <PageHeader
         eyebrow={es ? 'DEL FALTANTE A LA ENTREGA' : 'FROM SHORTAGE TO DELIVERY'}
         title={es ? 'Compras' : 'Purchasing'}
-        description={
-          es
-            ? 'Revisa presentaciones, guarda borradores y registra pedidos confirmados con proveedores.'
-            : 'Review supplier packs, save purchase drafts and record orders confirmed with suppliers.'
-        }
+        description={description}
         action={(
-          <Link className="button" href="/app/orders">
-            {es ? 'Pedidos de clientes' : 'Customer orders'}
+          <Link className="button" href={supplier ? '/app/suppliers' : '/app/orders'}>
+            {supplier ? supplierBack : ordersBack}
           </Link>
         )}
       />
+      {selectedSupplier && (
+        <p className="notice">
+          {`${es ? 'Proveedor seleccionado' : 'Selected supplier'}: ${selectedSupplier.name} · `}
+          <Link href="/app/purchasing">{es ? 'Ver todas las compras' : 'View all purchasing'}</Link>
+        </p>
+      )}
       <section className="panel">
         <h2>{es ? 'Seleccionar pedido de cliente' : 'Choose a customer order'}</h2>
         <div className="worksheet-links">
-          {workspace.plans
-            .filter((saved) => saved.status === 'Active')
-            .map((saved) => (
-              <Link
-                className="worksheet-link"
-                href={`/app/purchasing?plan=${saved.id}`}
-                key={saved.id}
-                aria-current={selected?.id === saved.id ? 'page' : undefined}
-              >
-                {planLabel(saved.id)}
-              </Link>
-            ))}
+          {plans.filter((saved) => saved.status === 'Active').map((saved) => (
+            <Link
+              className="worksheet-link"
+              href={`/app/purchasing?plan=${saved.id}${supplier ? `&supplier=${supplier}` : ''}`}
+              key={saved.id}
+              aria-current={selected?.id === saved.id ? 'page' : undefined}
+            >
+              {planLabel(saved.id)}
+              <small>{`${es ? 'Cliente necesita para' : 'Customer needs by'}: ${formatDate(saved.needed_on)}`}</small>
+            </Link>
+          ))}
         </div>
-        {!workspace.plans.some((saved) => saved.status === 'Active') && (
+        {!plans.some((saved) => saved.status === 'Active') && (
           <p>
             {es
-              ? 'Registra un pedido de cliente para calcular las compras.'
-              : 'Enter a customer order to calculate purchasing needs.'}
+              ? 'No hay pedidos activos relacionados. Registra un pedido de cliente y configura las presentaciones del proveedor en sus ingredientes.'
+              : 'No matching active orders. Enter a customer order and configure this supplier’s packs on the ingredients.'}
           </p>
         )}
       </section>
@@ -80,174 +102,41 @@ export default async function Purchasing({
               ? 'Solo los pedidos confirmados cuentan como entrada. Los borradores no cambian el inventario.'
               : 'Only confirmed orders count as inbound supply. Drafts do not change inventory.'}
           </p>
-          {!requirements.some((requirement) => requirement.shortage > 0) ? (
-            <p className="notice">
-              {es
-                ? 'No hay faltantes para este pedido.'
-                : 'No shortages for this order.'}
-            </p>
-          ) : (
-            canWrite && (
-              <PurchaseComposer
-                key={`${selected.id}-${JSON.stringify(requirements)}`}
-                planId={selected.id}
-                neededOn={selected.needed_on}
-                requirements={requirements}
-                packs={workspace.packs}
-                suppliers={workspace.suppliers}
-                existingSuppliers={drafts
-                  .filter((draft) => draft.status === 'Draft')
-                  .map((draft) => draft.supplier_id)}
-                locale={locale}
-              />
-            )
+          {inactiveSupplier && (
+            <p className="notice">{es ? 'Proveedor inactivo: solo historial.' : 'Inactive supplier: order history only.'}</p>
+          )}
+          {!inactiveSupplier && !hasShortages && <p className="notice">{noShortages}</p>}
+          {!inactiveSupplier && hasShortages && canWrite && (
+            <PurchaseComposer
+              key={`${selected.id}-${supplier ?? 'all'}-${JSON.stringify(requirements)}`}
+              planId={selected.id}
+              neededOn={selected.needed_on}
+              requirements={requirements}
+              packs={packs}
+              suppliers={suppliers}
+              existingSuppliers={drafts.filter((draft) => draft.status === 'Draft').map((draft) => draft.supplier_id)}
+              locale={locale}
+            />
           )}
         </section>
       )}
       <section className="panel">
-        <h2>
-          {es ? 'Borradores y pedidos registrados' : 'Purchase drafts & recorded orders'}
-        </h2>
-        {!drafts.length && (
-          <p className="empty">
-            {es ? 'Aún no hay compras guardadas.' : 'No saved purchases yet.'}
-          </p>
-        )}
-        {drafts.map((draft) => {
-          const lines = workspace.lines.filter(
-            (line) => line.purchase_draft_id === draft.id,
-          );
-          return (
-            <article className="purchase-group" key={draft.id}>
-              <div className="section-heading">
-                <h3>
-                  {
-                    workspace.suppliers.find(
-                      (supplier) => supplier.id === draft.supplier_id,
-                    )?.name
-                  }
-                </h3>
-                <span className="badge">{draft.status}</span>
-              </div>
-              <p>
-                {es ? 'Previsto' : 'Expected'}
-                :
-                {formatDate(draft.expected_on)}
-                {' '}
-                ·
-                {' '}
-                {draft.reference || draft.id.slice(0, 8)}
-              </p>
-              <Link href={`/app/orders?estimate=${draft.material_plan_id}`}>
-                {
-                  planLabel(draft.material_plan_id)
-                }
-              </Link>
-              <div className="table-wrap">
-                <table>
-                  <caption className="sr-only">
-                    {es ? 'Líneas de compra' : 'Purchase lines'}
-                  </caption>
-                  <thead>
-                    <tr>
-                      {(es
-                        ? [
-                          'Ingrediente',
-                          'Presentación guardada',
-                          'Pedido',
-                          'Recibido',
-                          'Pendiente',
-                        ]
-                        : [
-                          'Ingredient',
-                          'Saved pack',
-                          'Ordered',
-                          'Received',
-                          'Outstanding',
-                        ]
-                      ).map((heading) => (
-                        <th key={heading} scope="col">
-                          {heading}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lines.map((line) => {
-                      const received = receipts
-                        .filter((receipt) => receipt.purchase_draft_line_id === line.id)
-                        .reduce(
-                          (sum, receipt) => sum + Math.round(receipt.quantity * QUANTITY_SCALE),
-                          0,
-                        ) / QUANTITY_SCALE;
-                      return (
-                        <tr key={line.id}>
-                          <th scope="row">
-                            {line.ingredient_name}
-                            {line.override_reason && (
-                              <small>
-                                {' '}
-                                ·
-                                {line.override_reason}
-                              </small>
-                            )}
-                          </th>
-                          <td>
-                            {formatNumber(line.pack_quantity)}
-                            {' '}
-                            {line.uom}
-                            /
-                            {line.purchase_uom}
-                            <small>
-                              {' '}
-                              {line.supplier_sku}
-                            </small>
-                          </td>
-                          <td>
-                            {line.purchase_units}
-                            {' '}
-                            {line.purchase_uom}
-                            {' '}
-                            =
-                            {' '}
-                            {formatNumber(line.quantity)}
-                            {' '}
-                            {line.uom}
-                          </td>
-                          <td>
-                            {formatNumber(received)}
-                            {' '}
-                            {line.uom}
-                          </td>
-                          <td>
-                            {draft.status === 'Confirmed'
-                              ? formatNumber(
-                                inbound.find((choice) => choice.id === line.id)
-                                  ?.remaining ?? 0,
-                              )
-                              : '—'}
-                            {' '}
-                            {line.uom}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              {canWrite && (
-                <details>
-                  <summary>{es ? 'Actualizar estado' : 'Update status'}</summary>
-                  <PurchaseStatusForm
-                    key={`${draft.id}-${draft.revision}`}
-                    draft={draft}
-                    locale={locale}
-                  />
-                </details>
-              )}
-            </article>
-          );
-        })}
+        <h2>{es ? 'Borradores y pedidos registrados' : 'Purchase drafts & recorded orders'}</h2>
+        {!drafts.length && <p className="empty">{es ? 'Aún no hay compras guardadas.' : 'No saved purchases yet.'}</p>}
+        {drafts.map((draft) => (
+          <PurchaseOrderCard
+            key={draft.id}
+            draft={draft}
+            lines={workspace.lines}
+            receipts={workspace.receipts}
+            supplierName={workspace.suppliers.find((item) => item.id === draft.supplier_id)?.name ?? (es ? 'Proveedor no disponible' : 'Supplier unavailable')}
+            orderLabel={planLabel(draft.material_plan_id)}
+            neededOn={workspace.plans.find((saved) => saved.id === draft.material_plan_id)
+              ?.needed_on}
+            canWrite={canWrite}
+            locale={locale}
+          />
+        ))}
       </section>
     </>
   );
