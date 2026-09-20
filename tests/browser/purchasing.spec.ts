@@ -24,7 +24,7 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await addOption.locator('summary').click();
   await addOption.getByLabel('Customer', { exact: true }).fill('Preview customer');
   await addOption.getByLabel('Option name', { exact: true }).fill('2-gallon bag');
-  await addOption.getByLabel('Packaging', { exact: true }).selectOption('custom');
+  await addOption.getByRole('combobox', { name: /^Packaging/ }).selectOption('custom');
   await addOption.getByLabel('Sales unit', { exact: true }).fill('bag');
   await addOption.getByLabel('Gallons per sales unit', { exact: true }).fill('2');
   await addOption.getByLabel('Price per unit (USD)', { exact: true }).fill('12.50');
@@ -46,7 +46,7 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await page.getByLabel('Customer order reference (optional)').fill(`Order ${info.project.name}`);
   await page.getByLabel('Customer needs by').fill('2026-10-01');
   await page.getByLabel('Preview Italian dressing', { exact: true }).fill('40');
-  await page.getByLabel('Packaging & price', { exact: true }).selectOption({ label: '2-gallon bag · $12.50 / bag' });
+  await page.getByRole('combobox', { name: /^Packaging & price/ }).selectOption({ label: '2-gallon bag · $12.50 / bag' });
   await page.getByRole('button', { name: 'Save order & estimate ingredients' }).click();
   await expect(page).toHaveURL(/\/app\/orders\?order=/);
   const orderUrl = page.url();
