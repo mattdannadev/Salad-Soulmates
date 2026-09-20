@@ -9,9 +9,9 @@ test('prepares customer production with paired batches, shortage review, revisio
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/app$/);
   await page.goto('/app/orders');
-  await page.getByLabel('Customer', { exact: true }).fill('Production customer');
+  await page.getByRole('combobox', { name: 'Customer', exact: true }).selectOption({ label: 'Production customer' });
   await page.getByLabel('Customer order reference (optional)').fill(`Production ${info.project.name}`);
-  await page.getByLabel('Customer needs by').fill('2026-10-01');
+  await page.getByLabel('Customer pickup date').fill('2026-10-01');
   await page.getByLabel('Preview Italian dressing', { exact: true }).fill('4');
   await page.getByRole('button', { name: 'Save order & estimate ingredients' }).click();
   await expect(page).toHaveURL(/\/app\/orders\?order=/);

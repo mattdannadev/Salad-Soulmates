@@ -37,7 +37,7 @@ export default function PurchaseOrderCard({
         </div>
         {neededOn && (
         <div>
-          <dt>{es ? 'Cliente necesita para' : 'Customer needs by'}</dt>
+          <dt>{es ? 'Fecha de recogida del cliente' : 'Customer pickup date'}</dt>
           <dd>{formatDate(neededOn)}</dd>
         </div>
         )}

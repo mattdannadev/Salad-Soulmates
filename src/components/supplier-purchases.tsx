@@ -85,7 +85,7 @@ export default function SupplierPurchases({ supplier, workspace }: {
                       <dd>{formatDate(order.created_at)}</dd>
                     </div>
                     <div>
-                      <dt>{es ? 'Cliente necesita para' : 'Customer needs by'}</dt>
+                      <dt>{es ? 'Fecha de recogida del cliente' : 'Customer pickup date'}</dt>
                       <dd>{formatDate(order.needed_on)}</dd>
                     </div>
                   </dl>

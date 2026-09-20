@@ -48,11 +48,11 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   });
 
   await page.goto('/app/orders');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Customer orders');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Orders');
   await expect(page.getByLabel('Worksheet name')).toHaveCount(0);
-  await page.getByLabel('Customer', { exact: true }).fill('Preview customer');
+  await page.getByRole('combobox', { name: 'Customer', exact: true }).selectOption({ label: 'Preview customer' });
   await page.getByLabel('Customer order reference (optional)').fill(`Order ${info.project.name}`);
-  await page.getByLabel('Customer needs by').fill('2026-10-01');
+  await page.getByLabel('Customer pickup date').fill('2026-10-01');
   await page.getByLabel('Preview Italian dressing', { exact: true }).fill('40');
   await page
     .getByRole('combobox', { name: /^Packaging & price/ })
@@ -126,7 +126,7 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await draft.getByLabel('External order reference').fill(`PO-${info.project.name}`);
   await draft.getByRole('button', { name: 'Save purchase status' }).click();
   await expect(draft.getByText('Confirmed', { exact: true })).toBeVisible();
-  await expect(draft).toContainText('Customer needs by');
+  await expect(draft).toContainText('Customer pickup date');
   await expect(draft).toContainText('Expected delivery');
   await page.screenshot({ path: info.outputPath('purchasing.png'), fullPage: true });
   await page.goto('/app/receiving');

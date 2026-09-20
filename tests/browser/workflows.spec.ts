@@ -15,7 +15,7 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
   await expect(page).toHaveURL(/\/app$/);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Welcome');
   await Promise.all([
-    'Recipes', 'Products', 'Customer orders', 'Team', 'Access requests', 'Settings',
+    'Recipes', 'Products', 'Orders', 'Team', 'Access requests', 'Settings',
   ].map(async (label) => {
     await expect(page.getByRole('navigation', { name: 'Main navigation' })
       .getByRole('link', { name: label, exact: true })).toBeVisible();

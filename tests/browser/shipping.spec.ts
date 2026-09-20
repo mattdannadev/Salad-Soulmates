@@ -20,9 +20,9 @@ test('saves a partial pickup draft, preserves it on reload, and gates physical c
   await expect(unavailableConfirmation).toBeDisabled();
   await expect(unavailableConfirmation).toHaveCSS('cursor', 'not-allowed');
   await page.goto('/app/orders');
-  await page.getByLabel('Customer', { exact: true }).fill('Shipping customer');
+  await page.getByRole('combobox', { name: 'Customer', exact: true }).selectOption({ label: 'Shipping customer' });
   await page.getByLabel('Customer order reference (optional)').fill(`Shipping ${info.project.name}`);
-  await page.getByLabel('Customer needs by').fill('2026-10-01');
+  await page.getByLabel('Customer pickup date').fill('2026-10-01');
   await page.getByLabel('Preview Italian dressing', { exact: true }).fill('4');
   await page.getByRole('button', { name: 'Save order & estimate ingredients' }).click();
   await expect(page).toHaveURL(/\/app\/orders\?order=/);

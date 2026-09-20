@@ -59,10 +59,13 @@ const links = [
   },
   {
     href: '/app/orders',
-    en: 'Customer orders',
-    es: 'Pedidos de clientes',
+    en: 'Orders',
+    es: 'Pedidos',
     icon: ClipboardList,
     permission: 'orders.read',
+  },
+  {
+    href: '/app/customers', en: 'Customers', es: 'Clientes', icon: Users, permission: 'orders.read',
   },
   {
     href: '/app/purchasing',

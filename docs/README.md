@@ -23,6 +23,7 @@ on access to previous chat history.
 - [Receiving and serialization](receiving-serialization.md)
 - [Order-linked production preparation](order-production-planning.md)
 - [Packaging and label setup](packaging-setup.md)
+- [Customers and operations dashboard](customer-dashboard.md)
 - [Shipping preparation](shipping.md)
 - [Database setup](database.md)
 - [Review gates](review.md)

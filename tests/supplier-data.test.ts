@@ -28,7 +28,8 @@ beforeEach(() => {
 });
 it('makes purchase history primary and keeps contact editing collapsed', async () => {
   const html = renderToStaticMarkup(await Suppliers());
-  expect(html).toContain('<details class="supplier-orders">');
+  expect(html).toContain('<details class="supplier-orders" id="supplier-');
+  expect(html.indexOf('</table>')).toBeLessThan(html.indexOf('<details class="supplier-orders"'));
   expect(html).toContain('aria-label="Supplier directory"');
   expect(html).toContain('href="/app/suppliers/new"');
   expect(html).toContain('<th>Open purchase orders</th>');
