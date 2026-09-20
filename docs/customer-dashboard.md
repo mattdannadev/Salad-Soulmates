@@ -33,3 +33,30 @@ Apply the additive migration only after checks pass, merge under the owner's
 release authorization, verify Vercel Ready and authenticated read-only pages.
 Physical production, finished inventory and actual shipment confirmation remain
 separate build-plan work. Owner visual/operational acceptance remains outstanding.
+
+## Release verification — September 20, 2026
+
+PR #12 contains this implementation. PR #11 supplier directory is merged as
+`1532af1` and its production deployment is Ready; authenticated read-only viewing
+confirmed the directory and Add supplier link.
+
+- `npm ci` installed the pinned dependencies. `npm run check` passed formatting,
+  lint, types, 334 tests and the production build.
+- CI run `35494254302` passed all 22 desktop/phone browser scenarios and 22 native
+  PostgreSQL concurrency tests, as well as the full quality/build gate.
+- Local installed-Chrome verification caught a phone purchase link obscured inside
+  the scrolling supplier table. Supplier details now sit outside the table. The
+  four affected desktop/phone supplier and purchasing scenarios passed after this
+  fix. Pinned Chromium download was unavailable locally; CI uses pinned Chromium.
+- Populated dashboard screenshots were visually reviewed at desktop and phone
+  sizes, including dressing names and per-product/total batch counts. The local
+  browser tool verified rendering with no browser errors.
+- Customer migration `20260920063447_customer_directory` is applied to the existing
+  hosted database. The RPC uses invoker privileges and denies anonymous execution.
+  No hosted sample records were created. Security advisors retain only the existing
+  [authenticated definer-function findings](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable)
+  and [leaked-password protection setting](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
+
+Final CI reruns cover the supplier layout adjustment and migration filename
+alignment before merge. Production deployment and owner acceptance are still
+separate from these pre-merge checks; final release evidence is recorded in PR #12.

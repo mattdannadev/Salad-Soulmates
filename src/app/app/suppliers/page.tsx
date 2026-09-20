@@ -3,7 +3,6 @@ import { purchaseProgress } from '@/domain/supplier-orders';
 import { PageHeader } from '@/components/shell';
 import { SupplierForm } from '@/components/master-forms';
 import SupplierPurchases from '@/components/supplier-purchases';
-import { Fragment } from 'react';
 import Link from 'next/link';
 
 export default async function Suppliers() {
@@ -62,52 +61,48 @@ export default async function Suppliers() {
                       && purchaseProgress(draft, workspace.lines, workspace.receipts).open,
                   ).length;
                   return (
-                    <Fragment key={supplier.id}>
-                      <tr>
-                        <td>
-                          <strong>{supplier.name}</strong>
-                        </td>
-                        <td>
-                          {supplier.contact_name || '—'}
-                          <br />
-                          {supplier.email}
-                          <br />
-                          {supplier.phone}
-                        </td>
-                        <td>
-                          <span className={`badge ${supplier.active ? '' : 'muted'}`}>
-                            {supplier.active ? activeLabel : inactiveLabel}
-                          </span>
-                        </td>
-                        {canReadPurchases && <td>{openCount}</td>}
-                      </tr>
-                      <tr>
-                        <td colSpan={canReadPurchases ? 4 : 3}>
-                          <details className="supplier-orders">
-                            <summary>
-                              {`${es ? 'Ver detalles' : 'View details'} · ${supplier.name}`}
-                            </summary>
-                            <SupplierPurchases supplier={supplier} workspace={workspace} />
-                            <details className="supplier-profile">
-                              <summary>
-                                {es ? 'Contacto y configuración' : 'Supplier contact & settings'}
-                              </summary>
-                              {canEdit ? (
-                                <SupplierForm supplier={supplier} />
-                              ) : (
-                                <p>{`${supplier.contact_name} · ${supplier.email || (es ? 'Sin correo' : 'No email')} · ${supplier.phone || (es ? 'Sin teléfono' : 'No phone')} · ${supplier.lead_time_days ?? 0} ${es ? 'días' : 'days'}`}</p>
-                              )}
-                            </details>
-                          </details>
-                        </td>
-                      </tr>
-                    </Fragment>
+                    <tr key={supplier.id}>
+                      <td>
+                        <Link href={`#supplier-${supplier.id}`}><strong>{supplier.name}</strong></Link>
+                      </td>
+                      <td>
+                        {supplier.contact_name || '—'}
+                        <br />
+                        {supplier.email}
+                        <br />
+                        {supplier.phone}
+                      </td>
+                      <td>
+                        <span className={`badge ${supplier.active ? '' : 'muted'}`}>
+                          {supplier.active ? activeLabel : inactiveLabel}
+                        </span>
+                      </td>
+                      {canReadPurchases && <td>{openCount}</td>}
+                    </tr>
                   );
                 })}
               </tbody>
             </table>
           </div>
         )}
+        {suppliers.map((supplier) => (
+          <details className="supplier-orders" id={`supplier-${supplier.id}`} key={supplier.id}>
+            <summary>
+              {`${es ? 'Ver detalles' : 'View details'} · ${supplier.name}`}
+            </summary>
+            <SupplierPurchases supplier={supplier} workspace={workspace} />
+            <details className="supplier-profile">
+              <summary>
+                {es ? 'Contacto y configuración' : 'Supplier contact & settings'}
+              </summary>
+              {canEdit ? (
+                <SupplierForm supplier={supplier} />
+              ) : (
+                <p>{`${supplier.contact_name} · ${supplier.email || (es ? 'Sin correo' : 'No email')} · ${supplier.phone || (es ? 'Sin teléfono' : 'No phone')} · ${supplier.lead_time_days ?? 0} ${es ? 'días' : 'days'}`}</p>
+              )}
+            </details>
+          </details>
+        ))}
       </section>
     </>
   );
