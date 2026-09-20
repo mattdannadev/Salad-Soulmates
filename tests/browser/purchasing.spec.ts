@@ -1,8 +1,7 @@
 import { expect, test } from './fixtures';
 
 test.afterEach(async ({ page }, info) => {
-  if (info.status !== info.expectedStatus)
-    console.error('Synthetic browser failure:', await page.locator('main').ariaSnapshot());
+  if (info.status !== info.expectedStatus) console.error('Synthetic browser failure:', await page.locator('main').ariaSnapshot());
 });
 
 test('customer packaging and order estimates lead to purchasing and partial receipt', async ({
@@ -150,7 +149,8 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   ).toBeVisible();
   await expect(supplier.getByRole('article')).toContainText('50 lb');
   await expect(
-    page.getByRole('row').filter({ hasText: 'Preview supplier' }).first().getByRole('cell').last(),
+    page.getByRole('row').filter({ hasText: 'Preview supplier' }).first().getByRole('cell')
+      .last(),
   ).toHaveText('1');
   const fitsScreen = await page.evaluate(
     () => document.documentElement.scrollWidth <= window.innerWidth,
