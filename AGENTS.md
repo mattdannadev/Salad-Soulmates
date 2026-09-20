@@ -5,6 +5,19 @@ bug fixes, refactors, tests, scripts, migrations, and documentation examples.
 Apply them without asking the user to repeat them. Existing code is not exempt.
 This file is the canonical engineering policy. Do not silently weaken it.
 
+## Project continuity
+
+At the start of each task read `docs/README.md`, `docs/decisions.md`,
+`docs/build-plan.md` and the relevant feature requirements. Inspect current main
+and open PRs; do not use chat memory or historical scratch paths as repository state.
+Keep this policy authoritative across ChatGPT Work, Codex, IDEs and human changes.
+
+Record accepted requirement changes in the decision log and update build-plan
+scope and acceptance criteria in the same PR. Preserve versioned source documents
+and identify overrides. Every implementation handoff must record its PR/commit,
+verification results, remaining gates and next step. Distinguish implementation,
+merge, deployment and owner acceptance. Do not mark a phase complete from memory.
+
 ## Coding standards and style
 
 - JavaScript and TypeScript must follow the Airbnb JavaScript Style Guide and

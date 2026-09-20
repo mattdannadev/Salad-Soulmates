@@ -1,15 +1,21 @@
 # Salad Soulmates — current build plan
 
 Updated: September 20, 2026
-Owner instruction: execute all three supplied engineering documents within the first refactor phase.
-Execution status: **refactor CI passed; production release explicitly authorized; Phase 1 follow-up acceptance remains open.**
+## Current checkpoint
 
-Latest owner decision (September 19): merge PR #1, deploy the live app, and apply
-the two pending migrations. CI passed 145 tests plus the build, six browser cases,
-and seven native PostgreSQL tests. The migrations are applied; see `decisions.md`
-for their authoritative hosted versions. This supersedes older access/deployment
-blockers in the historical progress notes below. Real Auth and the remaining
-verification/review items must still be completed before advancing feature phases.
+GitHub main `3262e179a258c3cf1ae261f4f1bbae55dd5032d1` includes merged PRs
+#1 (refactor), #2 (orders/purchasing), #4 (receiving), #5 (migration alignment),
+and #6 (order-linked production preparation), verified September 20.
+PR #3 is closed without merging. See [continuation](continue-in-codex.md)
+and the feature documents for release evidence.
+
+**Next feature: scheduling and worker schedule.** Real-Auth, independent-review
+and physical printer/scanner acceptance remain open. Merged implementation does
+not mean every phase is fully accepted or that deployment was verified here.
+
+The dated implementation notes below preserve the sequence of owner corrections.
+Their candidate-only restrictions and access failures are historical where later
+decisions explicitly supersede them. Follow the current decision log and task scope.
 
 ## September 20 owner correction — one order-driven workflow
 
@@ -113,7 +119,7 @@ Preserve current UI/workflows, routes, data, organization/facility isolation and
 
 Phase 1 is complete only when all in-scope hand-written code has been reviewed, full compatible standards enforcement is active, complete checks pass on the actual proposed commit, and critical successful/failure workflows have browser/local-database coverage as appropriate. Production readiness cannot be inferred from passing local checks alone.
 
-## Current progress
+## Historical refactor progress — superseded checkpoint
 
 The continuation is on local branch `refactor/complete-and-preserve-modules`.
 Remote main was rechecked and remains `028880cebe49140271ce37f69ed6ddd406a79640`.
