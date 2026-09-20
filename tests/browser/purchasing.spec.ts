@@ -81,10 +81,11 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await page.screenshot({ path: info.outputPath('purchasing.png'), fullPage: true });
   await page.goto('/app/receiving');
   await page.getByLabel('Quantity received').fill('10');
+  await page.getByLabel('Quantity in each physical package').fill('10');
   await page
     .getByLabel('Confirmed inbound order (optional)')
     .selectOption({ label: `PO-${info.project.name} · Preview garlic powder · 60 lb` });
-  await page.getByLabel('Supplier lot').fill('TEST-LOT');
+  await page.getByLabel('Supplier lot *', { exact: true }).fill('TEST-LOT');
   await page.getByRole('button', { name: 'Post receipt & update inventory' }).click();
   await expect(page.getByRole('status')).toContainText('Receipt posted');
   await page.goto('/app/purchasing');

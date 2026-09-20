@@ -1,3 +1,6 @@
+import PendingSerialization from '@/components/pending-serialization';
+import { serializationRowSchema } from '@/domain/receiving';
+import SerializedInventory from '@/components/serialized-inventory';
 import {
   purchaseDraftRowSchema,
   purchaseLineRowSchema,
@@ -14,7 +17,7 @@ import ReceiptHistory from '@/components/receipt-history';
 export default async function Receiving() {
   const { db, profile } = await requireAdminShell();
   const [
-    ingredients, suppliers, receipts, lines, purchaseDrafts, purchaseLines,
+    ingredients, suppliers, receipts, lines, purchaseDrafts, purchaseLines, packs, serializations,
   ] = await Promise.all([
     rows(db, 'ingredients', rowSchemas.ingredients),
     rows(db, 'suppliers', rowSchemas.suppliers),
@@ -22,7 +25,10 @@ export default async function Receiving() {
     rows(db, 'inventory_receipt_lines', rowSchemas.inventory_receipt_lines),
     rows(db, 'purchase_drafts', purchaseDraftRowSchema),
     rows(db, 'purchase_draft_lines', purchaseLineRowSchema),
+    rows(db, 'supplier_items', rowSchemas.supplier_items),
+    rows(db, 'receipt_serializations', serializationRowSchema),
   ]);
+  const serializedLines = new Set(serializations.map((entry) => entry.receipt_line_id));
   const es = profile.preferred_locale === 'es';
   const canReceive = await hasPermission(db, 'inventory.receive');
   return (
@@ -39,12 +45,20 @@ export default async function Receiving() {
       {canReceive && (
         <section className="panel">
           <ReceiptForm
+            packs={packs}
             inbound={outstandingInbound(purchaseDrafts, purchaseLines, lines)}
             ingredients={ingredients.filter((i) => i.active)}
             suppliers={suppliers.filter((s) => s.active)}
             locale={profile.preferred_locale}
           />
         </section>
+      )}
+      <SerializedInventory db={db} locale={profile.preferred_locale} />
+      {canReceive && (
+      <PendingSerialization
+        lines={lines.filter((line) => !serializedLines.has(line.id))}
+        ingredientNames={new Map(ingredients.map((ingredient) => [ingredient.id, ingredient.name]))}
+      />
       )}
       <ReceiptHistory
         receipts={receipts}

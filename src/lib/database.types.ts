@@ -8,6 +8,84 @@ export type Database = {
   };
   public: {
     Tables: {
+      receipt_serializations: {
+        Row: {
+          id: string;
+          organization_id: string;
+          facility_id: string;
+          receipt_line_id: string;
+          supplier_item_id: string | null;
+          supplier_item_snapshot: Json | null;
+          packages: Json;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id?: string;
+          facility_id?: string;
+          receipt_line_id?: string;
+          supplier_item_id?: string | null;
+          supplier_item_snapshot?: Json | null;
+          packages?: Json;
+          created_by?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          facility_id?: string;
+          receipt_line_id?: string;
+          supplier_item_id?: string | null;
+          supplier_item_snapshot?: Json | null;
+          packages?: Json;
+          created_by?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      serialized_unit_events: {
+        Row: {
+          id: string;
+          organization_id: string;
+          facility_id: string;
+          unit_id: string;
+          expected_revision: number;
+          remaining_quantity: number;
+          status: string;
+          reason: string;
+          quantity_delta: number;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id?: string;
+          facility_id?: string;
+          unit_id?: string;
+          expected_revision?: number;
+          remaining_quantity?: number;
+          status?: string;
+          reason?: string;
+          quantity_delta?: number;
+          created_by?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          facility_id?: string;
+          unit_id?: string;
+          expected_revision?: number;
+          remaining_quantity?: number;
+          status?: string;
+          reason?: string;
+          quantity_delta?: number;
+          created_by?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       customers: {
         Row: {
           id: string;
@@ -1472,6 +1550,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      receive_serialized_delivery: { Args: { payload: Json }; Returns: string; };
+      serialize_receipt_line: { Args: { payload: Json }; Returns: string; };
+      change_serialized_unit: { Args: { payload: Json }; Returns: string; };
+      find_serialized_units: { Args: { search_text?: string; receipt_filter?: string; unit_filter?: string }; Returns: Json; };
       save_customer_product_option: { Args: { payload: Json }; Returns: string; };
       save_customer_order: { Args: { payload: Json }; Returns: string; };
       cancel_customer_order: { Args: { order_id: string }; Returns: string; };

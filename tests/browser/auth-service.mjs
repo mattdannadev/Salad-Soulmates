@@ -21,6 +21,8 @@ const tables = new Set([
   'supplier_items',
   'inventory_receipts',
   'inventory_receipt_lines',
+  'receipt_serializations',
+  'serialized_unit_events',
 ]);
 const mutations = new Set([
   'save_material_plan',
@@ -29,6 +31,9 @@ const mutations = new Set([
   'create_purchase_draft',
   'change_purchase_status',
   'post_inventory_receipt',
+  'receive_serialized_delivery',
+  'serialize_receipt_line',
+  'change_serialized_unit',
 ]);
 /** @type {Promise<PGlite> | undefined} */
 let databasePromise;
@@ -64,7 +69,7 @@ function isPurchasingFixtureRequest(url) {
   const endpoint = url.pathname.replace('/rest/v1/', '');
   return (
     tables.has(endpoint)
-    || endpoint === 'rpc/material_requirements' || endpoint === 'rpc/cancel_material_plan'
+    || endpoint === 'rpc/find_serialized_units' || endpoint === 'rpc/material_requirements' || endpoint === 'rpc/cancel_material_plan'
     || endpoint === 'rpc/cancel_customer_order'
     || mutations.has(endpoint.replace('rpc/', ''))
     || endpoint === 'test/purchasing-reset'
@@ -89,7 +94,11 @@ async function executeRequest(url, method, body) {
     return z
       .array(z.object({ value: z.record(z.string(), z.unknown()) }))
       .parse(result.rows)
-      .map((record) => record.value);
+      .map((record) => record.value)
+      .filter((record) => ['id', 'unit_id'].every((key) => {
+        const filter = url.searchParams.get(key);
+        return !filter || record[key] === filter.replace('eq.', '');
+      }));
   }
   if (endpoint === 'material_plans' && method === 'PATCH') {
     const id = z.uuid().parse(url.searchParams.get('id')?.replace('eq.', ''));
@@ -100,6 +109,15 @@ async function executeRequest(url, method, body) {
     return result.rows[0] ?? null;
   }
   const input = JSON.parse(body);
+  if (endpoint === 'rpc/find_serialized_units') {
+    const args = z.object({
+      search_text: z.string().optional(),
+      receipt_filter: z.uuid().optional(),
+      unit_filter: z.uuid().optional(),
+    }).parse(input);
+    const result = await db.query('select public.find_serialized_units($1,$2,$3) as value', [args.search_text ?? '', args.receipt_filter ?? null, args.unit_filter ?? null]);
+    return z.object({ value: z.unknown() }).parse(result.rows[0]).value;
+  }
   if (endpoint === 'rpc/cancel_customer_order') {
     const args = z.object({ order_id: z.uuid() }).parse(input);
     const result = await db.query('select public.cancel_customer_order($1) as id', [args.order_id]);
@@ -125,6 +143,9 @@ async function executeRequest(url, method, body) {
       'create_purchase_draft',
       'change_purchase_status',
       'post_inventory_receipt',
+      'receive_serialized_delivery',
+      'serialize_receipt_line',
+      'change_serialized_unit',
     ])
     .parse(endpoint.replace('rpc/', ''));
   const { payload } = z.object({ payload: z.unknown() }).parse(input);
