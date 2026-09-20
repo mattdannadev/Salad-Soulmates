@@ -119,6 +119,16 @@ less. The reported 691-pixel embedded browser viewport therefore uses the same
 compact navigation as a phone. Wider windows retain the left sidebar; the owner's
 question did not request a navigation redesign.
 
+## 2026-09-20 — Complete receiving and physical serialization candidate
+
+The owner requested execution of the receiving/serialization build step. Continue
+from the materials/purchasing branch so receipt-linked inbound behavior remains.
+Use immutable physical identities and append-only balance/status events, with
+supplier barcode reuse only for unique physical packages. Preserve the current
+single-database decision, mandatory engineering standards and open release gates.
+Build and verify the additive migration in disposable databases; the request to
+build this step does not itself release a new shared-database migration.
+
 ## 2026-09-20 — Connected Preview for owner testing
 
 After the candidate passed CI, the owner requested: “Launch so I can test it.”

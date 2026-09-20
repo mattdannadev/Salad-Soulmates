@@ -46,6 +46,16 @@ earlier manual batch worksheet sequencing. Preserve the single hosted database a
 real-data Preview decision. Real Auth and independent-review gates remain open;
 no automatic merge or production application deployment is authorized.
 
+## September 20 receiving/serialization candidate
+
+The owner requested the next receiving/serialization build step. The implementation
+is on `feature/receiving-serialization-complete`, stacked on the current purchasing candidate. It
+adds physical package identities, optional unique supplier barcodes, QR labels,
+lookup, partial balances, audited holds/releases and planning availability. See
+`receiving-serialization.md` for scope, verification and release prerequisites.
+This advances implementation under the current owner instruction while preserving
+the open Phase 1 acceptance gates. No acceptance gate is silently marked complete.
+
 ## Approved delivery order
 
 | Order | Build phase                                          | Scope / sequencing                                                                                                                                                               |

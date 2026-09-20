@@ -28,6 +28,10 @@ export default async function Inventory() {
       />
       <section className="panel">
         <h2>On hand</h2>
+        <p>
+          Owned stock includes held and expired material. Planning excludes unavailable packages.
+        </p>
+        <Link href="/receiving/packages">View package balances, holds, and supplier lots →</Link>
         {ingredients.length ? (
           <div className="table-wrap">
             <table>

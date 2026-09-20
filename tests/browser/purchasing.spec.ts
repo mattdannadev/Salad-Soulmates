@@ -74,8 +74,10 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await page.goto('/app/suppliers');
   const supplier = page.locator('details.supplier-orders').filter({ hasText: 'Preview supplier' });
   await expect(supplier).not.toHaveAttribute('open', '');
-  await supplier.locator(':scope > summary').focus();
-  await page.keyboard.press('Enter');
+  // Streamed server content exists in a hidden container before it is displayed.
+  await expect(supplier.locator(':scope > summary')).toBeVisible();
+  await supplier.locator(':scope > summary').press('Enter');
+  await expect(supplier).toHaveAttribute('open', '');
   await expect(supplier.getByText('No purchase orders for this supplier yet.', { exact: true })).toBeVisible();
   await expect(supplier.getByLabel('Supplier name', { exact: true })).not.toBeVisible();
   await expect(supplier.getByRole('heading', { name: 'Preview customer', exact: true })).toBeVisible();
@@ -101,10 +103,11 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await page.screenshot({ path: info.outputPath('purchasing.png'), fullPage: true });
   await page.goto('/app/receiving');
   await page.getByLabel('Quantity received').fill('10');
+  await page.getByLabel('Quantity in each physical package').fill('10');
   await page
     .getByLabel('Confirmed inbound order (optional)')
     .selectOption({ label: `PO-${info.project.name} · Preview garlic powder · 60 lb` });
-  await page.getByLabel('Supplier lot').fill('TEST-LOT');
+  await page.getByLabel('Supplier lot *', { exact: true }).fill('TEST-LOT');
   await page.getByRole('button', { name: 'Post receipt & update inventory' }).click();
   await expect(page.getByRole('status')).toContainText('Receipt posted');
   await page.goto('/app/purchasing');

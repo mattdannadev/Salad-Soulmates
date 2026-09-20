@@ -339,6 +339,69 @@ it('prevents cancelling a confirmed purchase after an overlapping receipt commit
   expect(String(outcome.error)).toContain('Received purchases cannot be cancelled');
 });
 
+async function serializedReceiptPayload() {
+  return {
+    ...await receiptPayload(),
+    supplier_lot: 'CONCURRENT-LOT',
+    packages: [{ quantity: 1, supplier_barcode: '' }, { quantity: 1, supplier_barcode: '' }],
+  };
+}
+const serializedReceiptSql = 'select public.receive_serialized_delivery($1::jsonb) as id';
+const packageChangeSql = 'select public.change_serialized_unit($1::jsonb) as id';
+it('serializes identical physical receipt retries into one receipt and one set of labels', async () => {
+  const payload = await serializedReceiptPayload();
+  const outcome = await overlap(
+    serializedReceiptSql,
+    [JSON.stringify(payload)],
+    serializedReceiptSql,
+    [JSON.stringify(payload)],
+  );
+  expect(outcome.error).toBeNull();
+  const result: unknown = await first.query(`select count(*)::int as count from public.serialized_units u
+    join public.receipt_serializations s on s.id=u.serialization_id
+    join public.inventory_receipt_lines l on l.id=s.receipt_line_id where l.ingredient_id=$1`, [payload.ingredient_id]);
+  const count = z.object({ rows: z.tuple([z.object({ count: z.number() })]) }).parse(result);
+  expect(count.rows[0].count).toBe(2);
+});
+async function packageChangePayload() {
+  const receipt = await serializedReceiptPayload();
+  await first.query(serializedReceiptSql, [JSON.stringify(receipt)]);
+  const result: unknown = await first.query('select id from public.serialized_unit_balances where ingredient_id=$1 order by ordinal', [receipt.ingredient_id]);
+  const unit = z.object({ rows: z.array(z.object({ id: z.uuid() })) }).parse(result).rows[0];
+  if (!unit) throw new Error('Package fixture was not created.');
+  return {
+    id: randomUUID(),
+    unit_id: unit.id,
+    expected_revision: 0,
+    remaining_quantity: 0.5,
+    status: 'Hold',
+    reason: 'Concurrent quality correction',
+  };
+}
+it('serializes package-change retries and posts the correction exactly once', async () => {
+  const payload = await packageChangePayload();
+  const outcome = await overlap(
+    packageChangeSql,
+    [JSON.stringify(payload)],
+    packageChangeSql,
+    [JSON.stringify(payload)],
+  );
+  expect(outcome.error).toBeNull();
+  const result: unknown = await first.query('select count(*)::int as count from public.inventory_events where serialized_unit_event_id=$1', [payload.id]);
+  const count = z.object({ rows: z.tuple([z.object({ count: z.number() })]) }).parse(result);
+  expect(count.rows[0].count).toBe(1);
+});
+it('rejects an overlapping stale package update after the first revision commits', async () => {
+  const payload = await packageChangePayload();
+  const outcome = await overlap(
+    packageChangeSql,
+    [JSON.stringify(payload)],
+    packageChangeSql,
+    [JSON.stringify({ ...payload, id: randomUUID(), status: 'Quarantined' })],
+  );
+  expect(String(outcome.error)).toContain('Package changed');
+});
+
 it('serializes duplicate customer orders into one order and one ingredient commitment', async () => {
   const { recipeId, versionId, productId } = await draftRecipe();
   await first.query(releaseSql, [actor, versionId]);

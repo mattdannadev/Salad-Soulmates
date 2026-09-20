@@ -78,6 +78,7 @@ export const receiptSchema = z.object({
 });
 
 export const ingredientRowSchema = z.object({
+  traceability_mode: z.enum(['future_required', 'not_required']).default('future_required'),
   id: z.uuid(),
   name: z.string(),
   category: z.string(),
