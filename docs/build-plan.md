@@ -46,7 +46,7 @@ earlier manual batch worksheet sequencing. Preserve the single hosted database a
 real-data Preview decision. Real Auth and independent-review gates remain open;
 no automatic merge or production application deployment is authorized.
 
-## September 20 receiving/serialization candidate
+## September 20 receiving/serialization completion
 
 The owner requested the next receiving/serialization build step. The implementation
 is on `feature/receiving-serialization-complete`, stacked on the current purchasing candidate. It
@@ -55,6 +55,10 @@ lookup, partial balances, audited holds/releases and planning availability. See
 `receiving-serialization.md` for scope, verification and release prerequisites.
 This advances implementation under the current owner instruction while preserving
 the open Phase 1 acceptance gates. No acceptance gate is silently marked complete.
+The owner subsequently instructed “Merge changes once complete.” PR #4 merges
+into the existing `feature/materials-purchasing` Preview after verification and
+the matching additive migration. This supersedes the candidate-only merge
+restriction for this slice; PR #2 against production main remains separate.
 
 ## Approved delivery order
 

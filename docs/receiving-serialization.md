@@ -46,7 +46,9 @@ package serial without assuming a random UUID sort order.
 
 ## Database and authorization
 
-Migration: `20260920011757_receiving_serialization.sql`, created with Supabase CLI.
+Applied migration: `20260920031357_receiving_serialization.sql`. The hosted version
+is authoritative; SQL is unchanged from the tested CLI candidate `20260920011757`.
+Do not apply both versions.
 The migration adds immutable receipt allocations, physical units and package
 change events, an RLS-invoker balance view, and validated invoker RPCs. It contains
 no operational seed records. All new tables use organization/facility RLS, explicit
@@ -76,22 +78,32 @@ at desktop and 390px. Native PostgreSQL tests exercise overlapping receipt retri
 package-change retries and stale competing revisions.
 
 Local `npm ci --offline` and `npm run check` passed after integrating the current
-purchasing branch: 232 automated tests, formatting, Airbnb lint, strict TypeScript
-and the production build. Final candidate results, including the later supplier integration, are recorded in
-[draft PR #4](https://github.com/mattdannadev/Salad-Soulmates/pull/4).
+purchasing branch: 247 automated tests, formatting, Airbnb lint, strict TypeScript
+and the production build.
+[CI run 35485861927](https://github.com/mattdannadev/Salad-Soulmates/actions/runs/35485861927)
+passed all 247 tests, 17 native PostgreSQL concurrency tests and all 12 browser
+cases. Supplier keyboard activation waits for streamed content to become visible.
+Final migration-version reconciliation and merge results are recorded in
+[PR #4](https://github.com/mattdannadev/Salad-Soulmates/pull/4).
 GitHub Actions runs Chromium at desktop and 390px phone sizes and an isolated
 PostgreSQL 17 service for true concurrent transactions. PGlite tests are not
 presented as native concurrency or real Auth verification. All automated records
 are disposable; no tests write to the shared hosted database.
 
-## Release prerequisites
+## Authorized Preview release
 
-1. Review this stacked candidate and the purchasing dependency.
-2. Validate with real Auth and the receiver/admin permissions in the approved
-   environment. Test physical label size, printer and scanner with the owner.
-3. Apply the additive receiving migration to the existing hosted project only as
-   part of an authorized release, after confirming migration history.
-4. Deploy the matching app commit after the migration. The new readers require
-   the new functions and tables.
+The owner instructed “Merge changes once complete.” PR #4 targets the connected
+`feature/materials-purchasing` Preview; PR #2 against production main remains
+separate. After CI passed, the tested additive migration was applied to the existing
+hosted project as `20260920031357`. The disposable loader follows the hosted order,
+after customer-order estimates. No operational or sample records were inserted.
 
-No merge, production release or shared database migration is included in this build.
+Post-application checks confirm organization/facility RLS, invoker functions and
+view, denied anonymous RPC execution and denied direct trigger-function execution.
+Security advisors show no new findings compared with the pre-application baseline.
+The matching application must deploy after this schema; its readers require the
+new functions and tables. PR #4 records the final commit and Preview checks.
+
+Real Supabase Auth with receiver/admin permissions, independent review and physical
+label-size/printer/scanner acceptance remain open. Automated evidence does not
+close these gates. Camera capture and production consumption remain later work.

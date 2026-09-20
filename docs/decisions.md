@@ -1,5 +1,19 @@
 # Implementation decisions
 
+## 2026-09-20 — Finish receiving and merge into the connected Preview
+
+The owner requested “Let's finish receiving and serialization,” then explicitly
+instructed “Merge changes once complete.” PR #4 targets the existing
+`feature/materials-purchasing` Preview branch. This supersedes the earlier
+candidate-only merge restriction for receiving. Complete the automated checks,
+apply the tested additive migration to the existing hosted database as the
+matching application's prerequisite, and merge the verified candidate.
+
+Keep PR #2 against production main separate. Preserve the single hosted database;
+verification uses disposable records only. Real Auth acceptance, independent
+review and physical printer/scanner checks remain open and are not inferred from
+the merge. See `receiving-serialization.md` and PR #4 for the release evidence.
+
 ## 2026-09-20 — Suppliers open into purchasing work
 
 The owner wants supplier expansion to show purchase orders and their statuses,
