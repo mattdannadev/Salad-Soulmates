@@ -4,6 +4,15 @@ Updated: September 20, 2026
 
 ## Current checkpoint
 
+The owner subsequently prioritized packaging setup and authorized releasing all
+outstanding PRs: #7 (continuity), #8 (shipping preparation), #9 (packaging setup).
+See `packaging-setup.md`, `shipping.md` and PR #9 for this release and verification.
+The two additive setup migrations are applied to the existing hosted database.
+Scheduling remains pending. Physical packaging and shipment confirmation still
+require production completion, tank genealogy and actual finished inventory.
+
+The following main checkpoint predates those release candidates:
+
 GitHub main `3262e179a258c3cf1ae261f4f1bbae55dd5032d1` includes merged PRs
 #1 (refactor), #2 (orders/purchasing), #4 (receiving), #5 (migration alignment),
 and #6 (order-linked production preparation), verified September 20.

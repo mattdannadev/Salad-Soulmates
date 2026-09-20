@@ -1,5 +1,22 @@
 # Implementation decisions
 
+## 2026-09-20 — Release packaging setup and all outstanding PRs
+
+The owner explicitly requested finishing packaging, merging all outstanding PRs,
+building, deploying and providing a Preview. This authorizes PRs #7 (continuity),
+#8 (shipping preparation) and #9 (packaging setup), plus their tested additive
+migrations in the existing hosted database. Packaging remains setup only, with
+one label per bag and editable 3-by-5-inch defaults. Shipping remains preparation
+only; production completion, tank transfers and actual fulfillment stay deferred.
+
+Hosted migrations are `20260920051807_packaging_setup` and
+`20260920051826_shipping_drafts`. Their SQL is unchanged from the tested candidates;
+do not replay the old candidate timestamps. RLS is enabled, anonymous inserts and
+authenticated updates/deletes are denied, and neither table contains test records.
+Security advisors match the previous baseline. Combined checks and deployment
+evidence are recorded in PR #9. Real Auth acceptance, independent review and
+physical printer/scanner acceptance remain open.
+
 ## 2026-09-20 — Packaging setup before scheduling
 
 The owner requested packaging next, then selected **Build packaging setup first**
