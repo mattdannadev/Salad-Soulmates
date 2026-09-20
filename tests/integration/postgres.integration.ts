@@ -449,3 +449,61 @@ it('rejects an overlapping stale customer-price revision', async () => {
   );
   expect(String(outcome.error)).toContain('Customer option changed');
 });
+
+async function productionOrderPayload() {
+  const { recipeId, versionId, productId } = await draftRecipe();
+  await first.query(releaseSql, [actor, versionId]);
+  await first.query('update public.recipes set active_version_id=$1 where id=$2', [versionId, recipeId]);
+  const id = randomUUID();
+  await first.query('select public.save_customer_order($1::jsonb)', [JSON.stringify({
+    id,
+    customer_name: `Production ${id}`,
+    reference: '',
+    needed_on: '2026-10-01',
+    products: [{ product_id: productId, batch_count: 2, customer_product_option_id: null }],
+  })]);
+  return {
+    id,
+    revision: 0,
+    start_on: '2026-09-28',
+    finish_on: '2026-09-30',
+    status: 'Draft',
+    note: '',
+    shortage_reason: '',
+  };
+}
+const productionSql = 'select public.save_order_production_plan($1::jsonb)';
+it('serializes duplicate production generation into exactly one set of mixer and spice records', async () => {
+  const payload = await productionOrderPayload();
+  const outcome = await overlap(
+    productionSql,
+    [JSON.stringify(payload)],
+    productionSql,
+    [JSON.stringify(payload)],
+  );
+  expect(outcome.error).toBeNull();
+  const result: unknown = await first.query(`select count(*)::int count from public.planned_mixer_batches batch
+    join public.planned_spice_preparations prep on prep.planned_mixer_batch_id=batch.id where batch.order_id=$1`, [payload.id]);
+  expect(resultRows.parse(result).rows).toEqual([{ count: 2 }]);
+});
+it('rejects an overlapping production revision with different dates', async () => {
+  const payload = await productionOrderPayload();
+  await first.query(productionSql, [JSON.stringify(payload)]);
+  const outcome = await overlap(
+    productionSql,
+    [JSON.stringify({ ...payload, revision: 1, start_on: '2026-09-29' })],
+    productionSql,
+    [JSON.stringify({ ...payload, revision: 1, start_on: '2026-09-27' })],
+  );
+  expect(String(outcome.error)).toContain('Production plan changed');
+});
+it('prevents overlapping order cancellation from orphaning newly generated production', async () => {
+  const payload = await productionOrderPayload();
+  const outcome = await overlap(
+    productionSql,
+    [JSON.stringify(payload)],
+    'select public.cancel_customer_order($1)',
+    [payload.id],
+  );
+  expect(String(outcome.error)).toContain('Cancel production preparation');
+});

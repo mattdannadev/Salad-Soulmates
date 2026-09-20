@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { z } from 'zod';
 import { PageHeader } from '@/components/shell';
 import CustomerOrderForm from '@/components/customer-order-form';
+import OrderProduction from '@/components/order-production';
 import OrderRequirements from '@/components/order-requirements';
 import { CancelMaterialPlan } from '@/components/purchase-status-form';
 import { formatPrice } from '@/domain/customer-pricing';
@@ -22,6 +23,8 @@ export default async function Orders({ searchParams }: {
   const es = locale === 'es';
   const activeLabel = es ? 'Activo' : 'Active';
   const cancelledLabel = es ? 'Cancelado' : 'Cancelled';
+  const productionLabel = es ? 'Producción' : 'Production';
+  const unplannedLabel = es ? 'Producción sin planificar' : 'Production not planned';
   const priceMissingLabel = es ? 'Sin configurar' : 'Not set';
   const order = workspace.orders.find((item) => item.id === selectedId);
   if ((selectedId && !selected) || (query.data.order && !order)) notFound();
@@ -38,11 +41,11 @@ export default async function Orders({ searchParams }: {
   return (
     <>
       <PageHeader
-        eyebrow={es ? 'DEL PEDIDO A LAS COMPRAS' : 'FROM CUSTOMER ORDER TO PURCHASING'}
+        eyebrow={es ? 'DEL PEDIDO A LAS COMPRAS' : 'ORDERS, PURCHASING & PRODUCTION'}
         title={es ? 'Pedidos de clientes' : 'Customer orders'}
         description={es
           ? 'Registra productos, lotes y fecha requerida. El pedido calcula ingredientes, revisa inventario y prepara la estimación de compras.'
-          : 'Capture products, batches and the needed date. Each order calculates ingredients, checks inventory and prepares a purchasing estimate.'}
+          : 'Capture products, batches and the needed date. Each order calculates ingredients, checks inventory and connects purchasing to production preparation.'}
         action={selected ? <Link className="button secondary" href="/app/orders">{es ? 'Todos los pedidos / nuevo pedido' : 'All orders / new order'}</Link> : undefined}
       />
       {selected ? (
@@ -77,7 +80,18 @@ export default async function Orders({ searchParams }: {
               </div>
             ) : <p className="notice">{es ? 'Estimación anterior sin pedido de cliente vinculado.' : 'Earlier estimate with no linked customer order.'}</p>}
           </section>
-          <OrderRequirements plan={selected} requirements={requirements} locale={locale} />
+          {order && (
+          <OrderProduction
+            order={order}
+            plan={workspace.production}
+            batches={workspace.productionBatches}
+            requirements={requirements}
+            canWrite={workspace.canOrder}
+            active={selected.status === 'Active'}
+            locale={locale}
+          />
+          )}
+          <OrderRequirements plan={selected} requirements={requirements} locale={locale} productionStart={workspace.production?.status !== 'Cancelled' ? workspace.production?.start_on : undefined} />
           {selected.status === 'Active'
             && workspace.canWrite && (!order || workspace.canOrder) && (
             <section className="panel">
@@ -104,6 +118,11 @@ export default async function Orders({ searchParams }: {
                     <strong>{customerOrderLabel(item)}</strong>
                     <span>{formatDate(item.needed_on)}</span>
                     <span>{workspace.plans.find((plan) => plan.id === item.id)?.status === 'Cancelled' ? cancelledLabel : activeLabel}</span>
+                    <span>
+                      {workspace.productionPlans.find((plan) => plan.id === item.id && plan.status !== 'Cancelled')?.start_on
+                        ? `${productionLabel} ${formatDate(workspace.productionPlans.find((plan) => plan.id === item.id)?.start_on ?? '')}`
+                        : unplannedLabel}
+                    </span>
                   </Link>
                 ))}
             </div>

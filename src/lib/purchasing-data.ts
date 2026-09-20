@@ -8,6 +8,7 @@ import {
   purchaseLineRowSchema,
 } from '@/domain/purchasing';
 import { customerOptionRowSchema, customerRowSchema } from '@/domain/customer-pricing';
+import { productionPlanSchema, mixerBatchSchema } from '@/domain/production';
 import { customerOrderRowSchema } from '@/domain/customer-orders';
 import { rowSchemas } from '@/domain/master-data';
 import {
@@ -49,6 +50,7 @@ export default async function loadPurchasingWorkspace(selectedId?: string) {
     canOrder,
     customers,
     customerOptions,
+    productionPlans,
   ] = await Promise.all([
     rows(db, 'material_plans', materialPlanRowSchema),
     rows(db, 'purchase_drafts', purchaseDraftRowSchema),
@@ -65,6 +67,7 @@ export default async function loadPurchasingWorkspace(selectedId?: string) {
     hasPermission(db, 'orders.write'),
     rows(db, 'customers', customerRowSchema),
     rows(db, 'customer_product_options', customerOptionRowSchema),
+    rows(db, 'order_production_plans', productionPlanSchema),
   ]);
   const selected = selectedId ? plans.find((plan) => plan.id === selectedId) : undefined;
   const requirements = selected?.status === 'Active'
@@ -74,7 +77,16 @@ export default async function loadPurchasingWorkspace(selectedId?: string) {
       'material_requirements',
     )
     : [];
+  const production = productionPlans.find((plan) => plan.id === selectedId);
+  const productionBatches = production ? readResult(
+    await db.rpc('order_production_batches', { order_id: production.id }),
+    z.array(mixerBatchSchema.extend({ spice_preparation_id: z.uuid() })),
+    'order_production_batches',
+  ) : [];
   return {
+    productionPlans,
+    production,
+    productionBatches,
     orders,
     customers,
     customerOptions,

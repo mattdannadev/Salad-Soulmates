@@ -1,5 +1,41 @@
 # Implementation decisions
 
+## 2026-09-20 — Order-linked production and authorized merges
+
+The owner requested the customer orders / production planning build step, then
+explicitly instructed merging this and the other completed PRs. Preserve the
+order-owned workflow: no separate planning entry point and no repeat order entry.
+Add facility-calendar start/completion dates and a Draft/Confirmed/Cancelled
+preparation state. Confirmation is preparation approval, not execution or
+ingredient consumption. Crew scheduling remains the next build item.
+
+Keep whole 40-gallon batch demand and saved recipe/packaging/price snapshots.
+Generate mixer and spice-prep records atomically, one spice preparation per batch.
+Revisions preserve physical-work identities and require an explanation when
+reopening confirmed/cancelled preparation. Show shortages against the start date;
+confirmation with shortages requires a recorded resolution. Existing single
+material commitments remain authoritative. Do not post inventory during planning.
+
+The owner subsequently requested a Preview of final merged `main` and explicitly
+approved publishing the production-planning branch to `mattdannadev/Salad-Soulmates`.
+PRs #4 and #2 are merged. Apply the tested additive production migration before
+merging dependent code, then build a Preview from the exact final main commit.
+No test records go into the hosted database.
+
+## 2026-09-20 — Finish receiving and merge into the connected Preview
+
+The owner requested “Let's finish receiving and serialization,” then explicitly
+instructed “Merge changes once complete.” PR #4 targets the existing
+`feature/materials-purchasing` Preview branch. This supersedes the earlier
+candidate-only merge restriction for receiving. Complete the automated checks,
+apply the tested additive migration to the existing hosted database as the
+matching application's prerequisite, and merge the verified candidate.
+
+Keep PR #2 against production main separate. Preserve the single hosted database;
+verification uses disposable records only. Real Auth acceptance, independent
+review and physical printer/scanner checks remain open and are not inferred from
+the merge. See `receiving-serialization.md` and PR #4 for the release evidence.
+
 ## 2026-09-20 — Suppliers open into purchasing work
 
 The owner wants supplier expansion to show purchase orders and their statuses,
