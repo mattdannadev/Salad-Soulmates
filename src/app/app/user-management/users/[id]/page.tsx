@@ -17,7 +17,7 @@ export default async function UserDetail({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { user, actorUserId } = await loadManagedUser(id);
+  const { user, actorUserId, accessProfiles } = await loadManagedUser(id);
   const fullName = `${user.firstName} ${user.lastName}`;
   let activity = <p>Login history requires audit access.</p>;
   if (user.loginHistory !== null) {
@@ -104,6 +104,8 @@ export default async function UserDetail({
         userName={fullName}
         active={user.active}
         isCurrentUser={user.id === actorUserId}
+        currentAccessProfileId={user.accessProfileId}
+        accessProfiles={accessProfiles}
       />
     </>
   );

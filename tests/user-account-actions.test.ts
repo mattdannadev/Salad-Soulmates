@@ -3,12 +3,21 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { expect, it, vi } from 'vitest';
 import UserAccountActions from '@/components/user-account-actions';
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
+
 vi.mock('@/app/user-management-actions', () => ({
+  changeManagedUserAccessProfile: vi.fn(),
   generateUserPasswordResetLink: vi.fn(),
   deactivateManagedUser: vi.fn(),
 }));
 
 const userId = '00000000-0000-4000-8000-000000000002';
+const accessProfileProps = {
+  currentAccessProfileId: '00000000-0000-4000-8000-000000000003',
+  accessProfiles: [{ id: '00000000-0000-4000-8000-000000000003', name: 'Receiver' }],
+};
 
 it('requires explicit confirmation and explains that delete preserves history', () => {
   const html = renderToStaticMarkup(createElement(UserAccountActions, {
@@ -16,8 +25,10 @@ it('requires explicit confirmation and explains that delete preserves history', 
     userName: 'Ana Rivera',
     active: true,
     isCurrentUser: false,
+    ...accessProfileProps,
   }));
   expect(html).toContain('Create password-reset link');
+  expect(html).toContain('Save access profile');
   expect(html).toContain('Delete user');
   expect(html).toContain('<dialog');
   expect(html).toContain('Delete Ana Rivera?');
@@ -34,6 +45,7 @@ it('disables self-deactivation and all inactive-account security actions', () =>
     userName: 'Current Administrator',
     active: true,
     isCurrentUser: true,
+    ...accessProfileProps,
   }));
   expect(own).toContain('You cannot deactivate your own access.');
   expect(own).toMatch(/disabled=""[^>]*>Delete user/);
@@ -43,6 +55,7 @@ it('disables self-deactivation and all inactive-account security actions', () =>
     userName: 'Inactive User',
     active: false,
     isCurrentUser: false,
+    ...accessProfileProps,
   }));
   expect(inactive).toContain('This user is inactive.');
   expect(inactive).not.toContain('Create password-reset link');

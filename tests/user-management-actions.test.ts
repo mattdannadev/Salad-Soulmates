@@ -2,6 +2,7 @@ import {
   beforeEach, expect, it, vi,
 } from 'vitest';
 import {
+  changeManagedUserAccessProfile,
   deactivateManagedUser,
   generateUserPasswordResetLink,
 } from '@/app/user-management-actions';
@@ -159,6 +160,21 @@ it('deactivates through the audited RPC and revalidates directory and detail', a
   expect(mocks.revalidate).toHaveBeenCalledWith('/app/user-management/users');
   expect(mocks.revalidate).toHaveBeenCalledWith(`/app/user-management/users/${targetId}`);
   expect(mocks.admin).not.toHaveBeenCalled();
+});
+
+it('changes access profile through the audited RPC and refreshes both user views', async () => {
+  const newProfileId = '00000000-0000-4000-8000-000000000003';
+  const result = await changeManagedUserAccessProfile(
+    initial,
+    form({ user_id: targetId, access_profile_id: newProfileId }),
+  );
+  expect(result).toEqual({ ok: true, message: 'Access profile updated.' });
+  expect(mocks.rpc).toHaveBeenCalledWith('change_user_access_profile', {
+    target_user_id: targetId,
+    assigned_access_profile_id: newProfileId,
+  });
+  expect(mocks.revalidate).toHaveBeenCalledWith('/app/user-management/users');
+  expect(mocks.revalidate).toHaveBeenCalledWith(`/app/user-management/users/${targetId}`);
 });
 
 it('blocks self-deactivation and hides unexpected database details', async () => {

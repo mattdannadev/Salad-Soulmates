@@ -25,6 +25,7 @@ vi.mock('next/navigation', () => ({
 
 const baseUser: ManagedUser = {
   id: '00000000-0000-4000-8000-000000000001',
+  accessProfileId: '00000000-0000-4000-8000-000000000003',
   firstName: 'Morgan',
   lastName: 'Zane',
   displayName: 'Morgan Zane',

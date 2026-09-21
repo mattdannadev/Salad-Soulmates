@@ -16,35 +16,45 @@ export default function UserDirectory({ users }: { users: ManagedUser[] }) {
     );
   }
   return (
-    <div className={styles.userGrid} role="region" aria-label="User directory">
-      {users.map((user) => (
-        <article className={styles.userCard} key={user.id}>
-          <div className={styles.cardHeading}>
-            <span className={styles.avatar} aria-hidden="true">{initials(user)}</span>
-            <span className={user.active ? styles.activeBadge : styles.inactiveBadge}>
-              {user.active ? 'Active' : 'Inactive'}
-            </span>
-          </div>
-          <div>
-            <h2>{`${user.firstName} ${user.lastName}`}</h2>
-            <p className={styles.email}>{user.workEmail ?? 'Email not recorded'}</p>
-          </div>
-          <dl className={styles.cardFacts}>
-            <div>
-              <dt>Facility</dt>
-              <dd>{user.facilityName}</dd>
-            </div>
-            <div>
-              <dt>Access</dt>
-              <dd>{user.accessProfileName}</dd>
-            </div>
-          </dl>
-          <Link href={`/app/user-management/users/${user.id}`}>
-            View user profile
-            <span aria-hidden="true"> →</span>
-          </Link>
-        </article>
-      ))}
+    <div className={styles.directoryTableWrap} role="region" aria-label="User directory">
+      <table className={styles.directoryTable}>
+        <thead>
+          <tr>
+            <th scope="col">User</th>
+            <th scope="col">Email</th>
+            <th scope="col">Facility</th>
+            <th scope="col">Access</th>
+            <th scope="col">Status</th>
+            <th scope="col"><span className="sr-only">Profile</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {users.map((user) => (
+            <tr key={user.id}>
+              <th scope="row">
+                <Link className={styles.userName} href={`/app/user-management/users/${user.id}`}>
+                  <span className={styles.avatar} aria-hidden="true">{initials(user)}</span>
+                  {`${user.firstName} ${user.lastName}`}
+                </Link>
+              </th>
+              <td className={styles.email}>{user.workEmail ?? '—'}</td>
+              <td>{user.facilityName}</td>
+              <td>{user.accessProfileName}</td>
+              <td>
+                <span className={user.active ? styles.activeBadge : styles.inactiveBadge}>
+                  {user.active ? 'Active' : 'Inactive'}
+                </span>
+              </td>
+              <td>
+                <Link href={`/app/user-management/users/${user.id}`}>
+                  View profile
+                  <span aria-hidden="true"> →</span>
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

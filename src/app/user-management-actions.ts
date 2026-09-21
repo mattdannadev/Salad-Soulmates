@@ -22,6 +22,9 @@ const trustedTargetSchema = z.object({
   id: z.uuid(),
   active: z.boolean(),
 });
+const accessProfileChangeSchema = userTargetSchema.extend({
+  access_profile_id: z.uuid(),
+});
 const resetLinkSchema = z.url();
 
 async function requireAccessManager(targetUserId: string) {
@@ -147,6 +150,46 @@ const safeDeactivationMessages = new Set([
   'User must belong to your organization',
   'A deactivation reason between 3 and 500 characters is required',
 ]);
+
+const safeAccessProfileMessages = new Set([
+  'Access management permission required',
+  'User must belong to your organization',
+  'Invalid access profile',
+  'The last active access manager cannot be reassigned',
+]);
+
+/** Change a user's assigned access profile through the audited database function. */
+export async function changeManagedUserAccessProfile(
+  _previous: UserManagementActionResult,
+  form: FormData,
+): Promise<UserManagementActionResult> {
+  const input = accessProfileChangeSchema.safeParse(Object.fromEntries(form));
+  if (!input.success) return { ok: false, message: 'Choose a valid access profile.' };
+  const access = await requireAccessManager(input.data.user_id);
+  if (!access.ok) return { ok: false, message: access.error };
+  let result;
+  try {
+    result = await access.db.rpc('change_user_access_profile', {
+      target_user_id: access.target.id,
+      assigned_access_profile_id: input.data.access_profile_id,
+    });
+  } catch (cause) {
+    logFailure('user_management_access_profile_change', cause);
+    return { ok: false, message: 'Could not change this access profile. Reload and try again.' };
+  }
+  if (result.error) {
+    logFailure('user_management_access_profile_change', result.error);
+    return {
+      ok: false,
+      message: safeAccessProfileMessages.has(result.error.message)
+        ? `${result.error.message}.`
+        : 'Could not change this access profile. Reload and try again.',
+    };
+  }
+  revalidatePath('/app/user-management/users');
+  revalidatePath(`/app/user-management/users/${access.target.id}`);
+  return { ok: true, message: 'Access profile updated.' };
+}
 
 /** Deactivate app access through the audited database function; never delete Auth identities. */
 export async function deactivateManagedUser(

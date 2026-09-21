@@ -47,6 +47,7 @@ const userId = '00000000-0000-4000-8000-000000000002';
 const actorId = '00000000-0000-4000-8000-000000000001';
 const user: ManagedUserDetail = {
   id: userId,
+  accessProfileId: '00000000-0000-4000-8000-000000000003',
   firstName: 'Ana',
   lastName: 'Rivera',
   displayName: 'Ana Rivera',
@@ -69,7 +70,7 @@ const user: ManagedUserDetail = {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.directory.mockResolvedValue({ users: [user], totalUsers: 1, actorUserId: actorId });
-  mocks.detail.mockResolvedValue({ user, actorUserId: actorId });
+  mocks.detail.mockResolvedValue({ user, actorUserId: actorId, accessProfiles: [] });
 });
 
 it('renders a responsive directory with validated URL search, sorting, and invitations', async () => {
@@ -78,8 +79,11 @@ it('renders a responsive directory with validated URL search, sorting, and invit
   }));
   expect(mocks.directory).toHaveBeenCalledWith({ q: 'ana', sort: 'first_name' });
   expect(html).toContain('aria-label="User directory"');
+  expect(html).toContain('<table');
+  expect(html).toContain('<th scope="col">Email</th>');
   expect(html).toContain('Ana Rivera');
   expect(html).toContain('ana@example.test');
+  expect(html).not.toContain('Email not recorded');
   expect(html).toContain(`href="/app/user-management/users/${userId}"`);
   expect(html).toContain('1 of 1 users match “ana”.');
   expect(html).toContain('aria-label="Invitation panel"');

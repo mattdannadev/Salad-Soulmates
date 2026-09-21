@@ -32,7 +32,7 @@ const managedProfileSchema = z.object({
 });
 
 const facilitySchema = z.object({ id: z.uuid(), name: z.string() });
-const accessProfileSchema = z.object({ id: z.uuid(), name: z.string() });
+const accessProfileSchema = z.object({ id: z.uuid(), name: z.string(), active: z.boolean() });
 const loginEventSchema = z.object({
   id: z.uuid(),
   event_type: z.enum(['signed_in', 'signed_out']),
@@ -41,6 +41,7 @@ const loginEventSchema = z.object({
 
 export interface ManagedUser {
   id: string;
+  accessProfileId: string;
   firstName: string;
   lastName: string;
   displayName: string;
@@ -57,6 +58,11 @@ export interface ManagedUser {
 
 export interface ManagedUserDetail extends ManagedUser {
   loginHistory: z.infer<typeof loginEventSchema>[] | null;
+}
+
+export interface AccessProfileOption {
+  id: string;
+  name: string;
 }
 
 interface UserManagementContext {
@@ -88,6 +94,7 @@ function combineUser(
 ): ManagedUser {
   return {
     id: profile.id,
+    accessProfileId: profile.access_profile_id,
     firstName: profile.first_name,
     lastName: profile.last_name,
     displayName: profile.display_name,
@@ -130,7 +137,7 @@ export function filterAndSortUsers(
 async function loadReferenceNames(db: UserManagementContext['db']) {
   const [facilitiesResult, accessProfilesResult] = await Promise.all([
     db.from('facilities').select('id,name').order('name'),
-    db.from('access_profiles').select('id,name').order('name'),
+    db.from('access_profiles').select('id,name,active').order('name'),
   ]);
   const facilities = readResult(
     facilitiesResult,
@@ -145,6 +152,9 @@ async function loadReferenceNames(db: UserManagementContext['db']) {
   return {
     facilities: new Map(facilities.map((facility) => [facility.id, facility.name])),
     accessProfiles: new Map(accessProfiles.map((profile) => [profile.id, profile.name])),
+    activeAccessProfileIds: new Set(
+      accessProfiles.filter((profile) => profile.active).map((profile) => profile.id),
+    ),
   };
 }
 
@@ -178,6 +188,7 @@ export async function loadUserDirectory(query: UserDirectoryQuery) {
 export async function loadManagedUser(userId: string): Promise<{
   user: ManagedUserDetail;
   actorUserId: string;
+  accessProfiles: AccessProfileOption[];
 }> {
   const parsedUserId = z.uuid().safeParse(userId);
   if (!parsedUserId.success) notFound();
@@ -213,6 +224,9 @@ export async function loadManagedUser(userId: string): Promise<{
     : null;
   return {
     actorUserId: context.actorUserId,
+    accessProfiles: [...references.accessProfiles]
+      .filter(([id]) => references.activeAccessProfileIds.has(id))
+      .map(([id, name]) => ({ id, name })),
     user: {
       ...combineUser(profile, references.facilities, references.accessProfiles),
       loginHistory,

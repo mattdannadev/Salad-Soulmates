@@ -23,44 +23,58 @@
   margin: 0 0 18px;
 }
 
-.userGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 18px;
-}
-
-.userCard {
-  min-width: 0;
-  display: grid;
-  gap: 18px;
-  padding: 22px;
+.directoryTableWrap {
+  overflow-x: auto;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: #fffefb;
 }
 
-.userCard h2 {
-  margin: 0 0 5px;
-  font-size: 25px;
+.directoryTable {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
 }
 
-.userCard p,
-.userCard dl {
-  margin: 0;
+.directoryTable th,
+.directoryTable td {
+  min-width: 0;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: middle;
 }
 
-.cardHeading {
-  display: flex;
+.directoryTable thead th {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.directoryTable tbody tr:last-child th,
+.directoryTable tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.directoryTable tbody tr:hover {
+  background: #f8faf4;
+}
+
+.userName {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .avatar {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: #e7efe0;
   color: #375b2f;
@@ -94,18 +108,10 @@
   color: var(--muted);
 }
 
-.cardFacts {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.cardFacts div,
 .profileFacts div {
   min-width: 0;
 }
 
-.cardFacts dt,
 .profileFacts dt {
   color: var(--muted);
   font-size: 11px;
@@ -114,7 +120,6 @@
   text-transform: uppercase;
 }
 
-.cardFacts dd,
 .profileFacts dd {
   margin: 4px 0 0;
   overflow-wrap: anywhere;
@@ -251,10 +256,6 @@
   .actionBlock button,
   .dangerButton {
     width: 100%;
-  }
-
-  .cardFacts {
-    grid-template-columns: 1fr;
   }
 
   .resetLinkRow,

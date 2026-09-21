@@ -1791,6 +1791,10 @@ export type Database = {
         Args: { reason: string; target_user_id: string };
         Returns: undefined;
       };
+      change_user_access_profile: {
+        Args: { assigned_access_profile_id: string; target_user_id: string };
+        Returns: undefined;
+      };
       current_facility: { Args: never; Returns: string };
       current_org: { Args: never; Returns: string };
       current_role: { Args: never; Returns: string };
