@@ -1651,6 +1651,11 @@ dialog::backdrop {
   margin: 4px 0 8px;
 }
 
+.inventory-status {
+  margin: 4px 0 0;
+  font-size: 0.8125rem;
+}
+
 .serial-search {
   display: flex;
   flex-wrap: wrap;

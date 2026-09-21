@@ -42,7 +42,10 @@ if (!paths.includes('src/lib/supabase.ts') || !paths.includes('src/proxy.ts')) {
 mkdirSync(destination);
 paths.forEach((path) => {
   const target = resolve(destination, path);
-  if (!target.startsWith(`${destination}/`)) throw new Error('Unexpected export path.');
+  const targetRelative = relative(destination, target);
+  if (targetRelative.startsWith('..') || isAbsolute(targetRelative)) {
+    throw new Error('Unexpected export path.');
+  }
   mkdirSync(dirname(target), { recursive: true });
   const contents = execFileSync('git', ['show', `${baseCommit}:${path}`], { cwd: repository });
   writeFileSync(target, contents, { flag: 'wx' });

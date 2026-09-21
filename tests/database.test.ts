@@ -16,7 +16,7 @@ async function asUser(user: number, sql: string, params: unknown[] = []) {
 beforeAll(async () => {
   db = new PGlite();
   await db.exec(`create role authenticated; create role anon; create schema auth;
- create table auth.users(id uuid primary key);
+ create table auth.users(id uuid primary key, email text);
  create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
  grant usage on schema auth to authenticated,anon;
  grant execute on function auth.uid() to authenticated,anon;`);
@@ -32,7 +32,10 @@ beforeAll(async () => {
     readFileSync('supabase/migrations/20260919154002_access_approval_workflow.sql', 'utf8'),
   );
   await db.exec(readFileSync('supabase/migrations/20260919154004_receiving_workflow.sql', 'utf8'));
-  await db.exec(`insert into auth.users values('${id(1)}'),('${id(2)}'),('${id(3)}'),('${id(4)}'),('${id(5)}'),('${id(6)}'),('${id(7)}'),('${id(8)}'),('${id(9)}'),('${id(30)}');
+  await db.exec(`insert into auth.users(id,email) values
+ ('${id(1)}','admin@example.com'),('${id(2)}','admin-b@example.com'),
+ ('${id(3)}',null),('${id(4)}',null),('${id(5)}',null),('${id(6)}',null),
+ ('${id(7)}',null),('${id(8)}',null),('${id(9)}',null),('${id(30)}',null);
  insert into public.organizations(id,name,slug) values('${id(10)}','A','a'),('${id(20)}','B','b');
  insert into public.facilities(id,organization_id,name) values('${id(11)}','${id(10)}','A'),('${id(21)}','${id(20)}','B'),('${id(12)}','${id(10)}','A2');
  insert into public.profiles(id,organization_id,facility_id,display_name,role) values
@@ -59,11 +62,41 @@ beforeAll(async () => {
   await db.exec(
     readFileSync('supabase/migrations/20260921170000_user_management_foundation.sql', 'utf8'),
   );
+  await db.exec(
+    readFileSync('supabase/migrations/20260921180000_backfill_profile_work_emails.sql', 'utf8'),
+  );
+  await db.exec(
+    readFileSync('supabase/migrations/20260921180100_change_user_access_profile.sql', 'utf8'),
+  );
+  await db.exec(
+    readFileSync('supabase/migrations/20260921190000_resync_profile_work_emails.sql', 'utf8'),
+  );
+  await db.exec(
+    readFileSync('supabase/migrations/20260921190200_preserve_access_manager.sql', 'utf8'),
+  );
 });
 afterAll(async () => {
   await db?.close();
 });
 describe('foundation migration against PostgreSQL (PGlite)', () => {
+  it('copies authentication emails into profiles and resynchronizes a changed address', async () => {
+    expect(
+      (await db.query('select work_email from public.profiles where id=$1', [id(1)])).rows,
+    ).toEqual([{ work_email: 'admin@example.com' }]);
+
+    await db.query('update auth.users set email=$1 where id=$2', [
+      'admin-renamed@example.com',
+      id(1),
+    ]);
+    await db.exec(
+      readFileSync('supabase/migrations/20260921190000_resync_profile_work_emails.sql', 'utf8'),
+    );
+
+    expect(
+      (await db.query('select work_email from public.profiles where id=$1', [id(1)])).rows,
+    ).toEqual([{ work_email: 'admin-renamed@example.com' }]);
+  });
+
   it('has RLS on all twenty-eight application tables', async () => {
     const result = await db.query<{ relrowsecurity: boolean }>(
       "select relrowsecurity from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and relkind='r'",
@@ -589,5 +622,52 @@ describe('user management database foundation', () => {
         )
       ).rows,
     ).toEqual([{ count: 1 }]);
+  });
+
+  it('changes an organization user from reviewer to administrator through the audited RPC', async () => {
+    const administrator = z.object({ id: z.string() }).parse((
+      await asUser(
+        1,
+        "select id from public.access_profiles where organization_id=$1 and name='Administrator'",
+        [id(10)],
+      )
+    ).rows[0]);
+
+    await asUser(1, 'select public.change_user_access_profile($1,$2)', [id(4), administrator.id]);
+
+    await db.exec('reset role');
+    expect((await db.query('select role,access_profile_id from public.profiles where id=$1', [id(4)])).rows)
+      .toEqual([{ role: 'admin', access_profile_id: administrator.id }]);
+    expect(
+      (await db.query(
+        "select actor_user_id,event_type from public.audit_events where entity_id=$1 and event_type='USER_ACCESS_PROFILE_CHANGED'",
+        [id(4)],
+      )).rows,
+    ).toEqual([{ actor_user_id: id(1), event_type: 'USER_ACCESS_PROFILE_CHANGED' }]);
+  });
+
+  it('does not remove access.manage from the last active access-manager profile', async () => {
+    const administrator = z.object({ id: z.string() }).parse((
+      await asUser(
+        1,
+        "select id from public.access_profiles where organization_id=$1 and name='Administrator'",
+        [id(10)],
+      )
+    ).rows[0]);
+
+    await expect(asUser(1, 'select public.save_access_profile($1::jsonb)', [JSON.stringify({
+      id: administrator.id,
+      name: 'Administrator',
+      description: 'Full system administration',
+      base_role: 'admin',
+      active: true,
+      permission_codes: ['settings.manage'],
+    })])).rejects.toThrow('last active access manager cannot lose access management permission');
+
+    await db.exec('reset role');
+    expect((await db.query(
+      "select permission_code from public.access_profile_permissions where access_profile_id=$1 and permission_code='access.manage'",
+      [administrator.id],
+    )).rows).toEqual([{ permission_code: 'access.manage' }]);
   });
 });

@@ -114,7 +114,7 @@ export default function UserAccountActions({
             <input type="hidden" name="user_id" value={userId} />
             <div>
               <h3>Password reset</h3>
-              <p>Create a one-time Supabase recovery link for this user.</p>
+              <p>Create a one-time password-reset link for this user.</p>
             </div>
             <button type="submit" className="secondary" disabled={resetting}>
               {resetting ? 'Creating link…' : 'Create password-reset link'}

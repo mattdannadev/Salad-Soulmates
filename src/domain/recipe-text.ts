@@ -45,6 +45,8 @@ const spanish = {
   'On hand': 'Existencias',
   'Not recorded': 'Sin registrar',
   'Inventory details unavailable with your access': 'Detalles del inventario no disponibles con su acceso',
+  'Inventory unavailable': 'Inventario no disponible',
+  'Not in inventory': 'No está en el inventario',
   'Recorded stock at your facility. Commitments and expiry are checked on customer orders.': 'Existencias registradas en su instalación. Los compromisos y vencimientos se revisan en los pedidos de clientes.',
   'Review negative balance': 'Revisar saldo negativo',
   'Recipe measure': 'Medida de la receta',

@@ -112,9 +112,18 @@ describe('recipe and product screens', () => {
   it('does not read inventory when the viewer lacks inventory access', async () => {
     mocks.permission.mockImplementation((db: unknown, permission: string) => Promise.resolve(permission !== 'inventory.read'));
     const html = renderToStaticMarkup(await details());
-    expect(html).toContain('Inventory details unavailable with your access');
+    expect(html).toContain('Inventory unavailable');
+    expect(html).toContain('class="inventory-status muted"');
     expect(html).toContain(`/app/ingredients/${fixtureId(100)}`);
     expect(mocks.rows.mock.calls.some((call) => call[1] === 'inventory_events')).toBe(false);
+  });
+  it('states when an ingredient has no inventory record', async () => {
+    mocks.rows.mockImplementation((db: unknown, table: string) => Promise.resolve(
+      table === 'inventory_events' ? [] : fixtureRecords[table] ?? [],
+    ));
+    const html = renderToStaticMarkup(await details());
+    expect(html).toContain('Not in inventory');
+    expect(html).not.toContain('On hand: Not recorded');
   });
   it('does not invent links for hidden ingredients or turn failed stock reads into zero', async () => {
     mocks.rows.mockImplementation((db: unknown, table: string) => Promise.resolve(

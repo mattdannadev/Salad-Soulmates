@@ -54,7 +54,11 @@ function RecipeIngredientGroup({
                             unit={ingredient.default_uom}
                             locale={locale}
                           />
-                        ) : <p className="muted">{recipeText(locale, 'Inventory details unavailable with your access')}</p>}
+                        ) : (
+                          <p className="inventory-status muted">
+                            {recipeText(locale, stock ? 'Not in inventory' : 'Inventory unavailable')}
+                          </p>
+                        )}
                       </>
                     ) : recipeText(locale, 'Ingredient details unavailable with your access')}
                   </td>
