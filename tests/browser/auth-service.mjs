@@ -265,12 +265,19 @@ const profile = {
   organization_id: '00000000-0000-4000-8000-000000000010',
   facility_id: '00000000-0000-4000-8000-000000000011',
   display_name: 'Test Administrator',
+  first_name: 'Test',
+  last_name: 'Administrator',
+  work_email: 'admin@example.test',
   role: 'admin',
   preferred_locale: 'en',
   active: true,
+  deactivated_at: null,
+  deactivated_by: null,
+  deactivation_reason: null,
   access_profile_id: '00000000-0000-4000-8000-000000000020',
 };
 const inventoryAttempts = [];
+const loginEvents = [];
 const attemptSchema = z.object({ request_id: z.uuid(), reason_note: z.string() });
 createServer((request, response) => {
   const url = new URL(request.url ?? '/', 'http://127.0.0.1:4010');
@@ -374,6 +381,33 @@ createServer((request, response) => {
     if (url.pathname.endsWith('/rpc/has_permission')) {
       const { requested } = JSON.parse(payload);
       response.end(JSON.stringify(ADMIN_PERMISSIONS.includes(requested)));
+      return;
+    }
+    if (url.pathname.endsWith('/rpc/login_event_user_names')) {
+      response.end(JSON.stringify([{ user_id: profile.id, display_name: profile.display_name }]));
+      return;
+    }
+    if (url.pathname.endsWith('/login_events')) {
+      if (request.method === 'POST') {
+        const event = z.object({
+          event_type: z.enum(['signed_in', 'signed_out']),
+          user_agent: z.string().max(1000).nullable().optional(),
+        }).safeParse(JSON.parse(payload));
+        if (!event.success) {
+          response.writeHead(400);
+          response.end(JSON.stringify({ code: 'INVALID_LOGIN_EVENT' }));
+          return;
+        }
+        loginEvents.unshift({
+          id: fixtureId(900 + loginEvents.length),
+          user_id: profile.id,
+          event_type: event.data.event_type,
+          ip_address: null,
+          user_agent: event.data.user_agent ?? null,
+          occurred_at: new Date().toISOString(),
+        });
+      }
+      response.end(JSON.stringify(loginEvents));
       return;
     }
     if (url.pathname.endsWith('/access_profile_permissions')) {

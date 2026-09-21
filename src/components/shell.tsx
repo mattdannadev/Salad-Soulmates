@@ -26,6 +26,8 @@ import {
   Layers3,
   ShoppingBasket,
   Building2,
+  UserCog,
+  History,
 } from 'lucide-react';
 import { signOut } from '@/app/actions';
 import FeedbackDrawer from './feedback';
@@ -142,6 +144,42 @@ const navigationGroups = [
     ],
   },
   {
+    id: 'user-management',
+    en: 'User Management',
+    es: 'Administración de usuarios',
+    icon: UserCog,
+    items: [
+      {
+        href: '/app/user-management/users',
+        en: 'Users',
+        es: 'Usuarios',
+        icon: Users,
+        permission: 'access.manage',
+      },
+      {
+        href: '/app/user-management/profiles',
+        en: 'Profile Management',
+        es: 'Administración de perfiles',
+        icon: UserCog,
+        permission: 'settings.manage',
+      },
+      {
+        href: '/app/user-management/access-requests',
+        en: 'Access Requests',
+        es: 'Solicitudes de acceso',
+        icon: ShieldCheck,
+        permission: 'access.manage',
+      },
+      {
+        href: '/app/user-management/login-history',
+        en: 'Login History',
+        es: 'Historial de inicio de sesión',
+        icon: History,
+        permission: 'audit.read',
+      },
+    ],
+  },
+  {
     id: 'organization',
     en: 'Organization',
     es: 'Organización',
@@ -153,13 +191,6 @@ const navigationGroups = [
         es: 'Equipo',
         icon: Users,
         permission: 'workforce.read',
-      },
-      {
-        href: '/app/access-requests',
-        en: 'Access requests',
-        es: 'Solicitudes de acceso',
-        icon: ShieldCheck,
-        permission: 'access.manage',
       },
       {
         href: '/app/settings',
@@ -203,7 +234,7 @@ export function Shell({
     mobileToggleLabel = isSpanish ? 'Cerrar navegación' : 'Close navigation';
   }
   const isCurrentPath = (href: string) => {
-    if (href === '/app') return path === href;
+    if (href === '/app' || href === '/app/user-management/users') return path === href;
     return path.startsWith(href);
   };
   return (
@@ -258,7 +289,7 @@ export function Shell({
             );
             const hasCurrentPage = visibleItems.some((item) => isCurrentPath(item.href));
 
-            if (visibleItems.length === 1) {
+            if (visibleItems.length === 1 && group.id !== 'user-management') {
               const item = visibleItems[0];
               if (!item) return null;
               const {

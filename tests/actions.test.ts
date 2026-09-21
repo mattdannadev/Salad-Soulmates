@@ -45,10 +45,12 @@ const mocks = vi.hoisted(() => {
     admin: vi.fn(),
     revalidate: vi.fn(),
     profile: vi.fn(),
+    headers: vi.fn(() => new Headers({ 'user-agent': 'Test browser' })),
   };
 });
 vi.mock('server-only', () => ({}));
 vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidate }));
+vi.mock('next/headers', () => ({ headers: mocks.headers }));
 vi.mock('next/navigation', () => ({
   redirect: (path: string) => {
     throw new Error(`REDIRECT:${path}`);
@@ -194,6 +196,18 @@ describe('server action behavior before restructuring', () => {
     form.set('identifier', 'user@example.test');
     form.set('password', 'example-password');
     await expect(signIn(initial, form)).rejects.toThrow('REDIRECT:/app');
+    expect(mocks.db.from).toHaveBeenCalledWith('login_events');
+    expect(mocks.query.insert).toHaveBeenCalledWith({
+      event_type: 'signed_in',
+      user_agent: 'Test browser',
+    });
+  });
+  it('keeps a successful login available when history recording fails', async () => {
+    mocks.execute.mockResolvedValue({ data: null, error: { code: 'LOGIN_EVENT_FAILED', message: 'private' } });
+    const form = new FormData();
+    form.set('identifier', 'user@example.test');
+    form.set('password', 'example-password');
+    await expect(signIn(initial, form)).rejects.toThrow('REDIRECT:/app');
   });
   it('keeps the successful sign-out destination', async () => {
     await expect(signOut()).rejects.toThrow('REDIRECT:/login');
@@ -332,8 +346,8 @@ describe('Auth service and invitation failures', () => {
       assigned_facility_id: inventory.ingredient_id,
       assigned_access_profile_id: inventory.request_id,
     });
-    expect(mocks.revalidate).toHaveBeenCalledWith('/app/settings');
-    expect(mocks.revalidate).toHaveBeenCalledWith('/app/access-requests');
+    expect(mocks.revalidate).toHaveBeenCalledWith('/app/user-management/users');
+    expect(mocks.revalidate).toHaveBeenCalledWith('/app/user-management/access-requests');
   });
   it('does not send a direct invitation when the email already has an open request', async () => {
     mocks.execute.mockResolvedValue({ data: null, error: { code: '23505', message: 'duplicate' } });

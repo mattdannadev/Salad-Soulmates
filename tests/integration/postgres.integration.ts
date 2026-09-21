@@ -737,3 +737,53 @@ it('serializes bulk purchasing across distinct requests without duplicate suppli
   const retry: unknown = await second.query(sql, [request]);
   expect(resultRows.parse(retry)).toEqual(resultRows.parse(initial));
 });
+
+it('rechecks deactivation authority after waiting for the organization lock', async () => {
+  const manager = randomUUID();
+  const targetUser = randomUUID();
+  const references: unknown = await observer.query(`
+    select
+      (select organization_id from public.profiles where id=$1) organization_id,
+      (select facility_id from public.profiles where id=$1) facility_id,
+      (select id from public.access_profiles where organization_id=(
+          select organization_id from public.profiles where id=$1)
+        and name='Administrator') manager_profile_id,
+      (select id from public.access_profiles where organization_id=(
+          select organization_id from public.profiles where id=$1)
+        and name='Production Worker') worker_profile_id
+  `, [actor]);
+  const fixture = z.object({
+    rows: z.tuple([z.object({
+      organization_id: z.uuid(),
+      facility_id: z.uuid(),
+      manager_profile_id: z.uuid(),
+      worker_profile_id: z.uuid(),
+    })]),
+  }).parse(references).rows[0];
+  await observer.query('insert into auth.users(id) values($1),($2)', [manager, targetUser]);
+  await observer.query(`insert into public.profiles(
+      id,organization_id,facility_id,display_name,role,access_profile_id)
+    values($1,$3,$4,'Concurrent manager','admin',$5),
+      ($2,$3,$4,'Concurrent target','worker',$6)`, [
+    manager,
+    targetUser,
+    fixture.organization_id,
+    fixture.facility_id,
+    fixture.manager_profile_id,
+    fixture.worker_profile_id,
+  ]);
+  await first.query("select set_config('request.jwt.claim.sub',$1,false)", [manager]);
+
+  const outcome = await overlap(
+    'select public.deactivate_user_access($1,$2)',
+    [actor, 'Concurrent manager handoff'],
+    'select public.deactivate_user_access($1,$2)',
+    [targetUser, 'Must recheck authority after lock wait'],
+  );
+  expect(String(outcome.error)).toContain('Access management permission required');
+  const targetState: unknown = await observer.query(
+    'select active from public.profiles where id=$1',
+    [targetUser],
+  );
+  expect(resultRows.parse(targetState).rows).toEqual([{ active: true }]);
+});

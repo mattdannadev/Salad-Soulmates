@@ -14,13 +14,20 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/app$/);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Welcome');
+  const mainNavigation = page.getByRole('navigation', { name: 'Main navigation' });
   await Promise.all([
-    'Recipes', 'Products', 'Orders', 'Team', 'Access requests', 'Settings',
-  ].map(async (label) => {
-    await expect(page.getByRole('navigation', { name: 'Main navigation' })
-      .getByRole('link', { name: label, exact: true })).toBeVisible();
+    'Product catalog', 'Customer orders', 'User Management', 'Organization',
+  ].map(async (groupLabel) => {
+    const group = mainNavigation.locator('.nav-group').filter({ hasText: groupLabel });
+    await group.locator('summary').click();
   }));
-  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Recipes', exact: true }).click();
+  await Promise.all([
+    'Recipes', 'Products', 'Orders', 'Team', 'Users', 'Profile Management',
+    'Access Requests', 'Login History', 'Settings',
+  ].map(async (label) => {
+    await expect(mainNavigation.getByRole('link', { name: label, exact: true })).toBeVisible();
+  }));
+  await mainNavigation.getByRole('link', { name: 'Recipes', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Recipes', exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Preview Italian recipe', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Version history' })).toBeVisible();
@@ -59,8 +66,19 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
   await page.goto('/app/receiving');
   await expect(page.getByText('No receipts yet', { exact: true })).toBeVisible();
   await page.goto('/app/settings');
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Invite a new user', exact: true })).toHaveCount(0);
+  await page.goto('/app/user-management/users');
   await expect(page.getByRole('heading', { name: 'Invite a new user', exact: true })).toBeVisible();
   await expect(page.getByLabel('Invitation email preview')).toContainText('Set up your account');
+  await page.goto('/app/access-requests');
+  await expect(page).toHaveURL(/\/app\/user-management\/access-requests$/);
+  await expect(page.getByRole('heading', { name: 'Access Requests', exact: true })).toBeVisible();
+  await page.goto('/app/user-management/login-history');
+  await expect(page.getByRole('heading', { name: 'Login History', exact: true })).toBeVisible();
+  await expect(page.getByRole('row').filter({ hasText: 'Test Administrator' })).toContainText(
+    'Signed in',
+  );
   await expect(page.locator('body')).not.toContainText('Application error');
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(/\/login$/);

@@ -1064,6 +1064,12 @@ dialog::backdrop {
   padding-top: 26px;
   border-top: 1px solid var(--line);
 }
+.login-event-source {
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .invite-user-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.8fr);

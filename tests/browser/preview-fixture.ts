@@ -22,11 +22,18 @@ const PROFILE = {
   organization_id: '00000000-0000-4000-8000-000000000010',
   facility_id: '00000000-0000-4000-8000-000000000011',
   display_name: 'Test Administrator',
+  first_name: 'Test',
+  last_name: 'Administrator',
+  work_email: FIXTURE_EMAIL,
   role: 'admin',
   preferred_locale: 'en',
   active: true,
+  deactivated_at: null,
+  deactivated_by: null,
+  deactivation_reason: null,
   access_profile_id: '00000000-0000-4000-8000-000000000020',
 };
+const LOGIN_EVENTS: Record<string, unknown>[] = [];
 const EMPTY_TABLES = new Set([
   'ingredients', 'products', 'suppliers', 'supplier_items', 'allergens',
   'ingredient_allergens', 'recipes', 'recipe_versions', 'recipe_sections',
@@ -145,7 +152,27 @@ export const previewFixtureFetch: typeof fetch = async (input, init) => {
     const permission = z.object({ requested: z.string() }).safeParse(inputBody);
     return json(permission.success && ADMIN_PERMISSIONS.includes(permission.data.requested));
   }
+  if (url.pathname === '/rest/v1/rpc/login_event_user_names' && request.method === 'POST') {
+    return json([{ user_id: PROFILE.id, display_name: PROFILE.display_name }]);
+  }
   if (url.pathname === '/rest/v1/rpc/find_serialized_units') return json([]);
+  if (url.pathname === '/rest/v1/login_events' && request.method === 'POST') {
+    const inputBody: unknown = await request.json();
+    const event = z.object({
+      event_type: z.enum(['signed_in', 'signed_out']),
+      user_agent: z.string().max(1000).nullable().optional(),
+    }).safeParse(inputBody);
+    if (!event.success) return json({ code: 'INVALID_LOGIN_EVENT' }, 400);
+    LOGIN_EVENTS.unshift({
+      id: `00000000-0000-4000-8000-${String(900 + LOGIN_EVENTS.length).padStart(12, '0')}`,
+      user_id: PROFILE.id,
+      event_type: event.data.event_type,
+      ip_address: null,
+      user_agent: event.data.user_agent ?? null,
+      occurred_at: new Date().toISOString(),
+    });
+    return json(LOGIN_EVENTS, 201);
+  }
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     return json({ code: 'TEST_WRITE_FAILURE', message: 'Test preview rejects business-data writes' }, 503);
   }
@@ -153,6 +180,7 @@ export const previewFixtureFetch: typeof fetch = async (input, init) => {
     return json(request.headers.get('Accept')?.includes('vnd.pgrst.object+json')
       ? PROFILE : [PROFILE]);
   }
+  if (url.pathname === '/rest/v1/login_events') return json(LOGIN_EVENTS);
   if (url.pathname === '/rest/v1/access_profile_permissions') {
     return json(ADMIN_PERMISSIONS.map((permissionCode) => ({
       access_profile_id: PROFILE.access_profile_id, permission_code: permissionCode,

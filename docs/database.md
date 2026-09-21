@@ -19,6 +19,12 @@ The second migration adds only the company and a **Main facility** using **Ameri
 
 Admin, reviewer, worker and receiver are supported profile roles. Only provisioned active profiles can access application data. A Supabase dashboard login is separate from an application user account; profiles do not automatically inherit dashboard access.
 
+User identity remains anchored to `profiles.id = auth.users.id`. Profiles now retain the legacy `display_name` while storing canonical `first_name` and `last_name`; `work_email` is optional but unique within an organization. Raw `last_name`, `first_name` PostgREST sorting and normalized full-name prefix filtering have dedicated indexes. The prefix index is intended for a future server-side `lower(first_name || ' ' || last_name) LIKE 'prefix%'` query; current application filtering remains in memory.
+
+`login_events` contains client-reported activity, not authoritative server authentication audit. It is organization-scoped and append-only for application roles. Signed-in users can record only events attributed to themselves, while users with `audit.read` can read events only for their organization. Client roles have no update or delete grant. Audit readers resolve event identities through `login_event_user_names()`, which returns only `user_id` and `display_name` for users represented in the caller's organization login history; `audit.read` does not grant broad profile access.
+
+`deactivate_user_access(target_user_id, reason)` requires `access.manage`, rejects cross-organization and self-deactivation, serializes organization access changes, and preserves at least one active access manager. It marks the profile inactive and writes `USER_ACCESS_DEACTIVATED` to `audit_events` in the same transaction. It does not delete `auth.users` or attempt to mutate Supabase Auth sessions; database access is revoked immediately because all authorization helpers require an active profile.
+
 ## Applying changes
 
 Keep every schema change in `supabase/migrations`. Test locally before applying it to the hosted project. Initial setup was run transactionally through the visible Supabase SQL Editor, with each source migration recorded in `supabase_migrations.schema_migrations` (`version`, `name`, `statements`). Do not rerun an applied migration or reset this shared database.
@@ -27,7 +33,7 @@ For future CLI use, link this exact project and confirm remote migration history
 
 ## Verification
 
-`npm test -- tests/database.test.ts` runs disposable PGlite PostgreSQL tests, including row-level tenant isolation, worker/reviewer permissions, prevention of self-promotion, audit/history protection, idempotent inventory submissions, unit consistency across facilities, tenant-safe foreign keys, pack constraints, atomic ingredient saves and contextual feedback. This test suite does not connect to Supabase.
+`npm test -- tests/database.test.ts tests/user-management-domain.test.ts` runs disposable PGlite PostgreSQL and domain tests, including row-level tenant isolation, worker/reviewer permissions, prevention of self-promotion, audit/history protection, append-only organization login history, guarded user deactivation, idempotent inventory submissions, unit consistency across facilities, tenant-safe foreign keys, pack constraints, atomic ingredient saves and contextual feedback. This test suite does not connect to Supabase.
 
 Verified on the hosted project on September 18, 2026:
 

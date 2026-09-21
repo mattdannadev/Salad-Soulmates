@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { z } from 'zod';
 import { requireProfile } from '@/lib/auth';
 import { supabase, supabaseAdmin, SupabaseConfigurationError } from '@/lib/supabase';
@@ -12,6 +13,21 @@ import hasPermission from '@/lib/permissions';
 import { logFailure } from '@/lib/operation-error';
 import confirmSignOut from '@/lib/sign-out';
 import authCallbackUrl from '@/domain/auth-callback-url';
+
+async function recordSuccessfulSignIn(db: Awaited<ReturnType<typeof supabase>>) {
+  let userAgent: string | null = null;
+  try {
+    const requestHeaders = await headers();
+    userAgent = requestHeaders.get('user-agent')?.slice(0, 1000) ?? null;
+  } catch (cause) {
+    logFailure('login_event_metadata', cause);
+  }
+  const { error } = await db.from('login_events').insert({
+    event_type: 'signed_in',
+    user_agent: userAgent,
+  });
+  if (error) logFailure('login_event_record', error);
+}
 
 export async function signIn(_previous: ActionResult, form: FormData): Promise<ActionResult> {
   const credentials = z
@@ -30,6 +46,7 @@ export async function signIn(_previous: ActionResult, form: FormData): Promise<A
     : { phone: identifier, password: credentials.data.password };
   const { error } = await db.auth.signInWithPassword(login);
   if (error) return { ok: false, message: 'Unable to sign in. Check your details and try again.' };
+  await recordSuccessfulSignIn(db);
   return redirect('/app');
 }
 
@@ -137,7 +154,7 @@ export async function reviewAccessRequest(
     .select('id')
     .single();
   if (error) return { ok: false, message: 'Could not update this request.' };
-  revalidatePath('/app/access-requests');
+  revalidatePath('/app/user-management/access-requests');
   return { ok: true, message: 'Request updated.' };
 }
 
@@ -256,7 +273,7 @@ export async function approveAccessRequest(
     facilityId: parsed.data.facility_id,
     accessProfileId: parsed.data.access_profile_id,
   });
-  if (result.ok) revalidatePath('/app/access-requests');
+  if (result.ok) revalidatePath('/app/user-management/access-requests');
   return result;
 }
 
@@ -309,8 +326,8 @@ export async function inviteUserFromSettings(
     accessProfileId: parsed.data.access_profile_id,
   });
   if (result.ok) {
-    revalidatePath('/app/settings');
-    revalidatePath('/app/access-requests');
+    revalidatePath('/app/user-management/users');
+    revalidatePath('/app/user-management/access-requests');
   }
   return result;
 }

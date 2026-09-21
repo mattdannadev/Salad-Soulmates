@@ -30,6 +30,28 @@ export const accessProfileSchema = z.object({
   active: z.boolean(),
   permission_codes: z.array(z.string().min(1)).max(100),
 });
+export const userProfileSchema = z.object({
+  id: z.uuid(),
+  first_name: z.string().trim().min(1).max(100),
+  last_name: z.string().trim().min(1).max(100),
+  display_name: z.string().trim().min(1).max(200),
+  work_email: z.union([z.email().max(320), z.literal('')]).nullable(),
+  facility_id: z.uuid(),
+  access_profile_id: z.uuid(),
+  preferred_locale: z.enum(['es', 'en']),
+  active: z.boolean(),
+});
+export const loginEventSchema = z.object({
+  event_type: z.enum(['signed_in', 'signed_out']),
+  ip_address: z.string().trim().min(2).max(64)
+    .nullable()
+    .optional(),
+  user_agent: z.string().max(1000).nullable().optional(),
+});
+export const deactivateUserAccessSchema = z.object({
+  target_user_id: z.uuid(),
+  reason: z.string().trim().min(3).max(500),
+});
 export const feedbackStatusSchema = z.object({
   id: z.uuid(),
   status: z.enum(['New', 'Reviewed', 'Resolved']),

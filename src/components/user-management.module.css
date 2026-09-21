@@ -1,0 +1,270 @@
+.directoryControls {
+  display: flex;
+  align-items: end;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.directoryControls label:first-child {
+  flex: 1 1 300px;
+}
+
+.directoryControls label {
+  margin: 0;
+}
+
+.directoryControls button {
+  width: auto;
+}
+
+.directorySummary {
+  color: var(--muted);
+  margin: 0 0 18px;
+}
+
+.userGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+.userCard {
+  min-width: 0;
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fffefb;
+}
+
+.userCard h2 {
+  margin: 0 0 5px;
+  font-size: 25px;
+}
+
+.userCard p,
+.userCard dl {
+  margin: 0;
+}
+
+.cardHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #e7efe0;
+  color: #375b2f;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.activeBadge,
+.inactiveBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.activeBadge {
+  background: #e5f1df;
+  color: #315b2a;
+}
+
+.inactiveBadge {
+  background: #f2e8e4;
+  color: #7a3c31;
+}
+
+.email {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+}
+
+.cardFacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cardFacts div,
+.profileFacts div {
+  min-width: 0;
+}
+
+.cardFacts dt,
+.profileFacts dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.cardFacts dd,
+.profileFacts dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.profileFacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  margin: 0;
+}
+
+.profileFacts dd {
+  font-size: 16px;
+}
+
+.wideFact {
+  grid-column: 1 / -1;
+}
+
+.securityPanel h2,
+.securityPanel h3 {
+  margin-top: 0;
+}
+
+.actionBlock {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.actionBlock p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.actionBlock button {
+  width: auto;
+}
+
+.dangerBlock {
+  border-bottom: 0;
+}
+
+.dangerBlock small {
+  grid-column: 1 / -1;
+}
+
+.dangerButton {
+  width: auto;
+  background: #8a3e32;
+  border-color: #8a3e32;
+}
+
+.dangerButton:hover {
+  background: #743126;
+  border-color: #743126;
+}
+
+.resetLinkRow {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.resetLinkRow input {
+  min-width: 0;
+}
+
+.resetLinkRow button {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.confirmation {
+  width: min(520px, calc(100vw - 32px));
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 26px;
+  color: var(--ink);
+  background: #fffef9;
+  box-shadow: 0 24px 90px #17381e33;
+}
+
+.confirmation textarea {
+  min-height: 110px;
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.dialogActions button {
+  width: auto;
+}
+
+.historyList {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.historyList li {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+@media (max-width: 760px) {
+  .detailGrid,
+  .profileFacts,
+  .actionBlock {
+    grid-template-columns: 1fr;
+  }
+
+  .directoryControls button,
+  .actionBlock button,
+  .dangerButton {
+    width: 100%;
+  }
+
+  .cardFacts {
+    grid-template-columns: 1fr;
+  }
+
+  .resetLinkRow,
+  .dialogActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .resetLinkRow button,
+  .dialogActions button {
+    width: 100%;
+  }
+}

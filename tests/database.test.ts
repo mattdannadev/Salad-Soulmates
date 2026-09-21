@@ -32,13 +32,15 @@ beforeAll(async () => {
     readFileSync('supabase/migrations/20260919154002_access_approval_workflow.sql', 'utf8'),
   );
   await db.exec(readFileSync('supabase/migrations/20260919154004_receiving_workflow.sql', 'utf8'));
-  await db.exec(`insert into auth.users values('${id(1)}'),('${id(2)}'),('${id(3)}'),('${id(4)}'),('${id(5)}'),('${id(6)}'),('${id(7)}');
+  await db.exec(`insert into auth.users values('${id(1)}'),('${id(2)}'),('${id(3)}'),('${id(4)}'),('${id(5)}'),('${id(6)}'),('${id(7)}'),('${id(8)}'),('${id(9)}'),('${id(30)}');
  insert into public.organizations(id,name,slug) values('${id(10)}','A','a'),('${id(20)}','B','b');
  insert into public.facilities(id,organization_id,name) values('${id(11)}','${id(10)}','A'),('${id(21)}','${id(20)}','B'),('${id(12)}','${id(10)}','A2');
  insert into public.profiles(id,organization_id,facility_id,display_name,role) values
  ('${id(1)}','${id(10)}','${id(11)}','Admin A','admin'),('${id(2)}','${id(20)}','${id(21)}','Admin B','admin'),
  ('${id(3)}','${id(10)}','${id(11)}','Worker A','worker'),('${id(4)}','${id(10)}','${id(11)}','Reviewer A','reviewer'),
- ('${id(5)}','${id(10)}','${id(12)}','Admin A2','admin'),('${id(6)}','${id(10)}','${id(11)}','Receiver A','receiver');`);
+ ('${id(5)}','${id(10)}','${id(12)}','Admin A2','admin'),('${id(6)}','${id(10)}','${id(11)}','Receiver A','receiver'),
+ ('${id(8)}','${id(10)}','${id(11)}','Auditor A','reviewer'),('${id(9)}','${id(10)}','${id(11)}','   ','reviewer'),
+ ('${id(30)}','${id(10)}','${id(11)}','First '||repeat('L',150),'reviewer');`);
   await db.exec(
     readFileSync(
       'supabase/migrations/20260919155843_permissions_and_reference_options.sql',
@@ -54,16 +56,19 @@ beforeAll(async () => {
   await db.exec(
     readFileSync('supabase/migrations/20260919231118_serialize_inventory_units.sql', 'utf8'),
   );
+  await db.exec(
+    readFileSync('supabase/migrations/20260921170000_user_management_foundation.sql', 'utf8'),
+  );
 });
 afterAll(async () => {
   await db?.close();
 });
 describe('foundation migration against PostgreSQL (PGlite)', () => {
-  it('has RLS on all twenty-seven application tables', async () => {
+  it('has RLS on all twenty-eight application tables', async () => {
     const result = await db.query<{ relrowsecurity: boolean }>(
       "select relrowsecurity from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and relkind='r'",
     );
-    expect(result.rows).toHaveLength(27);
+    expect(result.rows).toHaveLength(28);
     expect(result.rows.every((r) => r.relrowsecurity)).toBe(true);
   });
   it('does not expose security-definer trigger helpers for direct execution', async () => {
@@ -199,6 +204,8 @@ describe('foundation migration against PostgreSQL (PGlite)', () => {
         "insert into public.feedback_items(route,comment,status) values('/worker','Bypass','Resolved')",
       ),
     ).rejects.toThrow();
+    await expect(asUser(3, 'select * from public.login_event_user_names()'))
+      .rejects.toThrow('Audit permission required');
     expect((await asUser(1, 'select * from public.feedback_items')).rows).toHaveLength(2);
   });
   it('rejects anonymous access', async () => {
@@ -255,8 +262,14 @@ describe('foundation migration against PostgreSQL (PGlite)', () => {
       z.object({ id: z.uuid() }).parse(workerProfile.rows[0]).id,
     ]);
     expect(
-      (await asUser(7, 'select display_name,role,preferred_locale from public.profiles')).rows,
-    ).toEqual([{ display_name: 'Invited Worker', role: 'worker', preferred_locale: 'es' }]);
+      (await asUser(7, 'select first_name,last_name,display_name,role,preferred_locale from public.profiles')).rows,
+    ).toEqual([{
+      first_name: 'Invited',
+      last_name: 'Worker',
+      display_name: 'Invited Worker',
+      role: 'worker',
+      preferred_locale: 'es',
+    }]);
     await expect(
       asUser(1, 'select public.approve_access_request($1,$2,$3,$4)', [
         requestId,
@@ -398,5 +411,183 @@ describe('restored recipe schema invariants', () => {
     expect((await asUser(4, 'select id from public.recipe_versions')).rows).toEqual([
       { id: id(1002) },
     ]);
+  });
+});
+
+describe('user management database foundation', () => {
+  it('backfills canonical names and enforces organization-scoped work emails', async () => {
+    expect(
+      (await asUser(1, 'select first_name,last_name,display_name from public.profiles where id=$1', [
+        id(3),
+      ])).rows,
+    ).toEqual([{ first_name: 'Worker', last_name: 'A', display_name: 'Worker A' }]);
+    expect(
+      (await asUser(1, 'select first_name,last_name,display_name from public.profiles where id=$1', [
+        id(9),
+      ])).rows,
+    ).toEqual([{ first_name: 'Unknown', last_name: '-', display_name: '   ' }]);
+    const longLegacyName = z.object({
+      first_name: z.string(),
+      last_name: z.string(),
+      display_name: z.string(),
+    }).parse((await asUser(
+      1,
+      'select first_name,last_name,display_name from public.profiles where id=$1',
+      [id(30)],
+    )).rows[0]);
+    expect(longLegacyName).toMatchObject({ first_name: 'First' });
+    expect(longLegacyName.last_name).toHaveLength(100);
+    expect(longLegacyName.display_name).toHaveLength(156);
+
+    await db.exec('reset role');
+    await db.query('insert into auth.users values($1)', [id(31)]);
+    const reviewerProfile = await db.query<{ id: string }>(
+      "select id from public.access_profiles where organization_id=$1 and name='Operations Reviewer'",
+      [id(10)],
+    );
+    await db.query(
+      `insert into public.profiles(id,organization_id,facility_id,display_name,role,access_profile_id)
+       values($1,$2,$3,'   ','reviewer',$4)`,
+      [id(31), id(10), id(11), reviewerProfile.rows[0]?.id],
+    );
+    expect(
+      (await db.query('select first_name,last_name from public.profiles where id=$1', [id(31)])).rows,
+    ).toEqual([{ first_name: 'Unknown', last_name: '-' }]);
+
+    await db.query('update public.profiles set work_email=$1 where id in ($2,$3)', [
+      'ADMIN@EXAMPLE.COM',
+      id(1),
+      id(2),
+    ]);
+    expect(
+      (await db.query('select work_email from public.profiles where id=$1', [id(1)])).rows,
+    ).toEqual([{ work_email: 'admin@example.com' }]);
+    await expect(
+      db.query('update public.profiles set work_email=$1 where id=$2', [
+        'admin@example.com',
+        id(5),
+      ]),
+    ).rejects.toThrow();
+
+    const indexes = await db.query<{ indexdef: string; indexname: string }>(
+      "select indexname,indexdef from pg_indexes where schemaname='public' and tablename='profiles' and indexname like 'profiles_org_name_%' order by indexname",
+    );
+    expect(indexes.rows.map(({ indexname }) => indexname)).toEqual([
+      'profiles_org_name_search',
+      'profiles_org_name_sort',
+    ]);
+    expect(indexes.rows.find(({ indexname }) => indexname === 'profiles_org_name_sort')?.indexdef)
+      .toContain('(organization_id, last_name, first_name, id)');
+    expect(indexes.rows.find(({ indexname }) => indexname === 'profiles_org_name_search')?.indexdef)
+      .toContain('text_pattern_ops');
+  });
+
+  it('keeps login history append-only and isolated to organization audit readers', async () => {
+    await db.exec('reset role');
+    await db.query(
+      `insert into public.access_profiles(id,organization_id,name,description,base_role,is_system)
+       values($1,$2,'Audit Reader','Login audit access only','reviewer',false)`,
+      [id(810), id(10)],
+    );
+    await db.query(
+      `insert into public.access_profile_permissions(organization_id,access_profile_id,permission_code)
+       values($1,$2,'audit.read')`,
+      [id(10), id(810)],
+    );
+    await db.query('update public.profiles set access_profile_id=$1 where id=$2', [id(810), id(8)]);
+
+    await asUser(
+      3,
+      "insert into public.login_events(event_type,user_agent) values('signed_in','database test')",
+    );
+    await asUser(
+      9,
+      "insert into public.login_events(event_type,user_agent) values('signed_in','legacy blank name')",
+    );
+    await expect(
+      asUser(
+        3,
+        'insert into public.login_events(organization_id,user_id,event_type) values($1,$2,$3)',
+        [id(20), id(2), 'signed_in'],
+      ),
+    ).rejects.toThrow();
+    expect((await asUser(3, 'select id from public.login_events')).rows).toEqual([]);
+    expect(
+      (await asUser(1, 'select user_id,event_type from public.login_events order by user_id')).rows,
+    ).toEqual([
+      { user_id: id(3), event_type: 'signed_in' },
+      { user_id: id(9), event_type: 'signed_in' },
+    ]);
+    expect((await asUser(8, 'select display_name from public.profiles where id=$1', [id(3)])).rows)
+      .toEqual([]);
+    expect((await asUser(8, 'select * from public.login_event_user_names()')).rows).toEqual([
+      { user_id: id(9), display_name: 'Unknown' },
+      { user_id: id(3), display_name: 'Worker A' },
+    ]);
+    expect(
+      (await asUser(8, 'select * from public.login_event_user_names() where user_id=$1', [id(2)]))
+        .rows,
+    ).toEqual([]);
+    expect((await asUser(2, 'select id from public.login_events')).rows).toEqual([]);
+    await expect(
+      asUser(1, "update public.login_events set event_type='signed_out'"),
+    ).rejects.toThrow();
+    await expect(asUser(1, 'delete from public.login_events')).rejects.toThrow();
+  });
+
+  it('deactivates access transactionally without crossing organizations or deleting auth users', async () => {
+    await expect(
+      asUser(1, 'select public.deactivate_user_access($1,$2)', [id(1), 'Self removal']),
+    ).rejects.toThrow('cannot deactivate your own access');
+    await expect(
+      asUser(1, 'select public.deactivate_user_access($1,$2)', [id(2), 'Wrong company']),
+    ).rejects.toThrow('must belong to your organization');
+
+    await asUser(1, 'select public.deactivate_user_access($1,$2)', [
+      id(6),
+      'Employment ended',
+    ]);
+    expect((await asUser(6, 'select id from public.profiles')).rows).toEqual([]);
+
+    await db.exec('reset role');
+    expect(
+      (
+        await db.query(
+          'select active,deactivated_by,deactivation_reason from public.profiles where id=$1',
+          [id(6)],
+        )
+      ).rows,
+    ).toEqual([
+      { active: false, deactivated_by: id(1), deactivation_reason: 'Employment ended' },
+    ]);
+    expect((await db.query('select id from auth.users where id=$1', [id(6)])).rows).toEqual([
+      { id: id(6) },
+    ]);
+    expect(
+      (
+        await db.query(
+          "select actor_user_id,event_type from public.audit_events where entity_id=$1 and event_type='USER_ACCESS_DEACTIVATED'",
+          [id(6)],
+        )
+      ).rows,
+    ).toEqual([{ actor_user_id: id(1), event_type: 'USER_ACCESS_DEACTIVATED' }]);
+
+    await asUser(1, 'select public.deactivate_user_access($1,$2)', [
+      id(5),
+      'Reduce duplicate administration',
+    ]);
+    expect(
+      (
+        await asUser(
+          1,
+          `select count(*)::int as count
+           from public.profiles p
+           join public.access_profile_permissions app
+             on app.access_profile_id=p.access_profile_id
+           where p.organization_id=$1 and p.active and app.permission_code='access.manage'`,
+          [id(10)],
+        )
+      ).rows,
+    ).toEqual([{ count: 1 }]);
   });
 });

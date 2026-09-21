@@ -1025,6 +1025,44 @@ export type Database = {
           },
         ];
       };
+      login_events: {
+        Row: {
+          event_type: string;
+          id: string;
+          ip_address: string | null;
+          occurred_at: string;
+          organization_id: string;
+          user_agent: string | null;
+          user_id: string;
+        };
+        Insert: {
+          event_type: string;
+          id?: string;
+          ip_address?: string | null;
+          occurred_at?: string;
+          organization_id?: string;
+          user_agent?: string | null;
+          user_id?: string;
+        };
+        Update: {
+          event_type?: string;
+          id?: string;
+          ip_address?: string | null;
+          occurred_at?: string;
+          organization_id?: string;
+          user_agent?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'login_events_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       organizations: {
         Row: {
           created_at: string;
@@ -1121,32 +1159,50 @@ export type Database = {
         Row: {
           access_profile_id: string;
           active: boolean;
+          deactivated_at: string | null;
+          deactivated_by: string | null;
+          deactivation_reason: string | null;
           display_name: string;
           facility_id: string;
+          first_name: string;
           id: string;
+          last_name: string;
           organization_id: string;
           preferred_locale: string;
           role: string;
+          work_email: string | null;
         };
         Insert: {
           access_profile_id: string;
           active?: boolean;
+          deactivated_at?: string | null;
+          deactivated_by?: string | null;
+          deactivation_reason?: string | null;
           display_name: string;
           facility_id: string;
+          first_name: string;
           id: string;
+          last_name: string;
           organization_id: string;
           preferred_locale?: string;
           role: string;
+          work_email?: string | null;
         };
         Update: {
           access_profile_id?: string;
           active?: boolean;
+          deactivated_at?: string | null;
+          deactivated_by?: string | null;
+          deactivation_reason?: string | null;
           display_name?: string;
           facility_id?: string;
+          first_name?: string;
           id?: string;
+          last_name?: string;
           organization_id?: string;
           preferred_locale?: string;
           role?: string;
+          work_email?: string | null;
         };
         Relationships: [
           {
@@ -1731,10 +1787,18 @@ export type Database = {
         };
         Returns: string;
       };
+      deactivate_user_access: {
+        Args: { reason: string; target_user_id: string };
+        Returns: undefined;
+      };
       current_facility: { Args: never; Returns: string };
       current_org: { Args: never; Returns: string };
       current_role: { Args: never; Returns: string };
       has_permission: { Args: { requested: string }; Returns: boolean };
+      login_event_user_names: {
+        Args: Record<PropertyKey, never>;
+        Returns: { display_name: string; user_id: string }[];
+      };
       post_inventory_receipt: { Args: { payload: Json }; Returns: string };
       save_access_profile: { Args: { payload: Json }; Returns: string };
       save_ingredient: { Args: { payload: Json }; Returns: string };
