@@ -6,12 +6,14 @@ import PurchasingForm from './purchasing-form';
 
 export default function CustomerOptionForm({
   productId, defaultGallons, customers, locale, option = undefined,
+  orderUnits,
 }: {
   productId: string;
   defaultGallons: number;
   customers: Customer[];
   locale: 'en' | 'es';
   option?: CustomerOption;
+  orderUnits: { code: string; label: string }[];
 }) {
   const prefix = useId();
   const es = locale === 'es';
@@ -33,6 +35,7 @@ export default function CustomerOptionForm({
         unit_price: Number(form.get('unit_price')),
         currency: 'USD',
         active: form.get('active') === 'true',
+        is_preferred: form.get('is_preferred') === 'true',
       })}
     >
       <div className="form-grid">
@@ -56,7 +59,17 @@ export default function CustomerOptionForm({
         <>
           <label htmlFor={`${prefix}-unit`}>
             {es ? 'Unidad de venta' : 'Sales unit'}
-            <input id={`${prefix}-unit`} name="unit_name" required maxLength={80} defaultValue={option?.unit_name ?? ''} placeholder={es ? 'bolsa, caja, botella' : 'bag, case, bottle'} />
+            <select
+              id={`${prefix}-unit`}
+              name="unit_name"
+              required
+              defaultValue={option?.unit_name ?? ''}
+            >
+              <option value="">{es ? 'Selecciona una unidad' : 'Select a unit'}</option>
+              {orderUnits.map((unit) => (
+                <option key={unit.code} value={unit.code}>{unit.label}</option>
+              ))}
+            </select>
           </label>
           <label htmlFor={`${prefix}-gallons`}>
             {es ? 'Galones por unidad de venta' : 'Gallons per sales unit'}
@@ -73,6 +86,18 @@ export default function CustomerOptionForm({
           <select aria-label={es ? 'Disponibilidad' : 'Availability'} id={`${prefix}-active`} name="active" defaultValue={option?.active === false ? 'false' : 'true'}>
             <option value="true">{es ? 'Activa' : 'Active'}</option>
             <option value="false">{es ? 'Inactiva' : 'Inactive'}</option>
+          </select>
+        </label>
+        <label htmlFor={`${prefix}-preferred`}>
+          {es ? 'Unidad de pedido preferida' : 'Preferred ordering unit'}
+          <select
+            aria-label={es ? 'Unidad de pedido preferida' : 'Preferred ordering unit'}
+            id={`${prefix}-preferred`}
+            name="is_preferred"
+            defaultValue={option?.is_preferred ? 'true' : 'false'}
+          >
+            <option value="true">{es ? 'Sí' : 'Yes'}</option>
+            <option value="false">{es ? 'No' : 'No'}</option>
           </select>
         </label>
       </div>

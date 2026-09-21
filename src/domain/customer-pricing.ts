@@ -10,6 +10,7 @@ const optionFields = {
     .multipleOf(0.01),
   currency: z.literal('USD'),
   active: z.boolean(),
+  is_preferred: z.boolean(),
 };
 export const customerOptionInputSchema = z.object({
   id: z.uuid(),

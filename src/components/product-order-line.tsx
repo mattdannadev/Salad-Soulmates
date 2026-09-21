@@ -17,7 +17,8 @@ export default function ProductOrderLine({
 }) {
   const prefix = useId();
   const es = locale === 'es';
-  const [optionId, setOptionId] = useState(options[0]?.id ?? '');
+  const preferred = options.find((item) => item.is_preferred) ?? options[0];
+  const [optionId, setOptionId] = useState(preferred?.id ?? '');
   const [batches, setBatches] = useState('0');
   const option = options.find((item) => item.id === optionId);
   const units = option ? (Number(batches) * 40) / option.gallons_per_unit : 0;
@@ -40,17 +41,36 @@ export default function ProductOrderLine({
           value={batches}
           onChange={(event) => setBatches(event.currentTarget.value)}
           required
-          disabled={!option}
         />
+      </label>
+      <label htmlFor={`${prefix}-unit`}>
+        {es ? 'Unidad de pedido' : 'Ordering unit'}
+        <select
+          id={`${prefix}-unit`}
+          value={option?.unit_name ?? ''}
+          onChange={(event) => {
+            const next = options.find((item) => item.unit_name === event.currentTarget.value);
+            setOptionId(next?.id ?? '');
+          }}
+          disabled={!options.length}
+        >
+          {!options.length && (
+            <option value="">
+              {es ? 'Configura una unidad para este cliente' : 'Set up a customer ordering unit'}
+            </option>
+          )}
+          {options.map((item) => (
+            <option key={item.id} value={item.unit_name}>{item.unit_name}</option>
+          ))}
+        </select>
       </label>
       <label htmlFor={`${prefix}-packaging`}>
         {es ? 'Empaque y precio' : 'Packaging & price'}
+        <input type="hidden" name={`${choice.id}-packaging`} value={optionId} />
         <select
           id={`${prefix}-packaging`}
-          name={`${choice.id}-packaging`}
           value={optionId}
-          onChange={(event) => setOptionId(event.currentTarget.value)}
-          disabled={!options.length}
+          disabled
         >
           {!options.length && (
             <option value="">
@@ -59,14 +79,13 @@ export default function ProductOrderLine({
                 : 'Set up this customer’s package price'}
             </option>
           )}
-          {options.map((item) => (
+          {option && (
             <option
-              key={item.id}
-              value={item.id}
+              value={option.id}
             >
-              {`${item.label} · ${formatPrice(item.unit_price)} / ${item.unit_name}`}
+              {`${option.label} · ${formatPrice(option.unit_price)} / ${option.unit_name}`}
             </option>
-          ))}
+          )}
         </select>
       </label>
       {option ? (

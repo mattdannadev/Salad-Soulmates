@@ -236,6 +236,7 @@ export type Database = {
           unit_price: number;
           currency: string;
           active: boolean;
+          is_preferred: boolean;
           revision: number;
           created_by: string;
           created_at: string;
@@ -252,6 +253,7 @@ export type Database = {
           unit_price: number;
           currency?: string;
           active?: boolean;
+          is_preferred?: boolean;
           revision?: number;
           created_by?: string;
           created_at?: string;
@@ -268,6 +270,7 @@ export type Database = {
           unit_price?: number;
           currency?: string;
           active?: boolean;
+          is_preferred?: boolean;
           revision?: number;
           created_by?: string;
           created_at?: string;

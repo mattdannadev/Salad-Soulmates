@@ -83,6 +83,7 @@ it('validates customer prices and requires product-write permission', async () =
     unit_price: 12.5,
     currency: 'USD',
     active: true,
+    is_preferred: true,
   };
   expect((await savePurchasing('save-option', { ...option, unit_price: 1.001 })).ok).toBe(false);
   mocks.permission.mockImplementation((_db: unknown, permission: string) => Promise.resolve(permission !== 'products.write'));

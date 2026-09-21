@@ -26,7 +26,7 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await addOption.getByLabel('Customer', { exact: true }).fill('Preview customer');
   await addOption.getByLabel('Option name', { exact: true }).fill('2-gallon bag');
   await addOption.getByRole('combobox', { name: /^Packaging/ }).selectOption('custom');
-  await addOption.getByLabel('Sales unit', { exact: true }).fill('bag');
+  await addOption.getByLabel('Sales unit', { exact: true }).selectOption('bag');
   await addOption.getByLabel('Gallons per sales unit', { exact: true }).fill('2');
   await addOption.getByLabel('Price per unit (USD)', { exact: true }).fill('12.50');
   await addOption.getByRole('button', { name: 'Save customer option', exact: true }).click();
@@ -38,6 +38,7 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await addOption.getByLabel('Customer', { exact: true }).fill('Preview customer');
   await addOption.getByLabel('Option name', { exact: true }).fill('Standard case');
   await addOption.getByLabel('Price per unit (USD)', { exact: true }).fill('24');
+  await addOption.getByLabel('Preferred ordering unit', { exact: true }).selectOption('false');
   await addOption.getByRole('button', { name: 'Save customer option', exact: true }).click();
   await expect(
     customerOptions.getByText('Preview customer · Standard case · $24.00 / case', { exact: true }),
@@ -54,9 +55,7 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await page.getByLabel('Customer order reference (optional)').fill(`Order ${info.project.name}`);
   await page.getByLabel('Customer pickup date').fill('2026-10-01');
   await page.getByLabel('Preview Italian dressing', { exact: true }).fill('40');
-  await page
-    .getByRole('combobox', { name: /^Packaging & price/ })
-    .selectOption({ label: '2-gallon bag · $12.50 / bag' });
+  await page.getByRole('combobox', { name: 'Ordering unit', exact: true }).selectOption('bag');
   await page.getByRole('button', { name: 'Save order & estimate ingredients' }).click();
   await expect(page).toHaveURL(/\/app\/orders\?order=/);
   const orderUrl = page.url();

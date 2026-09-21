@@ -20,119 +20,101 @@ import {
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
+  ChevronDown,
+  Layers3,
+  ShoppingBasket,
+  Building2,
 } from 'lucide-react';
 import { signOut } from '@/app/actions';
 import FeedbackDrawer from './feedback';
 import LocaleSwitcher from './locale-switcher';
 
-const links = [
+const navigationGroups = [
   {
-    href: '/app',
-    en: 'Home',
-    es: 'Inicio',
+    id: 'workspace',
+    en: 'Workspace',
+    es: 'Espacio de trabajo',
     icon: Home,
-    permission: 'dashboard.read',
+    items: [{
+      href: '/app', en: 'Dashboard', es: 'Panel', icon: Home, permission: 'dashboard.read',
+    }],
   },
   {
-    href: '/app/ingredients',
-    en: 'Ingredients',
-    es: 'Ingredientes',
-    icon: Leaf,
-    permission: 'master_data.read',
+    id: 'catalog',
+    en: 'Product catalog',
+    es: 'Catálogo de productos',
+    icon: Layers3,
+    items: [
+      {
+        href: '/app/ingredients', en: 'Ingredients', es: 'Ingredientes', icon: Leaf, permission: 'master_data.read',
+      },
+      {
+        href: '/app/products', en: 'Products', es: 'Productos', icon: Package, permission: 'products.read',
+      },
+      {
+        href: '/app/recipes', en: 'Recipes', es: 'Recetas', icon: BookOpen, permission: 'products.read',
+      },
+    ],
   },
   {
-    href: '/app/suppliers',
-    en: 'Suppliers',
-    es: 'Proveedores',
-    icon: Truck,
-    permission: 'master_data.read',
-  },
-  {
-    href: '/app/products',
-    en: 'Products',
-    es: 'Productos',
-    icon: Package,
-    permission: 'products.read',
-  },
-  {
-    href: '/app/recipes',
-    en: 'Recipes',
-    es: 'Recetas',
-    icon: BookOpen,
-    permission: 'products.read',
-  },
-  {
-    href: '/app/orders',
-    en: 'Orders',
-    es: 'Pedidos',
+    id: 'customer-orders',
+    en: 'Customer orders',
+    es: 'Pedidos de clientes',
     icon: ClipboardList,
-    permission: 'orders.read',
+    items: [
+      {
+        href: '/app/customers', en: 'Customers', es: 'Clientes', icon: Users, permission: 'orders.read',
+      },
+      {
+        href: '/app/orders', en: 'Orders', es: 'Pedidos', icon: ClipboardList, permission: 'orders.read',
+      },
+      {
+        href: '/app/shipping', en: 'Shipping', es: 'Envíos', icon: Truck, permission: 'orders.read',
+      },
+    ],
   },
   {
-    href: '/app/customers', en: 'Customers', es: 'Clientes', icon: Users, permission: 'orders.read',
+    id: 'procurement-inventory',
+    en: 'Procurement & inventory',
+    es: 'Compras e inventario',
+    icon: ShoppingBasket,
+    items: [
+      {
+        href: '/app/suppliers', en: 'Suppliers', es: 'Proveedores', icon: Truck, permission: 'master_data.read',
+      },
+      {
+        href: '/app/purchasing', en: 'Purchasing', es: 'Compras', icon: Truck, permission: 'planning.read',
+      },
+      {
+        href: '/app/receiving', en: 'Receiving', es: 'Recepción', icon: PackageCheck, permission: 'inventory.read',
+      },
+      {
+        href: '/app/inventory', en: 'Inventory', es: 'Inventario', icon: Package, permission: 'inventory.read',
+      },
+      {
+        href: '/app/traceability', en: 'Traceability', es: 'Trazabilidad', icon: Search, permission: 'inventory.read',
+      },
+    ],
   },
   {
-    href: '/app/purchasing',
-    en: 'Purchasing',
-    es: 'Compras',
-    icon: Truck,
-    permission: 'planning.read',
-  },
-  {
-    href: '/app/shipping',
-    en: 'Shipping',
-    es: 'Envíos',
-    icon: Truck,
-    permission: 'orders.read',
-  },
-  {
-    href: '/app/inventory',
-    en: 'Inventory',
-    es: 'Inventario',
-    icon: Package,
-    permission: 'inventory.read',
-  },
-  {
-    href: '/app/traceability',
-    en: 'Traceability',
-    es: 'Trazabilidad',
-    icon: Search,
-    permission: 'inventory.read',
-  },
-  {
-    href: '/app/receiving',
-    en: 'Receiving',
-    es: 'Recepción',
-    icon: PackageCheck,
-    permission: 'inventory.read',
-  },
-  {
-    href: '/app/team',
-    en: 'Team',
-    es: 'Equipo',
-    icon: Users,
-    permission: 'workforce.read',
-  },
-  {
-    href: '/app/access-requests',
-    en: 'Access requests',
-    es: 'Solicitudes de acceso',
-    icon: ShieldCheck,
-    permission: 'access.manage',
-  },
-  {
-    href: '/app/settings',
-    en: 'Settings',
-    es: 'Configuración',
-    icon: Settings,
-    permission: 'settings.manage',
-  },
-  {
-    href: '/app/feedback',
-    en: 'Feedback',
-    es: 'Comentarios',
-    icon: MessageCircle,
-    permission: null,
+    id: 'organization',
+    en: 'Organization',
+    es: 'Organización',
+    icon: Building2,
+    items: [
+      {
+        href: '/app/team', en: 'Team', es: 'Equipo', icon: Users, permission: 'workforce.read',
+      },
+      {
+        href: '/app/access-requests', en: 'Access requests', es: 'Solicitudes de acceso', icon: ShieldCheck, permission: 'access.manage',
+      },
+      {
+        href: '/app/settings', en: 'Settings', es: 'Configuración', icon: Settings, permission: 'settings.manage',
+      },
+      {
+        href: '/app/feedback', en: 'Feedback', es: 'Comentarios', icon: MessageCircle, permission: null,
+      },
+    ],
   },
 ];
 export function Shell({
@@ -180,26 +162,56 @@ export function Shell({
           </small>
         </Link>
         <nav id="main-navigation" aria-label={isSpanish ? 'Navegación principal' : 'Main navigation'}>
-          {links
-            .filter((link) => !link.permission || permissions.includes(link.permission))
-            .map(({
-              href, en, es, icon: Icon,
-            }) => (
-              <Link
-                key={href}
-                href={href}
-                aria-label={isSpanish ? es : en}
-                title={isSpanish ? es : en}
-                aria-current={
-                  (href === '/app' ? path === href : path.startsWith(href))
-                    ? 'page'
-                    : undefined
-                }
-              >
-                <Icon size={20} aria-hidden />
-                <span className="nav-label">{isSpanish ? es : en}</span>
-              </Link>
-            ))}
+          {navigationGroups.map((group) => {
+            const visibleItems = group.items.filter(
+              (item) => !item.permission || permissions.includes(item.permission),
+            );
+            const hasCurrentPage = visibleItems.some((item) => (
+              item.href === '/app' ? path === item.href : path.startsWith(item.href)
+            ));
+
+            if (visibleItems.length === 1) {
+              const item = visibleItems[0];
+              if (!item) return null;
+              const {
+                href, en, es, icon: Icon,
+              } = item;
+              const label = isSpanish ? es : en;
+              return (
+                <Link key={href} href={href} aria-label={label} title={label} aria-current={hasCurrentPage ? 'page' : undefined}>
+                  <Icon size={20} aria-hidden />
+                  <span className="nav-label">{label}</span>
+                </Link>
+              );
+            }
+
+            return (
+              <details key={group.id} className="nav-group" open={hasCurrentPage}>
+                <summary
+                  aria-label={isSpanish ? group.es : group.en}
+                  title={isSpanish ? group.es : group.en}
+                >
+                  <group.icon className="nav-group-icon" size={18} aria-hidden />
+                  <span className="nav-group-label">{isSpanish ? group.es : group.en}</span>
+                  <ChevronDown size={16} aria-hidden />
+                </summary>
+                <div className="nav-group-links">
+                  {visibleItems.map(({
+                    href, en, es, icon: Icon,
+                  }) => {
+                    const label = isSpanish ? es : en;
+                    const isCurrentPage = href === '/app' ? path === href : path.startsWith(href);
+                    return (
+                      <Link key={href} href={href} aria-label={label} title={label} aria-current={isCurrentPage ? 'page' : undefined}>
+                        <Icon size={20} aria-hidden />
+                        <span className="nav-label">{label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </details>
+            );
+          })}
         </nav>
         <div className="sidebar-foot">
           <p>

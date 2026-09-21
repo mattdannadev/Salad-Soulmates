@@ -157,6 +157,7 @@ const optionInput = (optionId = id(850)) => ({
   unit_price: 12.5,
   currency: 'USD',
   active: true,
+  is_preferred: true,
 });
 
 describe('customer orders and packaging against actual migration SQL', () => {
@@ -186,7 +187,7 @@ describe('customer orders and packaging against actual migration SQL', () => {
     await rpc('save_customer_product_option', optionInput());
     await rpc('save_customer_product_option', optionInput());
     await rpc('save_customer_product_option', {
-      ...optionInput(id(851)), label: 'Default case', packaging_mode: 'product_default', unit_price: 24,
+      ...optionInput(id(851)), label: 'Default case', packaging_mode: 'product_default', unit_price: 24, is_preferred: false,
     });
     expect((await query('select * from public.customer_product_options')).rows).toHaveLength(2);
     expect((await query('select * from public.customers')).rows).toHaveLength(1);

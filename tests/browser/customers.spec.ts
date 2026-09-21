@@ -27,7 +27,7 @@ test('customer master lookup fills order details and dashboard shows product bat
   await add.getByLabel('Customer', { exact: true }).fill('Dashboard customer');
   await add.getByLabel('Option name', { exact: true }).fill('2-gallon bag');
   await add.getByRole('combobox', { name: /^Packaging/ }).selectOption('custom');
-  await add.getByLabel('Sales unit', { exact: true }).fill('bag');
+  await add.getByLabel('Sales unit', { exact: true }).selectOption('bag');
   await add.getByLabel('Gallons per sales unit', { exact: true }).fill('2');
   await add.getByLabel('Price per unit (USD)', { exact: true }).fill('12.50');
   await add.getByRole('button', { name: 'Save customer option', exact: true }).click();

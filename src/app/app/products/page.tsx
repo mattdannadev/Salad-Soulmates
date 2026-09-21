@@ -19,7 +19,7 @@ export default async function Products() {
     db, products, recipes, versions, locale,
   } = await loadRecipeCatalog();
   const [
-    customers, options, canWrite, packagingVersions, sections, lines, ingredients,
+    customers, options, canWrite, packagingVersions, sections, lines, ingredients, referenceOptions,
   ] = await Promise.all([
     rows(db, 'customers', customerRowSchema),
     rows(db, 'customer_product_options', customerOptionRowSchema),
@@ -28,6 +28,7 @@ export default async function Products() {
     rows(db, 'recipe_sections', recipeSectionRowSchema),
     rows(db, 'recipe_lines', recipeLineRowSchema),
     rows(db, 'ingredients', rowSchemas.ingredients),
+    rows(db, 'reference_options', rowSchemas.reference_options),
   ]);
   return (
     <>
@@ -134,6 +135,13 @@ export default async function Products() {
                               options={options.filter((option) => option.product_id === product.id)}
                               canWrite={canWrite}
                               locale={locale}
+                              orderUnits={referenceOptions
+                                .filter((option) => option.list_code === 'purchase_unit' && option.active)
+                                .sort((left, right) => left.sort_order - right.sort_order)
+                                .map((option) => ({
+                                  code: option.code,
+                                  label: locale === 'es' ? option.label_es : option.label_en,
+                                }))}
                             />
                           </td>
                         </tr>

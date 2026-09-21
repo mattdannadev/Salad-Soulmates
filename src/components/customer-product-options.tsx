@@ -5,6 +5,7 @@ import CustomerOptionForm from './customer-option-form';
 
 export default function CustomerProductOptions({
   productId, productName, defaultGallons, customers, options, canWrite, locale,
+  orderUnits,
 }: {
   productId: string;
   productName: string;
@@ -13,10 +14,12 @@ export default function CustomerProductOptions({
   options: CustomerOption[];
   canWrite: boolean;
   locale: 'en' | 'es';
+  orderUnits: { code: string; label: string }[];
 }) {
   const es = locale === 'es';
   const activeLabel = es ? 'Activa' : 'Active';
   const inactiveLabel = es ? 'Inactiva' : 'Inactive';
+  const preferredLabel = es ? ' · Preferida' : ' · Preferred';
   return (
     <details className="product-customer-options">
       <summary>{`${es ? 'Precios y empaques por cliente' : 'Customer pricing & packaging'} · ${productName}`}</summary>
@@ -29,7 +32,7 @@ export default function CustomerProductOptions({
       {options.map((option) => (
         <details key={`${option.id}-${option.revision}`}>
           <summary>{`${customers.find((customer) => customer.id === option.customer_id)?.name ?? '—'} · ${option.label} · ${formatPrice(option.unit_price)} / ${option.unit_name}`}</summary>
-          <p>{`${formatNumber(option.gallons_per_unit)} gal / ${option.unit_name} · ${option.active ? activeLabel : inactiveLabel}`}</p>
+          <p>{`${formatNumber(option.gallons_per_unit)} gal / ${option.unit_name} · ${option.active ? activeLabel : inactiveLabel}${option.is_preferred ? preferredLabel : ''}`}</p>
           {canWrite && (
           <CustomerOptionForm
             productId={productId}
@@ -37,6 +40,7 @@ export default function CustomerProductOptions({
             customers={customers}
             option={option}
             locale={locale}
+            orderUnits={orderUnits}
           />
           )}
         </details>
@@ -49,6 +53,7 @@ export default function CustomerProductOptions({
           defaultGallons={defaultGallons}
           customers={customers}
           locale={locale}
+          orderUnits={orderUnits}
         />
       </details>
       )}
