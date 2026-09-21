@@ -47,10 +47,9 @@ export default function ProductOrderLine({
         {es ? 'Unidad de pedido' : 'Ordering unit'}
         <select
           id={`${prefix}-unit`}
-          value={option?.unit_name ?? ''}
+          value={optionId}
           onChange={(event) => {
-            const next = options.find((item) => item.unit_name === event.currentTarget.value);
-            setOptionId(next?.id ?? '');
+            setOptionId(event.currentTarget.value);
           }}
           disabled={!options.length}
         >
@@ -60,7 +59,7 @@ export default function ProductOrderLine({
             </option>
           )}
           {options.map((item) => (
-            <option key={item.id} value={item.unit_name}>{item.unit_name}</option>
+            <option key={item.id} value={item.id}>{item.unit_name}</option>
           ))}
         </select>
       </label>

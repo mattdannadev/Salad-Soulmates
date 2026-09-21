@@ -372,6 +372,10 @@ small,
   display: flex;
   min-height: 100vh;
 }
+.mobile-navigation,
+.mobile-navigation-toggle {
+  display: none;
+}
 .sidebar {
   overflow-y: auto;
   overscroll-behavior-y: contain;
@@ -1156,14 +1160,22 @@ dialog::backdrop {
     display: block;
   }
   .sidebar {
-    overflow-y: visible;
+    overflow-y: auto;
     scrollbar-gutter: auto;
-    position: static;
-    width: 100%;
-    padding: 15px;
+    position: fixed;
+    z-index: 30;
+    inset: 0 auto 0 0;
+    width: min(340px, calc(100vw - 52px));
+    padding: 24px 18px 36px;
+    box-shadow: 16px 0 46px #1d351d2b;
+    transform: translateX(-105%);
+    transition: transform 180ms ease;
+  }
+  .mobile-navigation-open .sidebar {
+    transform: translateX(0);
   }
   .brand {
-    margin: 0 0 15px;
+    margin: 0 0 28px;
     flex-direction: row;
     gap: 9px;
     justify-content: center;
@@ -1177,7 +1189,10 @@ dialog::backdrop {
   }
   .brand small,
   .sidebar-foot {
-    display: none;
+    display: block;
+  }
+  .sidebar-foot {
+    padding-top: 26px;
   }
   .sidebar nav a,
   .nav-group summary {
@@ -1219,6 +1234,14 @@ dialog::backdrop {
   .topbar {
     padding: 12px 18px;
   }
+  .mobile-navigation-toggle {
+    display: inline-grid;
+    place-items: center;
+    min-width: 42px;
+    min-height: 42px;
+    padding: 10px;
+    border-radius: 50%;
+  }
   .breadcrumb {
     font-size: 11px;
   }
@@ -1230,7 +1253,7 @@ dialog::backdrop {
     margin: 0;
   }
   .app-main main {
-    padding: 25px 16px 60px;
+    padding: 25px 16px 100px;
   }
   .page-heading {
     display: block;
@@ -1285,7 +1308,7 @@ dialog::backdrop {
   }
   footer {
     display: block;
-    padding: 20px 18px 80px;
+    padding: 20px 18px 112px;
   }
   footer span {
     display: block;
@@ -1309,6 +1332,56 @@ dialog::backdrop {
   }
   .permission-grid {
     grid-template-columns: 1fr;
+  }
+  .mobile-navigation {
+    position: fixed;
+    z-index: 25;
+    right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    left: 12px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 4px;
+    padding: 7px;
+    border: 1px solid #d9e2d1;
+    border-radius: 20px;
+    background: #fffffdf2;
+    box-shadow: 0 12px 34px #17381e24;
+    backdrop-filter: blur(14px);
+  }
+  .mobile-navigation a,
+  .mobile-navigation button {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    min-width: 0;
+    min-height: 52px;
+    padding: 7px 4px 6px;
+    border: 0;
+    border-radius: 14px;
+    background: transparent;
+    color: #687760;
+    font: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.1;
+    text-decoration: none;
+  }
+  .mobile-navigation a[aria-current='page'] {
+    background: #315b39;
+    color: #fffef9;
+    box-shadow: 0 3px 10px #244b3126;
+  }
+  .mobile-navigation a:first-child {
+    font-size: 10px;
+  }
+  .mobile-navigation a:first-child[aria-current='page'] {
+    transform: translateY(-6px);
+  }
+  .mobile-navigation button[aria-expanded='true'] {
+    background: #e8efe3;
+    color: #244b31;
   }
 }
 @media (prefers-reduced-motion: no-preference) {

@@ -21,6 +21,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ChevronDown,
+  Menu,
+  X,
   Layers3,
   ShoppingBasket,
   Building2,
@@ -35,9 +37,15 @@ const navigationGroups = [
     en: 'Workspace',
     es: 'Espacio de trabajo',
     icon: Home,
-    items: [{
-      href: '/app', en: 'Dashboard', es: 'Panel', icon: Home, permission: 'dashboard.read',
-    }],
+    items: [
+      {
+        href: '/app',
+        en: 'Dashboard',
+        es: 'Panel',
+        icon: Home,
+        permission: 'dashboard.read',
+      },
+    ],
   },
   {
     id: 'catalog',
@@ -46,13 +54,25 @@ const navigationGroups = [
     icon: Layers3,
     items: [
       {
-        href: '/app/ingredients', en: 'Ingredients', es: 'Ingredientes', icon: Leaf, permission: 'master_data.read',
+        href: '/app/ingredients',
+        en: 'Ingredients',
+        es: 'Ingredientes',
+        icon: Leaf,
+        permission: 'master_data.read',
       },
       {
-        href: '/app/products', en: 'Products', es: 'Productos', icon: Package, permission: 'products.read',
+        href: '/app/products',
+        en: 'Products',
+        es: 'Productos',
+        icon: Package,
+        permission: 'products.read',
       },
       {
-        href: '/app/recipes', en: 'Recipes', es: 'Recetas', icon: BookOpen, permission: 'products.read',
+        href: '/app/recipes',
+        en: 'Recipes',
+        es: 'Recetas',
+        icon: BookOpen,
+        permission: 'products.read',
       },
     ],
   },
@@ -63,13 +83,25 @@ const navigationGroups = [
     icon: ClipboardList,
     items: [
       {
-        href: '/app/customers', en: 'Customers', es: 'Clientes', icon: Users, permission: 'orders.read',
+        href: '/app/customers',
+        en: 'Customers',
+        es: 'Clientes',
+        icon: Users,
+        permission: 'orders.read',
       },
       {
-        href: '/app/orders', en: 'Orders', es: 'Pedidos', icon: ClipboardList, permission: 'orders.read',
+        href: '/app/orders',
+        en: 'Orders',
+        es: 'Pedidos',
+        icon: ClipboardList,
+        permission: 'orders.read',
       },
       {
-        href: '/app/shipping', en: 'Shipping', es: 'Envíos', icon: Truck, permission: 'orders.read',
+        href: '/app/shipping',
+        en: 'Shipping',
+        es: 'Envíos',
+        icon: Truck,
+        permission: 'orders.read',
       },
     ],
   },
@@ -80,19 +112,39 @@ const navigationGroups = [
     icon: ShoppingBasket,
     items: [
       {
-        href: '/app/suppliers', en: 'Suppliers', es: 'Proveedores', icon: Truck, permission: 'master_data.read',
+        href: '/app/suppliers',
+        en: 'Suppliers',
+        es: 'Proveedores',
+        icon: Truck,
+        permission: 'master_data.read',
       },
       {
-        href: '/app/purchasing', en: 'Purchasing', es: 'Compras', icon: Truck, permission: 'planning.read',
+        href: '/app/purchasing',
+        en: 'Purchasing',
+        es: 'Compras',
+        icon: Truck,
+        permission: 'planning.read',
       },
       {
-        href: '/app/receiving', en: 'Receiving', es: 'Recepción', icon: PackageCheck, permission: 'inventory.read',
+        href: '/app/receiving',
+        en: 'Receiving',
+        es: 'Recepción',
+        icon: PackageCheck,
+        permission: 'inventory.read',
       },
       {
-        href: '/app/inventory', en: 'Inventory', es: 'Inventario', icon: Package, permission: 'inventory.read',
+        href: '/app/inventory',
+        en: 'Inventory',
+        es: 'Inventario',
+        icon: Package,
+        permission: 'inventory.read',
       },
       {
-        href: '/app/traceability', en: 'Traceability', es: 'Trazabilidad', icon: Search, permission: 'inventory.read',
+        href: '/app/traceability',
+        en: 'Traceability',
+        es: 'Trazabilidad',
+        icon: Search,
+        permission: 'inventory.read',
       },
     ],
   },
@@ -103,16 +155,32 @@ const navigationGroups = [
     icon: Building2,
     items: [
       {
-        href: '/app/team', en: 'Team', es: 'Equipo', icon: Users, permission: 'workforce.read',
+        href: '/app/team',
+        en: 'Team',
+        es: 'Equipo',
+        icon: Users,
+        permission: 'workforce.read',
       },
       {
-        href: '/app/access-requests', en: 'Access requests', es: 'Solicitudes de acceso', icon: ShieldCheck, permission: 'access.manage',
+        href: '/app/access-requests',
+        en: 'Access requests',
+        es: 'Solicitudes de acceso',
+        icon: ShieldCheck,
+        permission: 'access.manage',
       },
       {
-        href: '/app/settings', en: 'Settings', es: 'Configuración', icon: Settings, permission: 'settings.manage',
+        href: '/app/settings',
+        en: 'Settings',
+        es: 'Configuración',
+        icon: Settings,
+        permission: 'settings.manage',
       },
       {
-        href: '/app/feedback', en: 'Feedback', es: 'Comentarios', icon: MessageCircle, permission: null,
+        href: '/app/feedback',
+        en: 'Feedback',
+        es: 'Comentarios',
+        icon: MessageCircle,
+        permission: null,
       },
     ],
   },
@@ -132,12 +200,16 @@ export function Shell({
 }) {
   const path = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const isSpanish = locale === 'es';
   const expandLabel = isSpanish ? 'Expandir navegación' : 'Expand navigation';
   const collapseLabel = isSpanish ? 'Contraer navegación' : 'Collapse navigation';
   const toggleLabel = collapsed ? expandLabel : collapseLabel;
   return (
-    <div className={`app-shell${collapsed ? ' sidebar-collapsed' : ''}`} lang={locale}>
+    <div
+      className={`app-shell${collapsed ? ' sidebar-collapsed' : ''}${mobileNavigationOpen ? ' mobile-navigation-open' : ''}`}
+      lang={locale}
+    >
       <aside className="sidebar">
         <button
           type="button"
@@ -148,11 +220,17 @@ export function Shell({
           aria-controls="main-navigation"
           onClick={() => setCollapsed((value) => !value)}
         >
-          {collapsed
-            ? <PanelLeftOpen size={20} aria-hidden />
-            : <PanelLeftClose size={20} aria-hidden />}
+          {collapsed ? (
+            <PanelLeftOpen size={20} aria-hidden />
+          ) : (
+            <PanelLeftClose size={20} aria-hidden />
+          )}
         </button>
-        <Link href="/app" className="brand" aria-label={isSpanish ? 'Salad Soulmates — Inicio' : 'Salad Soulmates — Home'}>
+        <Link
+          href="/app"
+          className="brand"
+          aria-label={isSpanish ? 'Salad Soulmates — Inicio' : 'Salad Soulmates — Home'}
+        >
           <Leaf size={42} aria-hidden />
           <strong>Salad Soulmates</strong>
           <small>
@@ -161,24 +239,32 @@ export function Shell({
             {isSpanish ? 'NOS UNE' : 'PEOPLE TOGETHER'}
           </small>
         </Link>
-        <nav id="main-navigation" aria-label={isSpanish ? 'Navegación principal' : 'Main navigation'}>
+        <nav
+          id="main-navigation"
+          aria-label={isSpanish ? 'Navegación principal' : 'Main navigation'}
+        >
           {navigationGroups.map((group) => {
             const visibleItems = group.items.filter(
               (item) => !item.permission || permissions.includes(item.permission),
             );
-            const hasCurrentPage = visibleItems.some((item) => (
-              item.href === '/app' ? path === item.href : path.startsWith(item.href)
-            ));
+            const hasCurrentPage = visibleItems.some((item) =>
+              item.href === '/app' ? path === item.href : path.startsWith(item.href),
+            );
 
             if (visibleItems.length === 1) {
               const item = visibleItems[0];
               if (!item) return null;
-              const {
-                href, en, es, icon: Icon,
-              } = item;
+              const { href, en, es, icon: Icon } = item;
               const label = isSpanish ? es : en;
               return (
-                <Link key={href} href={href} aria-label={label} title={label} aria-current={hasCurrentPage ? 'page' : undefined}>
+                <Link
+                  key={href}
+                  href={href}
+                  aria-label={label}
+                  title={label}
+                  aria-current={hasCurrentPage ? 'page' : undefined}
+                  onClick={() => setMobileNavigationOpen(false)}
+                >
                   <Icon size={20} aria-hidden />
                   <span className="nav-label">{label}</span>
                 </Link>
@@ -196,13 +282,18 @@ export function Shell({
                   <ChevronDown size={16} aria-hidden />
                 </summary>
                 <div className="nav-group-links">
-                  {visibleItems.map(({
-                    href, en, es, icon: Icon,
-                  }) => {
+                  {visibleItems.map(({ href, en, es, icon: Icon }) => {
                     const label = isSpanish ? es : en;
                     const isCurrentPage = href === '/app' ? path === href : path.startsWith(href);
                     return (
-                      <Link key={href} href={href} aria-label={label} title={label} aria-current={isCurrentPage ? 'page' : undefined}>
+                      <Link
+                        key={href}
+                        href={href}
+                        aria-label={label}
+                        title={label}
+                        aria-current={isCurrentPage ? 'page' : undefined}
+                        onClick={() => setMobileNavigationOpen(false)}
+                      >
                         <Icon size={20} aria-hidden />
                         <span className="nav-label">{label}</span>
                       </Link>
@@ -219,16 +310,35 @@ export function Shell({
             <br />
             <em>{isSpanish ? 'Un mañana mejor.' : 'Brighter tomorrows.'}</em>
           </p>
-          <span>{isSpanish ? 'EMPRESA FAMILIAR · ALIMENTOS CON CUIDADO' : 'FAMILY OWNED · FOOD WITH CARE'}</span>
+          <span>
+            {isSpanish
+              ? 'EMPRESA FAMILIAR · ALIMENTOS CON CUIDADO'
+              : 'FAMILY OWNED · FOOD WITH CARE'}
+          </span>
         </div>
       </aside>
       <div className="app-main">
         <header className="topbar">
+          <button
+            type="button"
+            className="icon-button mobile-navigation-toggle"
+            aria-label={
+              mobileNavigationOpen
+                ? isSpanish
+                  ? 'Cerrar navegación'
+                  : 'Close navigation'
+                : isSpanish
+                  ? 'Abrir navegación'
+                  : 'Open navigation'
+            }
+            aria-expanded={mobileNavigationOpen}
+            aria-controls="main-navigation"
+            onClick={() => setMobileNavigationOpen((value) => !value)}
+          >
+            {mobileNavigationOpen ? <X size={21} aria-hidden /> : <Menu size={21} aria-hidden />}
+          </button>
           <span className="breadcrumb">
-            {isSpanish ? 'Operaciones' : 'Operations'}
-            {' '}
-            <ArrowUpRight size={14} />
-            {' '}
+            {isSpanish ? 'Operaciones' : 'Operations'} <ArrowUpRight size={14} />{' '}
             {isSpanish ? 'Etapa 1A' : 'Increment 1A'}
           </span>
           <div className="identity">
@@ -239,15 +349,18 @@ export function Shell({
               <small>{isSpanish && role === 'admin' ? 'Administrador' : role}</small>
             </span>
             <form action={signOut}>
-              <button type="submit" className="icon-button" aria-label={isSpanish ? 'Salir' : 'Sign out'}>
+              <button
+                type="submit"
+                className="icon-button"
+                aria-label={isSpanish ? 'Salir' : 'Sign out'}
+              >
                 <LogOut size={18} />
               </button>
             </form>
           </div>
         </header>
         <div className="staging-banner">
-          {isSpanish ? 'ETAPA 1A' : 'INCREMENT 1A'}
-          {' '}
+          {isSpanish ? 'ETAPA 1A' : 'INCREMENT 1A'}{' '}
           <span>
             {locale === 'es'
               ? 'Datos maestros activos · la ejecución de producción sigue bloqueada'
@@ -266,6 +379,51 @@ export function Shell({
           </span>
         </footer>
       </div>
+      <nav
+        className="mobile-navigation"
+        aria-label={isSpanish ? 'Navegación móvil' : 'Mobile navigation'}
+      >
+        <Link href="/app" aria-current={path === '/app' ? 'page' : undefined}>
+          <Home size={20} aria-hidden />
+          <span>{isSpanish ? 'Panel' : 'Dashboard'}</span>
+        </Link>
+        <Link
+          href="/app/ingredients"
+          aria-current={
+            path.startsWith('/app/ingredients') ||
+            path.startsWith('/app/products') ||
+            path.startsWith('/app/recipes')
+              ? 'page'
+              : undefined
+          }
+        >
+          <Layers3 size={20} aria-hidden />
+          <span>{isSpanish ? 'Catálogo' : 'Catalog'}</span>
+        </Link>
+        <Link
+          href="/app/orders"
+          aria-current={
+            path.startsWith('/app/customers') ||
+            path.startsWith('/app/orders') ||
+            path.startsWith('/app/shipping')
+              ? 'page'
+              : undefined
+          }
+        >
+          <ClipboardList size={20} aria-hidden />
+          <span>{isSpanish ? 'Pedidos' : 'Orders'}</span>
+        </Link>
+        <button
+          type="button"
+          aria-label={isSpanish ? 'Más secciones' : 'More sections'}
+          aria-expanded={mobileNavigationOpen}
+          aria-controls="main-navigation"
+          onClick={() => setMobileNavigationOpen((value) => !value)}
+        >
+          <Menu size={20} aria-hidden />
+          <span>{isSpanish ? 'Más' : 'More'}</span>
+        </button>
+      </nav>
       <FeedbackDrawer locale={locale} />
     </div>
   );

@@ -52,10 +52,14 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Orders');
   await expect(page.getByLabel('Worksheet name')).toHaveCount(0);
   await page.getByRole('combobox', { name: 'Customer', exact: true }).selectOption({ label: 'Preview customer' });
+  const orderingUnit = page.getByRole('combobox', { name: 'Ordering unit', exact: true });
+  await expect(orderingUnit).toBeEnabled();
+  await expect(orderingUnit).toHaveValue(/^[0-9a-f-]{36}$/);
+  await expect(orderingUnit.locator('option:checked')).toHaveText('bag');
   await page.getByLabel('Customer order reference (optional)').fill(`Order ${info.project.name}`);
   await page.getByLabel('Customer pickup date').fill('2026-10-01');
   await page.getByLabel('Preview Italian dressing', { exact: true }).fill('40');
-  await page.getByRole('combobox', { name: 'Ordering unit', exact: true }).selectOption('bag');
+  await orderingUnit.selectOption({ label: 'bag' });
   await page.getByRole('button', { name: 'Save order & estimate ingredients' }).click();
   await expect(page).toHaveURL(/\/app\/orders\?order=/);
   const orderUrl = page.url();

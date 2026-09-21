@@ -10,11 +10,13 @@ and ounce balances as well as the existing pound fixture; keep the configured
 ingredient unit as the empty-history fallback and reject inconsistent ledger
 units rather than attempting a conversion.
 
-Navigation follow-up: implement collapse/expand in the shared shell, with a leaf-only
-brand and accessible icon links when collapsed. Verify both states, route changes,
-logo-to-Home navigation and Spanish labels on desktop and phone. Implementation is
-in the shared `feature/dashboard-demand` working tree; combined release verification
-and deployment are coordinated with the dashboard candidate.
+Navigation follow-up: retain the desktop collapse/expand shell, including its
+leaf-only brand, accessible icon links, logo-to-Home navigation and Spanish labels.
+On phone-sized viewports (verified at approximately 457px), replace the long
+above-content sidebar with a compact fixed navigation bar: Dashboard is the
+visually prominent home destination, primary sections remain one tap away, and a
+menu exposes every permission-allowed section with clear active states. Verify both
+desktop states, mobile menu opening/closing, route changes and localized labels.
 
 Customer and dashboard follow-up: see [scope and acceptance](customer-dashboard.md).
 Use saved customer lookup and package pricing; calculate batch totals from package

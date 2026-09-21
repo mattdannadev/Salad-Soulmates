@@ -1,5 +1,16 @@
 # Implementation decisions
 
+## 2026-09-21 — Compact phone navigation
+
+The owner supersedes the earlier phone navigation treatment with a compact mobile
+pattern. At phone widths, do not place the full desktop sidebar above page content.
+Keep Dashboard visibly distinct as the home destination in a fixed bottom navigation
+bar, retain immediate access to the product catalog and customer orders, and expose
+every other permission-allowed section in an accessible slide-in menu. The selected
+destination must remain clear in both the bottom bar and the expanded menu. Desktop
+navigation and its collapse/expand behavior are unchanged. Verify at approximately
+457 CSS pixels wide.
+
 ## 2026-09-20 — Source Lots and internal DDDYY Production Lots
 
 Salad Soulmates uses two different lot concepts. They must not be renamed into
