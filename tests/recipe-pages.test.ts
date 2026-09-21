@@ -1,14 +1,15 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import {
-  beforeEach, describe, expect, it, vi,
-} from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Products from '../src/app/app/products/page';
 import Recipes from '../src/app/app/recipes/page';
 import RecipeDetails from '../src/app/app/recipes/[id]/page';
 import { fixtureId, fixtureRecords } from './browser/fixture-data';
 
 const mocks = vi.hoisted(() => ({
-  context: vi.fn(), permission: vi.fn(), rows: vi.fn(), single: vi.fn(),
+  context: vi.fn(),
+  permission: vi.fn(),
+  rows: vi.fn(),
+  single: vi.fn(),
 }));
 vi.mock('server-only', () => ({}));
 vi.mock('next/navigation', () => ({
@@ -23,7 +24,8 @@ vi.mock('next/navigation', () => ({
 vi.mock('../src/lib/auth', () => ({ requireAdminShell: mocks.context }));
 vi.mock('../src/lib/permissions', () => ({ default: mocks.permission }));
 vi.mock('../src/lib/data', async (original) => ({
-  ...await original<typeof import('../src/lib/data')>(), rows: mocks.rows,
+  ...(await original<typeof import('../src/lib/data')>()),
+  rows: mocks.rows,
 }));
 
 beforeEach(() => {
@@ -32,24 +34,28 @@ beforeEach(() => {
   query.select.mockReturnValue(query);
   query.eq.mockReturnValue(query);
   mocks.context.mockResolvedValue({
-    db: { from: () => query }, profile: { preferred_locale: 'en' },
+    db: { from: () => query },
+    profile: { preferred_locale: 'en' },
   });
   mocks.permission.mockResolvedValue(true);
-  mocks.rows.mockImplementation((db: unknown, table: string) => (
-    Promise.resolve(fixtureRecords[table] ?? [])
-  ));
+  mocks.rows.mockImplementation((db: unknown, table: string) =>
+    Promise.resolve(fixtureRecords[table] ?? []),
+  );
   mocks.single.mockResolvedValue({ data: fixtureRecords.recipes?.[0], error: null });
 });
-const details = (id = fixtureId(400), version?: string) => RecipeDetails({
-  params: Promise.resolve({ id }), searchParams: Promise.resolve({ version }),
-});
+const details = (id = fixtureId(400), version?: string) =>
+  RecipeDetails({
+    params: Promise.resolve({ id }),
+    searchParams: Promise.resolve({ version }),
+  });
 
 describe('recipe and product screens', () => {
   it('links products to recipes and preserves the active released version', async () => {
     const products = renderToStaticMarkup(await Products());
     expect(products).toContain('Preview Italian dressing');
     expect(products).toContain(`/app/recipes/${fixtureId(400)}`);
-    expect(products).toContain('<th>Packaging</th>');
+    expect(products).toContain('Default packaging');
+    expect(products).toContain('CUSTOMER-SPECIFIC CONFIGURATION');
     expect(products).toContain('Customer pricing &amp; packaging');
     expect(products).toContain('<details class="product-customer-options">');
     const recipes = renderToStaticMarkup(await Recipes());
@@ -67,47 +73,61 @@ describe('recipe and product screens', () => {
     expect(html).toContain('Preparation example');
   });
   it('labels imported worksheet blocks as ingredients without changing quantities', async () => {
-    mocks.rows.mockImplementation((db: unknown, table: string) => Promise.resolve(
-      table === 'recipe_sections'
-        ? fixtureRecords.recipe_sections?.map((section) => ({ ...section, name: 'Worksheet block 1' }))
-        : fixtureRecords[table] ?? [],
-    ));
+    mocks.rows.mockImplementation((db: unknown, table: string) =>
+      Promise.resolve(
+        table === 'recipe_sections'
+          ? fixtureRecords.recipe_sections?.map((section) => ({
+              ...section,
+              name: 'Worksheet block 1',
+            }))
+          : (fixtureRecords[table] ?? []),
+      ),
+    );
     const html = renderToStaticMarkup(await details());
     expect(html).toContain('<h2>Ingredients</h2>');
     expect(html).not.toContain('Worksheet block');
     expect(html).toContain('1 lb');
     expect(html).toContain('2 gal');
   });
-  it.each([8, 0, -2])('shows the recorded ledger balance %s in the ingredient base unit', async (balance) => {
-    mocks.rows.mockImplementation((db: unknown, table: string) => Promise.resolve(
-      table === 'inventory_events'
-        ? [{ ingredient_id: fixtureId(100), quantity_delta: 10 },
-          { ingredient_id: fixtureId(100), quantity_delta: balance - 10 }]
-        : fixtureRecords[table] ?? [],
-    ));
-    const html = renderToStaticMarkup(await details());
-    expect(html).toContain(`On hand: ${balance} lb`);
-    if (balance < 0) expect(html).toContain('Review negative balance');
-  });
+  it.each([8, 0, -2])(
+    'shows the recorded ledger balance %s in the ingredient base unit',
+    async (balance) => {
+      mocks.rows.mockImplementation((db: unknown, table: string) =>
+        Promise.resolve(
+          table === 'inventory_events'
+            ? [
+                { ingredient_id: fixtureId(100), quantity_delta: 10 },
+                { ingredient_id: fixtureId(100), quantity_delta: balance - 10 },
+              ]
+            : (fixtureRecords[table] ?? []),
+        ),
+      );
+      const html = renderToStaticMarkup(await details());
+      expect(html).toContain(`On hand: ${balance} lb`);
+      if (balance < 0) expect(html).toContain('Review negative balance');
+    },
+  );
   it('does not read inventory when the viewer lacks inventory access', async () => {
-    mocks.permission.mockImplementation((db: unknown, permission: string) => Promise.resolve(permission !== 'inventory.read'));
+    mocks.permission.mockImplementation((db: unknown, permission: string) =>
+      Promise.resolve(permission !== 'inventory.read'),
+    );
     const html = renderToStaticMarkup(await details());
     expect(html).toContain('Inventory details unavailable with your access');
     expect(html).toContain(`/app/ingredients/${fixtureId(100)}`);
     expect(mocks.rows.mock.calls.some((call) => call[1] === 'inventory_events')).toBe(false);
   });
   it('does not invent links for hidden ingredients or turn failed stock reads into zero', async () => {
-    mocks.rows.mockImplementation((db: unknown, table: string) => Promise.resolve(
-      table === 'ingredients' ? [] : fixtureRecords[table] ?? [],
-    ));
+    mocks.rows.mockImplementation((db: unknown, table: string) =>
+      Promise.resolve(table === 'ingredients' ? [] : (fixtureRecords[table] ?? [])),
+    );
     const html = renderToStaticMarkup(await details());
     expect(html).toContain('Ingredient details unavailable with your access');
     expect(html).not.toContain(`/app/ingredients/${fixtureId(100)}`);
-    mocks.rows.mockImplementation((db: unknown, table: string) => (
+    mocks.rows.mockImplementation((db: unknown, table: string) =>
       table === 'inventory_events'
         ? Promise.reject(new Error('STOCK_READ_FAILED'))
-        : Promise.resolve(fixtureRecords[table] ?? [])
-    ));
+        : Promise.resolve(fixtureRecords[table] ?? []),
+    );
     await expect(details()).rejects.toThrow('STOCK_READ_FAILED');
   });
   it('shows a selected draft without inheriting released ingredient lines', async () => {

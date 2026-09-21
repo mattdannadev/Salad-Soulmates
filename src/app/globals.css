@@ -381,6 +381,111 @@ small,
   overflow: auto;
   margin-top: 20px;
 }
+.product-catalog {
+  display: grid;
+  gap: 20px;
+}
+.product-detail-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fffefb;
+}
+.product-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px 22px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.product-detail-header h2,
+.customer-options-content h3 {
+  margin: 0;
+  font-size: 25px;
+}
+.detail-label {
+  margin: 0 0 7px;
+  color: #536c49;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+}
+.product-code {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.product-detail-groups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.product-detail-group {
+  padding: 20px 22px;
+  border-right: 1px solid var(--line);
+}
+.product-detail-group:last-child {
+  border-right: 0;
+}
+.product-detail-group h3 {
+  margin: 0 0 14px;
+  color: #536041;
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.product-detail-group dl {
+  margin: 0;
+}
+.product-detail-group dt {
+  margin-top: 12px;
+}
+.product-detail-group dt:first-child {
+  margin-top: 0;
+}
+.product-detail-group dd,
+.detail-value {
+  margin: 4px 0 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.ingredient-statement {
+  margin: 0 22px;
+}
+.product-customer-options {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: #f4f7f0;
+}
+.product-customer-options > summary {
+  padding: 17px 22px;
+  color: #34563a;
+}
+.customer-options-content {
+  padding: 4px 22px 22px;
+  border-top: 1px solid #dce5d8;
+}
+.customer-options-content header {
+  margin: 16px 0 12px;
+}
+.customer-options-intro {
+  max-width: 660px;
+  margin: 0 0 16px;
+  color: var(--muted);
+}
+.customer-option {
+  margin: 0;
+  padding: 14px 0;
+  border-bottom: 1px solid #dce5d8;
+}
+.customer-option summary {
+  min-height: 28px;
+}
+.customer-option-new {
+  border-bottom: 0;
+}
 table {
   width: 100%;
   border-collapse: collapse;
@@ -908,6 +1013,36 @@ dialog::backdrop {
   }
   .panel {
     padding: 22px 18px;
+  }
+  .product-catalog {
+    gap: 14px;
+  }
+  .product-detail-header {
+    padding: 18px;
+  }
+  .product-detail-header h2,
+  .customer-options-content h3 {
+    font-size: 22px;
+  }
+  .product-detail-groups {
+    grid-template-columns: 1fr;
+  }
+  .product-detail-group {
+    padding: 16px 18px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .product-detail-group:last-child {
+    border-bottom: 0;
+  }
+  .ingredient-statement {
+    margin: 0 18px;
+  }
+  .product-customer-options > summary {
+    padding: 16px 18px;
+  }
+  .customer-options-content {
+    padding: 2px 18px 18px;
   }
   .stats {
     gap: 8px;

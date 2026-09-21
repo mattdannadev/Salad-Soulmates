@@ -1,11 +1,16 @@
 const spanish = {
   CATALOG: 'CATÁLOGO',
   Products: 'Productos',
-  'Finished dressings, their configured packaging and associated recipes.': 'Aderezos terminados, empaque configurado y recetas asociadas.',
+  'Finished dressings, their configured packaging and associated recipes.':
+    'Aderezos terminados, empaque configurado y recetas asociadas.',
   'View recipes': 'Ver recetas',
   Product: 'Producto',
   'Standard batch': 'Lote estándar',
+  Production: 'Producción',
   Packaging: 'Empaque',
+  'Default packaging': 'Empaque predeterminado',
+  'Bag size': 'Tamaño de bolsa',
+  'Case configuration': 'Configuración de caja',
   Recipe: 'Receta',
   'No product code': 'Sin código de producto',
   Active: 'Activo',
@@ -15,18 +20,22 @@ const spanish = {
   'bags per case': 'bolsas por caja',
   'No recipe linked': 'Sin receta vinculada',
   'No products yet': 'Aún no hay productos',
-  'Approved products and packaging definitions will appear here.': 'Los productos aprobados y sus empaques aparecerán aquí.',
+  'Approved products and packaging definitions will appear here.':
+    'Los productos aprobados y sus empaques aparecerán aquí.',
   'PRODUCTION MASTER DATA': 'DATOS MAESTROS DE PRODUCCIÓN',
   Recipes: 'Recetas',
-  'Review recipe ingredients, preparation sections, quality checks and version history.': 'Revise ingredientes, secciones de preparación, controles de calidad e historial de versiones.',
+  'Review recipe ingredients, preparation sections, quality checks and version history.':
+    'Revise ingredientes, secciones de preparación, controles de calidad e historial de versiones.',
   'View products': 'Ver productos',
   Version: 'Versión',
   'Batch yield': 'Rendimiento del lote',
   'No versions': 'Sin versiones',
   'No recipes yet': 'Aún no hay recetas',
-  'Approved recipes will appear here with their ingredient quantities and versions.': 'Las recetas aprobadas aparecerán aquí con cantidades de ingredientes y versiones.',
+  'Approved recipes will appear here with their ingredient quantities and versions.':
+    'Las recetas aprobadas aparecerán aquí con cantidades de ingredientes y versiones.',
   'RECIPE DETAILS': 'DETALLES DE LA RECETA',
-  'Recorded quantities and instructions for this recipe version.': 'Cantidades e instrucciones registradas para esta versión de la receta.',
+  'Recorded quantities and instructions for this recipe version.':
+    'Cantidades e instrucciones registradas para esta versión de la receta.',
   'All recipes': 'Todas las recetas',
   'Version history': 'Historial de versiones',
   'Recipe versions': 'Versiones de la receta',
@@ -35,22 +44,28 @@ const spanish = {
   Draft: 'Borrador',
   Retired: 'Retirada',
   'Draft — not released for production.': 'Borrador: no publicado para producción.',
-  'Released versions are preserved. Recipe editing and new revisions are a later build step.': 'Se conservan las versiones publicadas. La edición y las nuevas revisiones son una etapa posterior.',
-  'No versions have been recorded for this recipe.': 'No hay versiones registradas para esta receta.',
+  'Released versions are preserved. Recipe editing and new revisions are a later build step.':
+    'Se conservan las versiones publicadas. La edición y las nuevas revisiones son una etapa posterior.',
+  'No versions have been recorded for this recipe.':
+    'No hay versiones registradas para esta receta.',
   Ingredient: 'Ingrediente',
   Ingredients: 'Ingredientes',
   'On hand': 'Existencias',
   'Not recorded': 'Sin registrar',
-  'Inventory details unavailable with your access': 'Detalles del inventario no disponibles con su acceso',
-  'Recorded stock at your facility. Commitments and expiry are checked on customer orders.': 'Existencias registradas en su instalación. Los compromisos y vencimientos se revisan en los pedidos de clientes.',
+  'Inventory details unavailable with your access':
+    'Detalles del inventario no disponibles con su acceso',
+  'Recorded stock at your facility. Commitments and expiry are checked on customer orders.':
+    'Existencias registradas en su instalación. Los compromisos y vencimientos se revisan en los pedidos de clientes.',
   'Review negative balance': 'Revisar saldo negativo',
   'Recipe measure': 'Medida de la receta',
   'Base quantity': 'Cantidad base',
   Instructions: 'Instrucciones',
-  'Ingredient details unavailable with your access': 'Detalles del ingrediente no disponibles con su acceso',
+  'Ingredient details unavailable with your access':
+    'Detalles del ingrediente no disponibles con su acceso',
   'No preparation sections recorded.': 'No hay secciones de preparación registradas.',
   'Quality checks': 'Controles de calidad',
-  'No quality checks have been recorded for this version.': 'No hay controles de calidad registrados para esta versión.',
+  'No quality checks have been recorded for this version.':
+    'No hay controles de calidad registrados para esta versión.',
 } as const;
 
 /** Translate catalog labels while keeping approved recipe content unchanged. */
