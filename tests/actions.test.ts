@@ -329,6 +329,8 @@ describe('Auth service and invitation failures', () => {
   };
   it('creates a recoverable request before sending a direct administrator invitation', async () => {
     mocks.execute.mockResolvedValueOnce({
+      data: null, error: null,
+    }).mockResolvedValueOnce({
       data: { ...request, display_name: 'New teammate', contact_value: 'new@example.test' }, error: null,
     });
     expect(await directInvite()).toMatchObject({ ok: true });
@@ -350,10 +352,27 @@ describe('Auth service and invitation failures', () => {
     expect(mocks.revalidate).toHaveBeenCalledWith('/app/user-management/access-requests');
   });
   it('does not send a direct invitation when the email already has an open request', async () => {
-    mocks.execute.mockResolvedValue({ data: null, error: { code: '23505', message: 'duplicate' } });
+    mocks.execute.mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: null, error: { code: '23505', message: 'duplicate' } });
     expect(await directInvite()).toMatchObject({ ok: false });
     expect(mocks.invite).not.toHaveBeenCalled();
     expect(mocks.rpc).not.toHaveBeenCalledWith('approve_access_request', expect.anything());
+  });
+  it('does not create an invitation for an email that already belongs to a user', async () => {
+    mocks.execute.mockResolvedValue({ data: { id: savedId }, error: null });
+    const result = await directInvite();
+    expect(result).toMatchObject({ ok: false });
+    expect(result.message).toContain('already belongs to a user');
+    expect(mocks.query.insert).not.toHaveBeenCalled();
+    expect(mocks.invite).not.toHaveBeenCalled();
+  });
+  it('does not create an invitation when the existing-user check fails', async () => {
+    mocks.execute.mockResolvedValue({ data: null, error: { code: '503', message: 'private' } });
+    const result = await directInvite();
+    expect(result).toMatchObject({ ok: false });
+    expect(result.message).toContain('Could not check');
+    expect(mocks.query.insert).not.toHaveBeenCalled();
+    expect(mocks.invite).not.toHaveBeenCalled();
   });
   it('stops before assigning access when saving a successful invitation fails', async () => {
     mocks.execute.mockResolvedValueOnce({ data: request, error: null })

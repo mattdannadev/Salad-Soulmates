@@ -295,12 +295,29 @@ export async function inviteUserFromSettings(
   if (!(await hasPermission(db, 'access.manage'))) {
     return { ok: false, message: 'Access management permission required.' };
   }
+  const email = parsed.data.email.toLowerCase();
+  const { data: existingUser, error: existingUserError } = await db
+    .from('profiles')
+    .select('id')
+    .eq('organization_id', profile.organization_id)
+    .eq('work_email', email)
+    .maybeSingle();
+  if (existingUserError) {
+    logFailure('direct_invitation_existing_user_lookup', existingUserError);
+    return { ok: false, message: 'Could not check whether this email already has a user. Please try again.' };
+  }
+  if (existingUser) {
+    return {
+      ok: false,
+      message: 'This email already belongs to a user. Each teammate signs in with one email address.',
+    };
+  }
   const { data, error } = await db
     .from('access_requests')
     .insert({
       display_name: parsed.data.display_name,
       contact_kind: 'email',
-      contact_value: parsed.data.email.toLowerCase(),
+      contact_value: email,
       preferred_locale: parsed.data.preferred_locale,
       requested_role: 'reviewer',
     })

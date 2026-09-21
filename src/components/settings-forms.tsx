@@ -197,6 +197,7 @@ export function InviteUserForm({
           <label>
             Work email
             <input name="email" type="email" autoComplete="email" required maxLength={254} />
+            <small>Each teammate needs a unique email address for the standard sign-in page.</small>
           </label>
           <label>
             Facility
