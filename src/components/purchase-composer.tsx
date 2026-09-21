@@ -135,6 +135,7 @@ export default function PurchaseComposer({
                   }
                   payload={(form, requestId) => ({
                     id: requestId,
+                    kind: 'order' as const,
                     material_plan_id: planId,
                     supplier_id: supplier.id,
                     expected_on: form.get('expected_on'),

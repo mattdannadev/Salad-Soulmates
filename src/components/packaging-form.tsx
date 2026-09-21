@@ -103,7 +103,7 @@ export default function PackagingForm({
             <textarea id={`${prefix}-statement`} name="ingredient_statement" maxLength={4000} rows={5} value={statement} onChange={(event) => setStatement(event.currentTarget.value)} />
           </label>
           <p>{es ? 'Copie el texto aprobado. No se genera a partir de la receta. Al aprobar, confirma este texto y establece el empaque predeterminado para pedidos futuros.' : 'Copy approved wording; it is not generated from the recipe. Approval confirms this content and sets packaging defaults for future orders.'}</p>
-          <div className="actions">
+          <div className="packaging-form-actions">
             <button className="button secondary" type="submit" name="intent" value="Draft">{pending ? savingLabel : draftLabel}</button>
             <button className="button" type="submit" name="intent" value="Approved" disabled={!statement.trim()}>{es ? 'Aprobar versión de empaque' : 'Approve packaging version'}</button>
           </div>

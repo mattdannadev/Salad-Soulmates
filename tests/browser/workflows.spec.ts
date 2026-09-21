@@ -58,6 +58,9 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
   ).toBeVisible();
   await page.goto('/app/receiving');
   await expect(page.getByText('No receipts yet', { exact: true })).toBeVisible();
+  await page.goto('/app/settings');
+  await expect(page.getByRole('heading', { name: 'Invite a new user', exact: true })).toBeVisible();
+  await expect(page.getByLabel('Invitation email preview')).toContainText('Set up your account');
   await expect(page.locator('body')).not.toContainText('Application error');
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(/\/login$/);

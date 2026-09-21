@@ -84,6 +84,7 @@ describe('purchasing input and display calculations', () => {
   it('rejects duplicate ingredients and fractional purchase units', () => {
     const input = {
       id,
+      kind: 'order' as const,
       material_plan_id: id,
       supplier_id: id,
       expected_on: '2026-10-01',
@@ -97,6 +98,12 @@ describe('purchasing input and display calculations', () => {
       ],
     };
     expect(purchaseDraftInputSchema.safeParse(input).success).toBe(true);
+    expect(purchaseDraftInputSchema.safeParse({
+      ...input,
+      kind: 'standalone',
+      material_plan_id: undefined,
+      lines: [{ ...input.lines[0], override_reason: 'Replenish pantry stock' }],
+    }).success).toBe(true);
     expect(
       purchaseDraftInputSchema.safeParse({
         ...input,

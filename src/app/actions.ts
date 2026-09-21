@@ -166,6 +166,36 @@ export async function approveAccessRequest(
     return { ok: false, message: 'Could not load this request. Reload before trying again.' };
   }
   const request = accessRequestRowSchema.parse(requestData);
+  const result = await sendInvitationAndAssignAccess({
+    db,
+    profile,
+    request,
+    facilityId: parsed.data.facility_id,
+    accessProfileId: parsed.data.access_profile_id,
+  });
+  if (result.ok) revalidatePath('/app/access-requests');
+  return result;
+}
+
+interface InvitationAssignment {
+  db: Awaited<ReturnType<typeof supabase>>;
+  profile: { id: string };
+  request: ReturnType<typeof accessRequestRowSchema.parse>;
+  facilityId: string;
+  accessProfileId: string;
+}
+
+/**
+ * Sends the Auth invitation only after there is a recoverable access-request record,
+ * then uses the database function to assign the approved facility and profile.
+ */
+async function sendInvitationAndAssignAccess({
+  db,
+  profile,
+  request,
+  facilityId,
+  accessProfileId,
+}: InvitationAssignment): Promise<ActionResult> {
   if (request.contact_kind !== 'email') {
     return {
       ok: false,
@@ -205,7 +235,7 @@ export async function approveAccessRequest(
         reviewed_by: profile.id,
         review_note: 'Invitation sent',
       })
-      .eq('id', parsed.data.id)
+      .eq('id', request.id)
       .select('id')
       .single();
     if (invited.error) {
@@ -216,10 +246,10 @@ export async function approveAccessRequest(
     }
   }
   const { error } = await db.rpc('approve_access_request', {
-    request_id: parsed.data.id,
+    request_id: request.id,
     invited_user_id: invitedUserId,
-    assigned_facility_id: parsed.data.facility_id,
-    assigned_access_profile_id: parsed.data.access_profile_id,
+    assigned_facility_id: facilityId,
+    assigned_access_profile_id: accessProfileId,
   });
   if (error) {
     return {
@@ -227,8 +257,62 @@ export async function approveAccessRequest(
       message: 'Invitation exists, but access could not be assigned. Try approval again.',
     };
   }
-  revalidatePath('/app/access-requests');
   return { ok: true, message: 'Approved. The invitation was sent and access was assigned.' };
+}
+
+export async function inviteUserFromSettings(
+  _previous: ActionResult,
+  form: FormData,
+): Promise<ActionResult> {
+  const parsed = z.object({
+    display_name: z.string().trim().min(2).max(120),
+    email: z.email(),
+    preferred_locale: z.enum(['en', 'es']),
+    facility_id: z.uuid(),
+    access_profile_id: z.uuid(),
+  }).safeParse(Object.fromEntries(form));
+  if (!parsed.success) {
+    return { ok: false, message: 'Enter a name, work email, facility, access profile, and language.' };
+  }
+  const { db, profile } = await requireProfile({ readOnly: false });
+  if (!(await hasPermission(db, 'access.manage'))) {
+    return { ok: false, message: 'Access management permission required.' };
+  }
+  const { data, error } = await db
+    .from('access_requests')
+    .insert({
+      display_name: parsed.data.display_name,
+      contact_kind: 'email',
+      contact_value: parsed.data.email.toLowerCase(),
+      preferred_locale: parsed.data.preferred_locale,
+      requested_role: 'reviewer',
+    })
+    .select('*')
+    .single();
+  if (error?.code === '23505') {
+    return { ok: false, message: 'This email already has a pending invitation or access request.' };
+  }
+  if (error || !data) {
+    logFailure('direct_invitation_request_create', error ?? { code: 'EMPTY_RESPONSE' });
+    return { ok: false, message: 'Could not prepare this invitation. Please try again.' };
+  }
+  const request = accessRequestRowSchema.safeParse(data);
+  if (!request.success) {
+    logFailure('direct_invitation_request_create', { code: 'INVALID_RESPONSE' });
+    return { ok: false, message: 'Could not prepare this invitation. Please try again.' };
+  }
+  const result = await sendInvitationAndAssignAccess({
+    db,
+    profile,
+    request: request.data,
+    facilityId: parsed.data.facility_id,
+    accessProfileId: parsed.data.access_profile_id,
+  });
+  if (result.ok) {
+    revalidatePath('/app/settings');
+    revalidatePath('/app/access-requests');
+  }
+  return result;
 }
 
 export async function requestPasswordReset(

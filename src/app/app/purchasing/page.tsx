@@ -5,7 +5,8 @@ import loadPurchasingWorkspace from '@/lib/purchasing-data';
 import { PageHeader } from '@/components/shell';
 import PurchaseComposer from '@/components/purchase-composer';
 import PurchaseOrderCard from '@/components/purchase-order-card';
-import { formatDate } from '@/domain/format';
+import StandalonePurchaseComposer from '@/components/standalone-purchase-composer';
+import { formatDate, formatNumber } from '@/domain/format';
 import { customerOrderLabel } from '@/domain/customer-orders';
 
 export default async function Purchasing({
@@ -72,7 +73,7 @@ export default async function Purchasing({
         </p>
       )}
       <section className="panel">
-        <h2>{es ? 'Seleccionar pedido de cliente' : 'Choose a customer order'}</h2>
+        <h2>{es ? 'Pedido de cliente (opcional)' : 'Customer order (optional)'}</h2>
         <div className="worksheet-links">
           {plans.filter((saved) => saved.status === 'Active').map((saved) => (
             <Link
@@ -94,6 +95,18 @@ export default async function Purchasing({
           </p>
         )}
       </section>
+      {!inactiveSupplier && canWrite && !selected && (
+        <section className="panel">
+          <h2>{es ? 'Compra independiente' : 'Standalone supplier purchase'}</h2>
+          <p>{es ? 'Crea una orden de compra para reabastecer ingredientes sin un pedido de cliente activo.' : 'Create a purchase order to replenish ingredients without an active customer order.'}</p>
+          <StandalonePurchaseComposer
+            suppliers={suppliers}
+            packs={packs}
+            ingredients={(workspace.ingredients ?? []).filter((item) => item.active)}
+            locale={locale}
+          />
+        </section>
+      )}
       {selected?.status === 'Active' && (
         <section className="panel">
           <h2>{planLabel(selected.id)}</h2>
@@ -102,6 +115,23 @@ export default async function Purchasing({
               ? 'Solo los pedidos confirmados cuentan como entrada. Los borradores no cambian el inventario.'
               : 'Only confirmed orders count as inbound supply. Drafts do not change inventory.'}
           </p>
+          <div className="table-wrap">
+            <table>
+              <caption className="sr-only">{es ? 'Demanda y brecha de compra' : 'Demand and purchase gap'}</caption>
+              <thead><tr>{(es ? ['Ingrediente', 'Demanda', 'Existencias', 'Entradas confirmadas', 'Brecha de compra'] : ['Ingredient', 'Order demand', 'Stock on hand', 'Confirmed inbound', 'Purchase gap']).map((heading) => <th key={heading} scope="col">{heading}</th>)}</tr></thead>
+              <tbody>
+                {requirements.map((requirement) => (
+                  <tr key={requirement.ingredient_id}>
+                    <th scope="row">{requirement.ingredient_name}</th>
+                    <td>{`${formatNumber(requirement.required)} ${requirement.uom}`}</td>
+                    <td>{`${formatNumber(requirement.on_hand)} ${requirement.uom}`}</td>
+                    <td>{`${formatNumber(requirement.confirmed_inbound)} ${requirement.uom}`}</td>
+                    <td><strong>{`${formatNumber(requirement.shortage)} ${requirement.uom}`}</strong></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {inactiveSupplier && (
             <p className="notice">{es ? 'Proveedor inactivo: solo historial.' : 'Inactive supplier: order history only.'}</p>
           )}
@@ -131,7 +161,7 @@ export default async function Purchasing({
             lines={workspace.lines}
             receipts={workspace.receipts}
             supplierName={workspace.suppliers.find((item) => item.id === draft.supplier_id)?.name ?? (es ? 'Proveedor no disponible' : 'Supplier unavailable')}
-            orderLabel={planLabel(draft.material_plan_id)}
+            orderLabel={draft.material_plan_id ? planLabel(draft.material_plan_id) : undefined}
             neededOn={workspace.plans.find((saved) => saved.id === draft.material_plan_id)
               ?.needed_on}
             canWrite={canWrite}

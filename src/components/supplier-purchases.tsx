@@ -44,6 +44,12 @@ export default function SupplierPurchases({ supplier, workspace }: {
       {purchases.slice(0, RECENT_PURCHASE_LIMIT).map((draft) => {
         const order = workspace.orders.find((item) => item.id === draft.material_plan_id);
         const plan = workspace.plans.find((item) => item.id === draft.material_plan_id);
+        let orderLabel: string | undefined;
+        if (draft.material_plan_id) {
+          orderLabel = order
+            ? customerOrderLabel(order)
+            : `${es ? 'Estimación anterior' : 'Earlier estimate'} · ${plan?.name ?? ''}`;
+        }
         return (
           <PurchaseOrderCard
             key={draft.id}
@@ -51,7 +57,7 @@ export default function SupplierPurchases({ supplier, workspace }: {
             lines={lines}
             receipts={receipts}
             supplierName={supplier.name}
-            orderLabel={order ? customerOrderLabel(order) : `${es ? 'Estimación anterior' : 'Earlier estimate'} · ${plan?.name ?? ''}`}
+            orderLabel={orderLabel}
             neededOn={order?.needed_on ?? plan?.needed_on}
             canWrite={canWrite}
             locale={locale}
