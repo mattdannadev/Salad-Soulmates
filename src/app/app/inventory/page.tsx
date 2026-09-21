@@ -8,15 +8,27 @@ import {
 import inventoryBalances, { inventoryUnits } from '@/domain/inventory';
 import InventoryForm from '@/components/inventory-form';
 import { PageHeader } from '@/components/shell';
+import hasPermission from '@/lib/permissions';
+
+const purchasePermissions = [
+  'orders.read',
+  'planning.read',
+  'planning.write',
+  'inventory.read',
+  'products.read',
+  'master_data.read',
+];
 
 export default async function Inventory() {
   const { db, profile } = await requireAdminShell();
-  const [ingredients, events, facility] = await Promise.all([
+  const [ingredients, events, facility, purchaseAccess] = await Promise.all([
     rows(db, 'ingredients', rowSchemas.ingredients),
     rows(db, 'inventory_events', rowSchemas.inventory_events),
     db.from('facilities').select('name').eq('id', profile.facility_id).single(),
+    Promise.all(purchasePermissions.map((permission) => hasPermission(db, permission))),
   ]);
   const facilityData = readResult(facility, z.object({ name: z.string() }), 'inventory_facility');
+  const canPurchase = purchaseAccess.every(Boolean);
   const balances = inventoryBalances(events);
   const receivedUnits = inventoryUnits(events);
   const recent = [...events].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 50);
@@ -41,6 +53,7 @@ export default async function Inventory() {
                   <th>Ingredient</th>
                   <th>On hand</th>
                   <th>Status</th>
+                  {canPurchase && <th>Purchase</th>}
                 </tr>
               </thead>
               <tbody>
@@ -65,6 +78,19 @@ export default async function Inventory() {
                         </span>
                       )}
                     </td>
+                    {canPurchase && (
+                      <td>
+                        {i.active ? (
+                          <Link
+                            className="button secondary"
+                            href={`/app/purchasing?ingredient=${i.id}`}
+                            aria-label={`Purchase ${i.name}`}
+                          >
+                            Purchase
+                          </Link>
+                        ) : 'Unavailable'}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

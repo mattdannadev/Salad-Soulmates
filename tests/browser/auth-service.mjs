@@ -42,6 +42,7 @@ const mutations = new Set([
   'change_purchase_status',
   'post_inventory_receipt',
   'receive_serialized_delivery',
+  'receive_purchase_delivery',
   'serialize_receipt_line',
   'change_serialized_unit',
 ]);
@@ -124,7 +125,9 @@ async function executeRequest(url, method, body) {
       .array(z.object({ value: z.record(z.string(), z.unknown()) }))
       .parse(result.rows)
       .map((record) => record.value)
-      .filter((record) => ['id', 'unit_id'].every((key) => {
+      .filter((record) => [
+        'id', 'unit_id', 'delivery_request_id', 'created_by',
+      ].every((key) => {
         const filter = url.searchParams.get(key);
         return !filter || record[key] === filter.replace('eq.', '');
       }));
@@ -200,6 +203,7 @@ async function executeRequest(url, method, body) {
       'change_purchase_status',
       'post_inventory_receipt',
       'receive_serialized_delivery',
+      'receive_purchase_delivery',
       'serialize_receipt_line',
       'change_serialized_unit',
     ])

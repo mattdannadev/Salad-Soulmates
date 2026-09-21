@@ -267,6 +267,38 @@ describe('customer orders and packaging against actual migration SQL', () => {
 });
 
 describe('materials and purchasing against actual migration SQL', () => {
+  it('creates retry-safe standalone purchase orders without requiring a reason', async () => {
+    const purchase = {
+      id: id(900),
+      kind: 'standalone',
+      supplier_id: id(200),
+      expected_on: '2026-09-30',
+      lines: [{
+        ingredient_id: id(100),
+        supplier_item_id: id(201),
+        purchase_units: 2,
+        override_reason: '',
+      }],
+    };
+    await rpc('create_purchase_draft', purchase);
+    await rpc('create_purchase_draft', purchase);
+    expect((await query(
+      'select status,reference,revision from public.purchase_drafts where id=$1',
+      [id(900)],
+    )).rows[0]).toMatchObject({
+      status: 'Confirmed',
+      reference: 'PO-00000900',
+      revision: 2,
+    });
+    expect((await query(
+      'select override_reason from public.purchase_draft_lines where purchase_draft_id=$1',
+      [id(900)],
+    )).rows[0]).toMatchObject({ override_reason: '' });
+    await expect(rpc('create_purchase_draft', {
+      ...purchase,
+      lines: [{ ...purchase.lines[0], purchase_units: 3 }],
+    })).rejects.toThrow('different values');
+  });
   it('aggregates pinned recipe quantities, commits planning stock, and never consumes inventory', async () => {
     await rpc('save_material_plan', planInput());
     const first = (await requirements())[0];

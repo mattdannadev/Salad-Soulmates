@@ -74,7 +74,10 @@ const purchaseDraftBaseSchema = z.object({
   id: z.uuid(),
   supplier_id: z.uuid(),
   expected_on: z.iso.date(),
-  lines: z.array(purchaseLineInputSchema).min(1).max(200),
+  lines: z
+    .array(purchaseLineInputSchema)
+    .min(1, 'Choose at least one ingredient and enter its whole-pack quantity.')
+    .max(200),
 });
 export const purchaseDraftInputSchema = z.discriminatedUnion('kind', [
   purchaseDraftBaseSchema.extend({ kind: z.literal('order'), material_plan_id: z.uuid() }),
@@ -167,6 +170,42 @@ export interface InboundChoice {
   label: string;
   remaining: number;
 }
+
+interface StandalonePackChoice {
+  id: string;
+  ingredient_id: string;
+  is_preferred: boolean;
+}
+
+/** Convert contextual whole-pack selections into one purchase line per ingredient. */
+export function standalonePurchaseLines(
+  packs: StandalonePackChoice[],
+  unitsByIngredient: Readonly<Record<string, number>>,
+  selectedPacksByIngredient: Readonly<Record<string, string | undefined>>,
+  reason: string,
+) {
+  return Object.entries(unitsByIngredient).flatMap(([ingredientId, purchaseUnits]) => {
+    if (!Number.isInteger(purchaseUnits) || purchaseUnits <= 0) return [];
+    const ingredientPacks = packs.filter((pack) => pack.ingredient_id === ingredientId);
+    const selectedPackId = selectedPacksByIngredient[ingredientId];
+    const preferred = ingredientPacks.filter((pack) => pack.is_preferred);
+    let selectedPack: StandalonePackChoice | undefined;
+    if (selectedPackId) {
+      selectedPack = ingredientPacks.find((pack) => pack.id === selectedPackId);
+    } else if (preferred.length === 1) {
+      [selectedPack] = preferred;
+    } else if (ingredientPacks.length === 1) {
+      [selectedPack] = ingredientPacks;
+    }
+    return selectedPack ? [{
+      ingredient_id: ingredientId,
+      supplier_item_id: selectedPack.id,
+      purchase_units: purchaseUnits,
+      override_reason: reason,
+    }] : [];
+  });
+}
+
 /** Derive outstanding supply from immutable receipts; confirmed orders never add owned stock. */
 export function outstandingInbound(
   drafts: PurchaseDraft[],

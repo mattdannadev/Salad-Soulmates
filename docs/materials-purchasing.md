@@ -36,6 +36,11 @@ requirements using the active released recipe for each product.
   override reasons, immutable purchase snapshots and confirmed-inbound rules
   remain intact. Drafts do not count as inbound; confirming records an order
   already placed externally and does not transmit it to a supplier.
+- Purchasing is contextual rather than a main-navigation destination. Inventory
+  starts a manual purchase with its selected ingredient fixed while the buyer
+  chooses a configured supplier. A supplier starts a manual purchase with that
+  supplier fixed while the buyer chooses one or more configured ingredients.
+  Ingredients without an active supplier pack require configuration before purchase.
 - Partial receiving adds owned stock and reduces outstanding inbound once.
   Expired receipt stock is excluded using the estimate horizon. Existing holds,
   staging, production consumption and lot execution remain later scope.

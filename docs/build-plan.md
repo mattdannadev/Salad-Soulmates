@@ -1,8 +1,16 @@
 # Salad Soulmates — current build plan
 
-Updated: September 20, 2026
+Updated: September 21, 2026
 
 ## Current checkpoint
+
+Receive Inventory follow-up: show all confirmed outstanding purchase orders,
+filter by supplier, and select multiple orders from the same supplier. Populate
+ordered/received/outstanding quantities and allow actual quantities, lot splits,
+and package allocations. Acceptance requires atomic receipt/ledger/package
+posting, safe retries, concurrent over-receipt prevention, complete labels,
+English/Spanish desktop and phone flows, and preservation of manual receiving.
+See `receive-purchase-delivery.md` for the implementation contract and gates.
 
 Inventory-unit follow-up: the Inventory screen and the dashboard's on-hand
 balances must use the stored receipt/ledger unit for each ingredient. Test gallon
@@ -27,10 +35,13 @@ and owned ingredient balances. Actual shipped records remain gated.
 Supplier directory follow-up: show a catalog table and header Add supplier action,
 retaining open purchase-order counts and expandable purchasing/customer demand.
 Verify creation returns to the directory and purchase access remains available
-
-Purchasing follow-up: allow an explicit standalone supplier PO for manual ingredient
-replenishment while retaining customer-order demand/gap purchasing and receiving.
 on desktop and phone, using disposable browser fixtures only.
+
+Purchasing follow-up: remove Purchasing from the main navigation. Start manual
+replenishment from Inventory with the chosen ingredient fixed while selecting its
+supplier, or from a supplier with one or more of its configured ingredients.
+Retain customer-order demand/gap purchasing and the existing draft/confirmation
+rules. Receiving behavior remains a separate follow-up.
 
 Administration follow-up: let access managers create a user directly in Settings
 with its facility and access profile selected before invitation. Show the branded

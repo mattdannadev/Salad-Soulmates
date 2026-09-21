@@ -969,6 +969,9 @@ export type Database = {
         Row: {
           created_at: string;
           created_by: string;
+          delivery_line_count: number | null;
+          delivery_payload: Json | null;
+          delivery_request_id: string | null;
           facility_id: string;
           id: string;
           note: string;
@@ -980,6 +983,9 @@ export type Database = {
         Insert: {
           created_at?: string;
           created_by?: string;
+          delivery_line_count?: number | null;
+          delivery_payload?: Json | null;
+          delivery_request_id?: string | null;
           facility_id?: string;
           id?: string;
           note?: string;
@@ -991,6 +997,9 @@ export type Database = {
         Update: {
           created_at?: string;
           created_by?: string;
+          delivery_line_count?: number | null;
+          delivery_payload?: Json | null;
+          delivery_request_id?: string | null;
           facility_id?: string;
           id?: string;
           note?: string;
@@ -1684,6 +1693,7 @@ export type Database = {
       complete_batch_worksheet: { Args: { execution_id: string }; Returns: string };
       order_production_batches: { Args: { order_id: string }; Returns: Json };
       receive_serialized_delivery: { Args: { payload: Json }; Returns: string };
+      receive_purchase_delivery: { Args: { payload: Json }; Returns: string };
       serialize_receipt_line: { Args: { payload: Json }; Returns: string };
       change_serialized_unit: { Args: { payload: Json }; Returns: string };
       find_serialized_units: {

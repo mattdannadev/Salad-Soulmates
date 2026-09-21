@@ -32,6 +32,7 @@ it('makes purchase history primary and keeps contact editing collapsed', async (
   expect(html.indexOf('</table>')).toBeLessThan(html.indexOf('<details class="supplier-orders"'));
   expect(html).toContain('aria-label="Supplier directory"');
   expect(html).toContain('href="/app/suppliers/new"');
+  expect(html).toContain('aria-controls="supplier-');
   expect(html).toContain('<th>Open purchase orders</th>');
   expect(html).toContain('<details class="supplier-profile">');
   expect(html).toContain('No purchase orders for this supplier yet.');

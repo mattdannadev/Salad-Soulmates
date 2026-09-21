@@ -48,7 +48,6 @@ const safeDatabaseMessages = [
   'Configure a validated pack in the ingredient base unit',
   'This ingredient has no current shortage',
   'A purchase quantity override requires a reason',
-  'A standalone purchase requires a reason',
   'Received purchases cannot be cancelled',
 ];
 

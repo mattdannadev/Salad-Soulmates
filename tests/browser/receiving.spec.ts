@@ -9,8 +9,9 @@ test('receive physical packages, print labels, resolve a barcode, and preserve a
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/app$/);
   await page.goto('/receiving');
+  await page.getByText('Receive without a purchase order', { exact: true }).click();
   await page.getByLabel('Quantity received').fill('50');
-  await page.getByLabel('Supplier lot *', { exact: true }).fill('TRACE-LOT-1');
+  await page.getByLabel(/^Supplier-provided lot \(if shown\)/).fill('TRACE-LOT-1');
   await page.getByLabel('Expiration date').fill('2099-10-01');
   await page.getByLabel('Quantity in each physical package').fill('30 | SUPPLIER-ONE\n19');
   await page.getByRole('button', { name: 'Post receipt & update inventory' }).click();

@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const chromiumExecutablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+const localLaunch = chromiumExecutablePath ? { executablePath: chromiumExecutablePath } : {};
+
 export default defineConfig({
   testDir: './tests/browser',
   fullyParallel: false,
@@ -11,13 +14,18 @@ export default defineConfig({
   projects: [
     {
       name: 'desktop',
-      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 1000 } },
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: localLaunch,
+        viewport: { width: 1440, height: 1000 },
+      },
     },
     {
       name: 'phone',
       use: {
         ...devices['iPhone 13'],
         defaultBrowserType: 'chromium',
+        launchOptions: localLaunch,
         viewport: { width: 390, height: 844 },
       },
     },

@@ -201,13 +201,26 @@ export function InviteUserForm({
           <label>
             Facility
             <select name="facility_id" required defaultValue={facilities[0]?.id}>
-              {facilities.map((facility) => <option key={facility.id} value={facility.id}>{facility.name}</option>)}
+              {facilities.map((facility) => (
+                <option key={facility.id} value={facility.id}>
+                  {facility.name}
+                </option>
+              ))}
             </select>
           </label>
           <label>
             Access profile
-            <select name="access_profile_id" required value={profileId} onChange={(event) => setProfileId(event.target.value)}>
-              {profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
+            <select
+              name="access_profile_id"
+              required
+              value={profileId}
+              onChange={(event) => setProfileId(event.target.value)}
+            >
+              {profiles.map((profile) => (
+                <option key={profile.id} value={profile.id}>
+                  {profile.name}
+                </option>
+              ))}
             </select>
           </label>
           <label>
@@ -228,11 +241,18 @@ export function InviteUserForm({
         <div className="email-preview-card">
           <p className="email-brand">Salad Soulmates</p>
           <h3>You&apos;re invited</h3>
-          <p>Hi {name.trim() || 'there'},</p>
           <p>
-            Your access to Salad Soulmates is ready{selectedProfile ? ` with the ${selectedProfile.name} profile` : ''}.
+            Hi
+            {' '}
+            {name.trim() || 'there'}
+            ,
           </p>
-          <a>Set up your account</a>
+          <p>
+            Your access to Salad Soulmates is ready
+            {selectedProfile ? ` with the ${selectedProfile.name} profile` : ''}
+            .
+          </p>
+          <a href="#set-up-your-account">Set up your account</a>
           <p className="email-preview-note">This secure, one-time link lets you set your password and sign in.</p>
         </div>
         <p className="hint">The delivered message is sent by Supabase Auth; this preview is the approved branded copy for its invitation template.</p>

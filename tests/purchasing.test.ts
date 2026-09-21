@@ -5,6 +5,7 @@ import {
   purchaseStatusInputSchema,
   recommendPurchase,
   selectSupplierPack,
+  standalonePurchaseLines,
   outstandingInbound,
 } from '@/domain/purchasing';
 
@@ -110,6 +111,83 @@ describe('purchasing input and display calculations', () => {
         lines: [...input.lines, ...input.lines],
       }).success,
     ).toBe(false);
+    const empty = purchaseDraftInputSchema.safeParse({ ...input, lines: [] });
+    expect(empty.success).toBe(false);
+    if (!empty.success) {
+      expect(empty.error.issues[0]?.message).toBe(
+        'Choose at least one ingredient and enter its whole-pack quantity.',
+      );
+    }
+  });
+  it('builds contextual standalone lines without reselecting an inventory ingredient', () => {
+    const fixedIngredient = '00000000-0000-4000-8000-000000000002';
+    const fixedPack = '00000000-0000-4000-8000-000000000003';
+    expect(standalonePurchaseLines(
+      [
+        { id: fixedPack, ingredient_id: fixedIngredient, is_preferred: true },
+        {
+          id: 'unrelated-pack',
+          ingredient_id: '00000000-0000-4000-8000-000000000004',
+          is_preferred: true,
+        },
+      ],
+      { [fixedIngredient]: 2 },
+      {},
+      'Replenish stock',
+    )).toEqual([{
+      ingredient_id: fixedIngredient,
+      supplier_item_id: fixedPack,
+      purchase_units: 2,
+      override_reason: 'Replenish stock',
+    }]);
+  });
+  it('builds multiple supplier-context lines and omits zero quantities', () => {
+    const firstIngredient = '00000000-0000-4000-8000-000000000002';
+    const secondIngredient = '00000000-0000-4000-8000-000000000003';
+    const skippedIngredient = '00000000-0000-4000-8000-000000000004';
+    const packs = [
+      { id: 'pack-1', ingredient_id: firstIngredient, is_preferred: true },
+      { id: 'pack-2', ingredient_id: secondIngredient, is_preferred: true },
+      { id: 'pack-3', ingredient_id: skippedIngredient, is_preferred: true },
+    ];
+    expect(standalonePurchaseLines(
+      packs,
+      { [firstIngredient]: 1, [secondIngredient]: 3, [skippedIngredient]: 0 },
+      {},
+      'Supplier replenishment',
+    )).toEqual([
+      {
+        ingredient_id: firstIngredient,
+        supplier_item_id: 'pack-1',
+        purchase_units: 1,
+        override_reason: 'Supplier replenishment',
+      },
+      {
+        ingredient_id: secondIngredient,
+        supplier_item_id: 'pack-2',
+        purchase_units: 3,
+        override_reason: 'Supplier replenishment',
+      },
+    ]);
+  });
+  it('honors an explicit pack selection before the preferred fallback', () => {
+    const ingredientId = '00000000-0000-4000-8000-000000000002';
+    const packs = [
+      { id: 'preferred-pack', ingredient_id: ingredientId, is_preferred: true },
+      { id: 'selected-pack', ingredient_id: ingredientId, is_preferred: false },
+    ];
+    expect(standalonePurchaseLines(
+      packs,
+      { [ingredientId]: 4 },
+      { [ingredientId]: 'selected-pack' },
+      'Choose case size',
+    )[0]?.supplier_item_id).toBe('selected-pack');
+    expect(standalonePurchaseLines(
+      packs,
+      { [ingredientId]: 4 },
+      {},
+      'Use preferred case',
+    )[0]?.supplier_item_id).toBe('preferred-pack');
   });
   it('requires an external confirmation reference and a cancellation reason', () => {
     const input = {

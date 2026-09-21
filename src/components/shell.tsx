@@ -119,16 +119,9 @@ const navigationGroups = [
         permission: 'master_data.read',
       },
       {
-        href: '/app/purchasing',
-        en: 'Purchasing',
-        es: 'Compras',
-        icon: Truck,
-        permission: 'planning.read',
-      },
-      {
         href: '/app/receiving',
-        en: 'Receiving',
-        es: 'Recepción',
+        en: 'Receive Inventory',
+        es: 'Recibir inventario',
         icon: PackageCheck,
         permission: 'inventory.read',
       },
@@ -205,12 +198,28 @@ export function Shell({
   const expandLabel = isSpanish ? 'Expandir navegación' : 'Expand navigation';
   const collapseLabel = isSpanish ? 'Contraer navegación' : 'Collapse navigation';
   const toggleLabel = collapsed ? expandLabel : collapseLabel;
+  let mobileToggleLabel = isSpanish ? 'Abrir navegación' : 'Open navigation';
+  if (mobileNavigationOpen) {
+    mobileToggleLabel = isSpanish ? 'Cerrar navegación' : 'Close navigation';
+  }
+  const isCurrentPath = (href: string) => {
+    if (href === '/app') return path === href;
+    return path.startsWith(href);
+  };
   return (
     <div
       className={`app-shell${collapsed ? ' sidebar-collapsed' : ''}${mobileNavigationOpen ? ' mobile-navigation-open' : ''}`}
       lang={locale}
     >
       <aside className="sidebar">
+        <button
+          type="button"
+          className="icon-button mobile-drawer-close"
+          aria-label={isSpanish ? 'Cerrar navegación' : 'Close navigation'}
+          onClick={() => setMobileNavigationOpen(false)}
+        >
+          <X size={21} aria-hidden />
+        </button>
         <button
           type="button"
           className="icon-button sidebar-toggle"
@@ -247,14 +256,14 @@ export function Shell({
             const visibleItems = group.items.filter(
               (item) => !item.permission || permissions.includes(item.permission),
             );
-            const hasCurrentPage = visibleItems.some((item) =>
-              item.href === '/app' ? path === item.href : path.startsWith(item.href),
-            );
+            const hasCurrentPage = visibleItems.some((item) => isCurrentPath(item.href));
 
             if (visibleItems.length === 1) {
               const item = visibleItems[0];
               if (!item) return null;
-              const { href, en, es, icon: Icon } = item;
+              const {
+                href, en, es, icon: Icon,
+              } = item;
               const label = isSpanish ? es : en;
               return (
                 <Link
@@ -282,9 +291,11 @@ export function Shell({
                   <ChevronDown size={16} aria-hidden />
                 </summary>
                 <div className="nav-group-links">
-                  {visibleItems.map(({ href, en, es, icon: Icon }) => {
+                  {visibleItems.map(({
+                    href, en, es, icon: Icon,
+                  }) => {
                     const label = isSpanish ? es : en;
-                    const isCurrentPage = href === '/app' ? path === href : path.startsWith(href);
+                    const isCurrentPage = isCurrentPath(href);
                     return (
                       <Link
                         key={href}
@@ -317,20 +328,20 @@ export function Shell({
           </span>
         </div>
       </aside>
+      <button
+        type="button"
+        className="navigation-scrim"
+        aria-label={isSpanish ? 'Cerrar navegación' : 'Close navigation'}
+        aria-hidden={!mobileNavigationOpen}
+        tabIndex={mobileNavigationOpen ? 0 : -1}
+        onClick={() => setMobileNavigationOpen(false)}
+      />
       <div className="app-main">
         <header className="topbar">
           <button
             type="button"
             className="icon-button mobile-navigation-toggle"
-            aria-label={
-              mobileNavigationOpen
-                ? isSpanish
-                  ? 'Cerrar navegación'
-                  : 'Close navigation'
-                : isSpanish
-                  ? 'Abrir navegación'
-                  : 'Open navigation'
-            }
+            aria-label={mobileToggleLabel}
             aria-expanded={mobileNavigationOpen}
             aria-controls="main-navigation"
             onClick={() => setMobileNavigationOpen((value) => !value)}
@@ -338,7 +349,10 @@ export function Shell({
             {mobileNavigationOpen ? <X size={21} aria-hidden /> : <Menu size={21} aria-hidden />}
           </button>
           <span className="breadcrumb">
-            {isSpanish ? 'Operaciones' : 'Operations'} <ArrowUpRight size={14} />{' '}
+            {isSpanish ? 'Operaciones' : 'Operations'}
+            {' '}
+            <ArrowUpRight size={14} />
+            {' '}
             {isSpanish ? 'Etapa 1A' : 'Increment 1A'}
           </span>
           <div className="identity">
@@ -360,7 +374,8 @@ export function Shell({
           </div>
         </header>
         <div className="staging-banner">
-          {isSpanish ? 'ETAPA 1A' : 'INCREMENT 1A'}{' '}
+          {isSpanish ? 'ETAPA 1A' : 'INCREMENT 1A'}
+          {' '}
           <span>
             {locale === 'es'
               ? 'Datos maestros activos · la ejecución de producción sigue bloqueada'
@@ -390,9 +405,9 @@ export function Shell({
         <Link
           href="/app/ingredients"
           aria-current={
-            path.startsWith('/app/ingredients') ||
-            path.startsWith('/app/products') ||
-            path.startsWith('/app/recipes')
+            path.startsWith('/app/ingredients')
+            || path.startsWith('/app/products')
+            || path.startsWith('/app/recipes')
               ? 'page'
               : undefined
           }
@@ -403,9 +418,9 @@ export function Shell({
         <Link
           href="/app/orders"
           aria-current={
-            path.startsWith('/app/customers') ||
-            path.startsWith('/app/orders') ||
-            path.startsWith('/app/shipping')
+            path.startsWith('/app/customers')
+            || path.startsWith('/app/orders')
+            || path.startsWith('/app/shipping')
               ? 'page'
               : undefined
           }

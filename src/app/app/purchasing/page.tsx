@@ -12,20 +12,35 @@ import { customerOrderLabel } from '@/domain/customer-orders';
 export default async function Purchasing({
   searchParams,
 }: {
-  searchParams: Promise<{ plan?: string | string[]; supplier?: string | string[] }>;
+  searchParams: Promise<{
+    plan?: string | string[];
+    supplier?: string | string[];
+    ingredient?: string | string[];
+  }>;
 }) {
-  const query = z.object({ plan: z.uuid().optional(), supplier: z.uuid().optional() })
+  const query = z.object({
+    plan: z.uuid().optional(),
+    supplier: z.uuid().optional(),
+    ingredient: z.uuid().optional(),
+  })
     .safeParse(await searchParams);
   if (!query.success) notFound();
-  const { plan, supplier } = query.data;
+  const { plan, supplier, ingredient } = query.data;
+  if (plan && ingredient) notFound();
   const workspace = await loadPurchasingWorkspace(plan);
   const { selected, canWrite, locale } = workspace;
   const selectedSupplier = supplier
     ? workspace.suppliers.find((item) => item.id === supplier) : undefined;
-  if ((plan && !selected) || (supplier && !selectedSupplier)) notFound();
+  const selectedIngredient = ingredient
+    ? workspace.ingredients.find((item) => item.id === ingredient && item.active) : undefined;
+  if ((plan && !selected) || (supplier && !selectedSupplier)
+    || (ingredient && !selectedIngredient)) notFound();
   const es = locale === 'es';
-  const suppliers = workspace.suppliers.filter((item) => !supplier || item.id === supplier);
-  const packs = workspace.packs.filter((item) => !supplier || item.supplier_id === supplier);
+  const packs = workspace.packs.filter((item) => (!supplier || item.supplier_id === supplier)
+    && (!ingredient || item.ingredient_id === ingredient));
+  const suppliers = workspace.suppliers.filter((item) => (!supplier || item.id === supplier)
+    && (!ingredient || (item.active
+      && packs.some((pack) => pack.active && pack.supplier_id === item.id))));
   const suppliedIngredients = new Set(packs.filter((pack) => pack.active)
     .map((pack) => pack.ingredient_id));
   const plans = workspace.plans.filter((saved) => !supplier
@@ -42,14 +57,38 @@ export default async function Purchasing({
   };
   const drafts = workspace.drafts
     .filter((draft) => (!plan || draft.material_plan_id === plan)
-      && (!supplier || draft.supplier_id === supplier))
+      && (!supplier || draft.supplier_id === supplier)
+      && (!ingredient || workspace.lines.some((line) => line.purchase_draft_id === draft.id
+        && line.ingredient_id === ingredient)))
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
   const supplierBack = es ? 'Volver a proveedores' : 'Back to suppliers';
+  const inventoryBack = es ? 'Volver al inventario' : 'Back to inventory';
   const ordersBack = es ? 'Pedidos de clientes' : 'Customer orders';
   let description = es
     ? 'Revisa presentaciones, guarda borradores y registra pedidos confirmados con proveedores.'
     : 'Review supplier packs, save purchase drafts and record orders confirmed with suppliers.';
   if (selectedSupplier) description = `${es ? 'Pedidos de compra para' : 'Purchase orders for'} ${selectedSupplier.name}`;
+  if (selectedIngredient) description = `${es ? 'Comprar' : 'Purchase'} ${selectedIngredient.name}`;
+  let backHref = '/app/orders';
+  let backLabel = ordersBack;
+  if (supplier) {
+    backHref = '/app/suppliers';
+    backLabel = supplierBack;
+  }
+  if (ingredient) {
+    backHref = '/app/inventory';
+    backLabel = inventoryBack;
+  }
+  let standaloneTitle = es ? 'Compra independiente' : 'Standalone supplier purchase';
+  let standaloneDescription = es
+    ? 'Crea una orden de compra para reabastecer ingredientes sin un pedido de cliente activo.'
+    : 'Create a purchase order to replenish ingredients without an active customer order.';
+  if (selectedIngredient) {
+    standaloneTitle = `${es ? 'Selecciona un proveedor para' : 'Select a supplier for'} ${selectedIngredient.name}`;
+    standaloneDescription = es
+      ? 'El ingrediente está fijo. Elige un proveedor y la cantidad de presentaciones completas.'
+      : 'The ingredient is fixed. Choose a supplier and enter the number of whole packs.';
+  }
   const inactiveSupplier = selectedSupplier && !selectedSupplier.active;
   const hasShortages = requirements.some((requirement) => requirement.shortage > 0);
   let noShortages = es ? 'No hay faltantes para este pedido.' : 'No shortages for this order.';
@@ -61,8 +100,8 @@ export default async function Purchasing({
         title={es ? 'Compras' : 'Purchasing'}
         description={description}
         action={(
-          <Link className="button" href={supplier ? '/app/suppliers' : '/app/orders'}>
-            {supplier ? supplierBack : ordersBack}
+          <Link className="button" href={backHref}>
+            {backLabel}
           </Link>
         )}
       />
@@ -72,37 +111,56 @@ export default async function Purchasing({
           <Link href="/app/purchasing">{es ? 'Ver todas las compras' : 'View all purchasing'}</Link>
         </p>
       )}
-      <section className="panel">
-        <h2>{es ? 'Pedido de cliente (opcional)' : 'Customer order (optional)'}</h2>
-        <div className="worksheet-links">
-          {plans.filter((saved) => saved.status === 'Active').map((saved) => (
-            <Link
-              className="worksheet-link"
-              href={`/app/purchasing?plan=${saved.id}${supplier ? `&supplier=${supplier}` : ''}`}
-              key={saved.id}
-              aria-current={selected?.id === saved.id ? 'page' : undefined}
-            >
-              {planLabel(saved.id)}
-              <small>{`${es ? 'Fecha de recogida del cliente' : 'Customer pickup date'}: ${formatDate(saved.needed_on)}`}</small>
-            </Link>
-          ))}
-        </div>
-        {!plans.some((saved) => saved.status === 'Active') && (
-          <p>
-            {es
-              ? 'No hay pedidos activos relacionados. Registra un pedido de cliente y configura las presentaciones del proveedor en sus ingredientes.'
-              : 'No matching active orders. Enter a customer order and configure this supplier’s packs on the ingredients.'}
-          </p>
-        )}
-      </section>
-      {!inactiveSupplier && canWrite && !selected && (
+      {selectedIngredient && (
+        <p className="notice">
+          {`${es ? 'Ingrediente seleccionado' : 'Selected ingredient'}: ${selectedIngredient.name}`}
+        </p>
+      )}
+      {!ingredient && (
         <section className="panel">
-          <h2>{es ? 'Compra independiente' : 'Standalone supplier purchase'}</h2>
-          <p>{es ? 'Crea una orden de compra para reabastecer ingredientes sin un pedido de cliente activo.' : 'Create a purchase order to replenish ingredients without an active customer order.'}</p>
+          <h2>{es ? 'Pedido de cliente (opcional)' : 'Customer order (optional)'}</h2>
+          <div className="worksheet-links">
+            {plans.filter((saved) => saved.status === 'Active').map((saved) => (
+              <Link
+                className="worksheet-link"
+                href={`/app/purchasing?plan=${saved.id}${supplier ? `&supplier=${supplier}` : ''}`}
+                key={saved.id}
+                aria-current={selected?.id === saved.id ? 'page' : undefined}
+              >
+                {planLabel(saved.id)}
+                <small>{`${es ? 'Fecha de recogida del cliente' : 'Customer pickup date'}: ${formatDate(saved.needed_on)}`}</small>
+              </Link>
+            ))}
+          </div>
+          {!plans.some((saved) => saved.status === 'Active') && (
+            <p>
+              {es
+                ? 'No hay pedidos activos relacionados. Registra un pedido de cliente y configura las presentaciones del proveedor en sus ingredientes.'
+                : 'No matching active orders. Enter a customer order and configure this supplier’s packs on the ingredients.'}
+            </p>
+          )}
+        </section>
+      )}
+      {(supplier || ingredient) && !inactiveSupplier && canWrite && !selected && (
+        <section className="panel">
+          <h2>
+            {standaloneTitle}
+          </h2>
+          <p>
+            {standaloneDescription}
+          </p>
+          {selectedIngredient && !suppliers.length && (
+            <p className="notice">
+              {es
+                ? 'Este ingrediente no tiene presentaciones activas de proveedores. Configúralas en los detalles del ingrediente.'
+                : 'This ingredient has no active supplier packs. Configure one in the ingredient details.'}
+            </p>
+          )}
           <StandalonePurchaseComposer
             suppliers={suppliers}
             packs={packs}
-            ingredients={(workspace.ingredients ?? []).filter((item) => item.active)}
+            ingredients={(workspace.ingredients ?? []).filter((item) => item.active
+              && (!ingredient || item.id === ingredient))}
             locale={locale}
           />
         </section>

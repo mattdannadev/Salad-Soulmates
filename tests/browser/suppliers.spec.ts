@@ -20,7 +20,9 @@ test('adds a supplier from the directory and preserves purchase-order access', a
   await expect(row).toContainText('Active');
   await expect(row.getByRole('cell').last()).toHaveText('0');
   const details = page.locator('details.supplier-orders').filter({ hasText: 'New directory supplier' });
-  await details.locator(':scope > summary').click();
+  await row.getByRole('link', { name: 'New directory supplier', exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/suppliers#supplier-/);
+  await expect(details).toHaveAttribute('open', '');
   await expect(details.getByText('No purchase orders for this supplier yet.', { exact: true })).toBeVisible();
   await expect(
     details.getByRole('link', { name: 'New purchase order', exact: true }),

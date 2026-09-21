@@ -348,6 +348,181 @@ async function serializedReceiptPayload() {
 }
 const serializedReceiptSql = 'select public.receive_serialized_delivery($1::jsonb) as id';
 const packageChangeSql = 'select public.change_serialized_unit($1::jsonb) as id';
+const multiReceiptSql = 'select public.receive_purchase_delivery($1::jsonb) as id';
+
+async function multiPurchaseDeliveryScenario() {
+  const supplierId = randomUUID();
+  const ingredientIds = [await ingredient(), await ingredient()];
+  const itemIds = [randomUUID(), randomUUID()];
+  const draftIds = [randomUUID(), randomUUID()];
+  await first.query('insert into public.suppliers(id,name) values($1,$2)', [supplierId, supplierId]);
+  await first.query(`insert into public.supplier_items(
+    id,supplier_id,ingredient_id,supplier_sku,purchase_uom,pack_quantity,pack_quantity_uom)
+    values($1,$2,$3,'FIRST','pail',20,'lb'),($4,$2,$5,'SECOND','pail',20,'lb')`, [
+    itemIds[0], supplierId, ingredientIds[0], itemIds[1], ingredientIds[1],
+  ]);
+  await draftIds.reduce(async (previous, draftId, index) => {
+    await previous;
+    await first.query('select public.create_purchase_draft($1::jsonb)', [JSON.stringify({
+      id: draftId,
+      kind: 'standalone',
+      material_plan_id: null,
+      supplier_id: supplierId,
+      expected_on: '2026-09-30',
+      lines: [{
+        ingredient_id: ingredientIds[index],
+        supplier_item_id: itemIds[index],
+        purchase_units: 1,
+        override_reason: 'Native multi-receiving fixture',
+      }],
+    })]);
+  }, Promise.resolve());
+  const savedLines: unknown = await first.query(`select id,purchase_draft_id,ingredient_id,uom
+    from public.purchase_draft_lines where purchase_draft_id=any($1::uuid[]) order by purchase_draft_id`, [draftIds]);
+  const purchaseLines = z.object({
+    rows: z.array(z.object({
+      id: z.uuid(), purchase_draft_id: z.uuid(), ingredient_id: z.uuid(), uom: z.string(),
+    })).length(2),
+  }).parse(savedLines).rows;
+  const payload = (requestId = randomUUID()) => ({
+    request_id: requestId,
+    supplier_id: supplierId,
+    received_on: '2026-09-30',
+    supplier_reference: 'NATIVE-MULTI',
+    note: '',
+    lines: purchaseLines.map((line) => ({
+      id: randomUUID(),
+      purchase_draft_line_id: line.id,
+      quantity: 10,
+      supplier_lot: '',
+      expiration_date: '',
+      packages: [{ quantity: 10, supplier_barcode: '' }],
+    })),
+  });
+  return {
+    draftIds, payload, purchaseLines, supplierId,
+  };
+}
+
+it('serializes identical multi-PO delivery retries into one complete receipt', async () => {
+  const scenario = await multiPurchaseDeliveryScenario();
+  const payload = scenario.payload();
+  const outcome = await overlap(
+    multiReceiptSql,
+    [JSON.stringify(payload)],
+    multiReceiptSql,
+    [JSON.stringify(payload)],
+  );
+  expect(outcome.error).toBeNull();
+  const result: unknown = await observer.query(`select count(distinct receipt.id)::int receipts,
+      count(line.id)::int lines,count(serialization.id)::int serializations
+    from public.inventory_receipts receipt
+    join public.inventory_receipt_lines line on line.receipt_id=receipt.id
+    join public.receipt_serializations serialization on serialization.receipt_line_id=line.id
+    where receipt.delivery_request_id=$1`, [payload.request_id]);
+  expect(resultRows.parse(result).rows).toEqual([{ receipts: 1, lines: 2, serializations: 2 }]);
+});
+
+it('locks overlapping multi-PO deliveries in deterministic order despite reversed input', async () => {
+  const scenario = await multiPurchaseDeliveryScenario();
+  const firstPayload = scenario.payload();
+  const secondPayload = scenario.payload();
+  secondPayload.lines.reverse();
+  const outcome = await overlap(
+    multiReceiptSql,
+    [JSON.stringify(firstPayload)],
+    multiReceiptSql,
+    [JSON.stringify(secondPayload)],
+  );
+  expect(outcome.error).toBeNull();
+  const result: unknown = await observer.query(`select count(*)::int count
+    from public.inventory_receipt_lines where purchase_draft_line_id=any($1::uuid[])`, [
+    scenario.purchaseLines.map((line) => line.id),
+  ]);
+  expect(resultRows.parse(result).rows).toEqual([{ count: 4 }]);
+});
+
+it('orders fallback-lot and PO locks consistently with a concurrent legacy receipt', async () => {
+  const scenario = await multiPurchaseDeliveryScenario();
+  const payload = scenario.payload();
+  payload.lines = payload.lines.map((line) => ({
+    ...line, quantity: 5, packages: [{ quantity: 5, supplier_barcode: '' }],
+  }));
+  const firstLine = scenario.purchaseLines[0];
+  if (!firstLine) throw new Error('Expected a purchase-line fixture.');
+  const legacy = {
+    request_id: randomUUID(),
+    supplier_id: scenario.supplierId,
+    ingredient_id: firstLine.ingredient_id,
+    quantity: 5,
+    uom: firstLine.uom,
+    received_on: '2026-09-30',
+    supplier_reference: 'NATIVE-LEGACY',
+    supplier_lot: '',
+    expiration_date: '',
+    note: '',
+    purchase_draft_line_id: firstLine.id,
+  };
+  const pidResult: unknown = await second.query('select pg_backend_pid() as pid');
+  const { pid } = z.object({ rows: z.tuple([z.object({ pid: z.number() })]) })
+    .parse(pidResult).rows[0];
+  await first.query(`insert into public.source_lot_daily_sequences(received_on,next_sequence)
+    values($1,1) on conflict(organization_id,facility_id,received_on) do nothing`, [legacy.received_on]);
+  await first.query('begin');
+  try {
+    // Hold only the allocator row. If the multi-PO RPC takes a PO lock first,
+    // the legacy receipt below produces the historical PO/allocator deadlock.
+    await first.query(`select 1 from public.source_lot_daily_sequences
+      where organization_id=public.current_org() and facility_id=public.current_facility()
+        and received_on=$1 for update`, [legacy.received_on]);
+    let finished = false;
+    const pending = second.query(multiReceiptSql, [JSON.stringify(payload)]).then(
+      (result) => {
+        finished = true;
+        return { result: resultRows.parse(result), error: null };
+      },
+      (error: unknown) => {
+        finished = true;
+        return { result: null, error };
+      },
+    );
+    await expect.poll(async () => {
+      if (finished) throw new Error('Multi-PO receipt did not wait on the fallback allocator');
+      const activity: unknown = await observer.query(
+        'select wait_event_type from pg_stat_activity where pid=$1',
+        [pid],
+      );
+      return z.object({ rows: z.array(z.object({ wait_event_type: z.string().nullable() })) })
+        .parse(activity).rows[0]?.wait_event_type;
+    }, { timeout: 4000, interval: 25 }).toBe('Lock');
+    await first.query(receiptSql, [JSON.stringify(legacy)]);
+    await first.query('commit');
+    expect((await pending).error).toBeNull();
+  } finally {
+    await first.query('rollback');
+  }
+});
+
+it('prevents cancelling a PO after an overlapping multi-PO delivery commits', async () => {
+  const scenario = await multiPurchaseDeliveryScenario();
+  const payload = scenario.payload();
+  const firstDraftId = scenario.draftIds[0];
+  if (!firstDraftId) throw new Error('Expected a purchase-draft fixture.');
+  const outcome = await overlap(
+    multiReceiptSql,
+    [JSON.stringify(payload)],
+    'select public.change_purchase_status($1::jsonb)',
+    [JSON.stringify({
+      id: firstDraftId,
+      revision: 2,
+      status: 'Cancelled',
+      reference: `PO-${firstDraftId.replaceAll('-', '').slice(-8).toUpperCase()}`,
+      note: 'Concurrent cancellation fixture',
+    })],
+  );
+  expect(String(outcome.error)).toContain('Received purchases cannot be cancelled');
+});
+
 it('serializes identical physical receipt retries into one receipt and one set of labels', async () => {
   const payload = await serializedReceiptPayload();
   const outcome = await overlap(

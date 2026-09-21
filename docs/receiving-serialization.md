@@ -1,5 +1,9 @@
 # Receiving and physical package serialization
 
+The approved multi-PO receiving extension is described in
+[Receiving multiple purchase orders](receive-purchase-delivery.md). That document
+records its posting contract, rollout constraints and current verification gates.
+
 Candidate branch: `feature/receiving-serialization-complete`, stacked on the materials
 and purchasing candidate (`2f2a7c0`). This implements the next owner-requested build
 step. It does not close the carried-forward Auth, independent review or release

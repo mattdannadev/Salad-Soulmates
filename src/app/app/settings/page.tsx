@@ -11,7 +11,15 @@ export default async function SettingsPage() {
   const { db } = await requireAdminShell();
   const allowed = await hasPermission(db, 'settings.manage');
   if (!allowed) redirect('/app');
-  const [listResult, options, permissionResult, profiles, assignments, facilities, canManageAccess] = await Promise.all([
+  const [
+    listResult,
+    options,
+    permissionResult,
+    profiles,
+    assignments,
+    facilities,
+    canManageAccess,
+  ] = await Promise.all([
     db.from('reference_lists').select('*').order('area').order('code'),
     rows(db, 'reference_options', rowSchemas.reference_options),
     db.from('permissions').select('*').order('area').order('code'),
@@ -48,7 +56,10 @@ export default async function SettingsPage() {
             Create an account directly, choose its facility and access profile, then send a
             one-time setup link by email.
           </p>
-          <InviteUserForm facilities={facilityRows} profiles={profiles.filter((profile) => profile.active)} />
+          <InviteUserForm
+            facilities={facilityRows}
+            profiles={profiles.filter((profile) => profile.active)}
+          />
         </section>
       ) : null}
       <section className="panel">

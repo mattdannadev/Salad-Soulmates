@@ -5,6 +5,7 @@ import tseslint from 'typescript-eslint';
 export default defineConfig([
   globalIgnores([
     '.next/**',
+    '.vercel/**',
     'next-env.d.ts',
     'src/lib/database.types.ts',
     'test-results/**',

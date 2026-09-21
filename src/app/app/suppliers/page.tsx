@@ -3,6 +3,7 @@ import { purchaseProgress } from '@/domain/supplier-orders';
 import { PageHeader } from '@/components/shell';
 import { SupplierForm } from '@/components/master-forms';
 import SupplierPurchases from '@/components/supplier-purchases';
+import SupplierDetailLink from '@/components/supplier-detail-link';
 import Link from 'next/link';
 
 export default async function Suppliers() {
@@ -63,7 +64,10 @@ export default async function Suppliers() {
                   return (
                     <tr key={supplier.id}>
                       <td>
-                        <Link href={`#supplier-${supplier.id}`}><strong>{supplier.name}</strong></Link>
+                        <SupplierDetailLink
+                          supplierId={supplier.id}
+                          supplierName={supplier.name}
+                        />
                       </td>
                       <td>
                         {supplier.contact_name || '—'}

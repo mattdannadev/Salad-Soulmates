@@ -141,42 +141,6 @@ export async function reviewAccessRequest(
   return { ok: true, message: 'Request updated.' };
 }
 
-export async function approveAccessRequest(
-  _previous: ActionResult,
-  form: FormData,
-): Promise<ActionResult> {
-  const parsed = z
-    .object({
-      id: z.uuid(),
-      facility_id: z.uuid(),
-      access_profile_id: z.uuid(),
-    })
-    .safeParse(Object.fromEntries(form));
-  if (!parsed.success) return { ok: false, message: 'Choose a facility and access profile.' };
-  const { db, profile } = await requireProfile({ readOnly: false });
-  const allowed = await hasPermission(db, 'access.manage');
-  if (!allowed) return { ok: false, message: 'Access management permission required.' };
-  const { data: requestData, error: loadError } = await db
-    .from('access_requests')
-    .select('*')
-    .eq('id', parsed.data.id)
-    .single();
-  if (loadError) {
-    logFailure('access_request_load', loadError);
-    return { ok: false, message: 'Could not load this request. Reload before trying again.' };
-  }
-  const request = accessRequestRowSchema.parse(requestData);
-  const result = await sendInvitationAndAssignAccess({
-    db,
-    profile,
-    request,
-    facilityId: parsed.data.facility_id,
-    accessProfileId: parsed.data.access_profile_id,
-  });
-  if (result.ok) revalidatePath('/app/access-requests');
-  return result;
-}
-
 interface InvitationAssignment {
   db: Awaited<ReturnType<typeof supabase>>;
   profile: { id: string };
@@ -258,6 +222,42 @@ async function sendInvitationAndAssignAccess({
     };
   }
   return { ok: true, message: 'Approved. The invitation was sent and access was assigned.' };
+}
+
+export async function approveAccessRequest(
+  _previous: ActionResult,
+  form: FormData,
+): Promise<ActionResult> {
+  const parsed = z
+    .object({
+      id: z.uuid(),
+      facility_id: z.uuid(),
+      access_profile_id: z.uuid(),
+    })
+    .safeParse(Object.fromEntries(form));
+  if (!parsed.success) return { ok: false, message: 'Choose a facility and access profile.' };
+  const { db, profile } = await requireProfile({ readOnly: false });
+  const allowed = await hasPermission(db, 'access.manage');
+  if (!allowed) return { ok: false, message: 'Access management permission required.' };
+  const { data: requestData, error: loadError } = await db
+    .from('access_requests')
+    .select('*')
+    .eq('id', parsed.data.id)
+    .single();
+  if (loadError) {
+    logFailure('access_request_load', loadError);
+    return { ok: false, message: 'Could not load this request. Reload before trying again.' };
+  }
+  const request = accessRequestRowSchema.parse(requestData);
+  const result = await sendInvitationAndAssignAccess({
+    db,
+    profile,
+    request,
+    facilityId: parsed.data.facility_id,
+    accessProfileId: parsed.data.access_profile_id,
+  });
+  if (result.ok) revalidatePath('/app/access-requests');
+  return result;
 }
 
 export async function inviteUserFromSettings(

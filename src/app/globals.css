@@ -373,7 +373,9 @@ small,
   min-height: 100vh;
 }
 .mobile-navigation,
-.mobile-navigation-toggle {
+.mobile-navigation-toggle,
+.mobile-drawer-close,
+.navigation-scrim {
   display: none;
 }
 .sidebar {
@@ -1222,8 +1224,23 @@ dialog::backdrop {
     transform: translateX(-105%);
     transition: transform 180ms ease;
   }
+  .navigation-scrim {
+    position: fixed;
+    z-index: 29;
+    inset: 0;
+    display: block;
+    border: 0;
+    background: rgb(20 39 24 / 42%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms ease;
+  }
   .mobile-navigation-open .sidebar {
     transform: translateX(0);
+  }
+  .mobile-navigation-open .navigation-scrim {
+    opacity: 1;
+    pointer-events: auto;
   }
   .brand {
     margin: 0 0 28px;
@@ -1261,7 +1278,7 @@ dialog::backdrop {
   }
   .nav-group-links {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 5px;
     margin: 0 0 2px 8px;
     padding: 4px 0 4px 8px;
@@ -2067,9 +2084,17 @@ dialog::backdrop {
 }
 @media (max-width: 760px) {
   .sidebar-toggle {
+    display: none;
+  }
+  .mobile-drawer-close {
     position: absolute;
     top: 8px;
     right: 15px;
+    z-index: 1;
+    display: inline-grid;
+    place-items: center;
+    min-width: 44px;
+    min-height: 44px;
     margin-bottom: 0;
   }
   .sidebar .brand {
@@ -2078,5 +2103,26 @@ dialog::backdrop {
   }
   .sidebar-collapsed .brand {
     justify-content: flex-start;
+  }
+  .sidebar-collapsed .brand strong,
+  .sidebar-collapsed .brand small,
+  .sidebar-collapsed .nav-label,
+  .sidebar-collapsed .nav-group-label,
+  .sidebar-collapsed .sidebar-foot {
+    display: block;
+  }
+  .sidebar-collapsed .sidebar nav a,
+  .sidebar-collapsed .nav-group summary {
+    justify-content: flex-start;
+    padding: 12px;
+    gap: 10px;
+  }
+  .sidebar-collapsed .nav-group summary > svg:last-child {
+    display: block;
+  }
+  .sidebar-collapsed .nav-group-links {
+    margin: 0 0 2px 8px;
+    padding: 4px 0 4px 8px;
+    border-left: 1px solid #dce5d6;
   }
 }

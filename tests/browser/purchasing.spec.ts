@@ -4,6 +4,31 @@ test.afterEach(async ({ page }, info) => {
   if (info.status !== info.expectedStatus) console.error('Synthetic browser failure:', await page.locator('main').ariaSnapshot());
 });
 
+test('inventory starts a purchase with its ingredient fixed', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('Email or phone number').fill('admin@example.test');
+  await page.getByLabel('Password', { exact: true }).fill('local-test-password');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page).toHaveURL(/\/app$/);
+  await page.goto('/app/inventory');
+  const mainNavigation = page.getByRole('navigation', { name: 'Main navigation' });
+  await expect(mainNavigation.getByRole('link', { name: 'Purchasing', exact: true })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Purchase Preview garlic powder' }).click();
+  await expect(page).toHaveURL(
+    /\/app\/purchasing\?ingredient=00000000-0000-4000-8000-000000000100/,
+  );
+  await expect(page.getByText('Selected ingredient: Preview garlic powder')).toBeVisible();
+  await expect(page.getByText('The ingredient is fixed.', { exact: false })).toBeVisible();
+  await expect(page.getByText('Preview lemon juice', { exact: true })).toHaveCount(0);
+  await page.getByLabel('Expected delivery').fill('2026-10-01');
+  await page.getByLabel(/Whole packs \(0 skips this ingredient\)/).fill('2');
+  await expect(
+    page.getByRole('button', { name: 'Create purchase order for Preview supplier' }),
+  ).toBeEnabled();
+  await page.getByRole('button', { name: 'Create purchase order for Preview supplier' }).click();
+  await expect(page.getByRole('article').getByText('Confirmed', { exact: true })).toBeVisible();
+});
+
 test('customer packaging and order estimates lead to purchasing and partial receipt', async ({
   page,
 }, info) => {
@@ -114,6 +139,8 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await expect(
     page.getByText('Selected supplier: Preview supplier', { exact: false }),
   ).toBeVisible();
+  await expect(page.getByLabel(/30 lb\/pail · Whole packs/)).toBeVisible();
+  await expect(page.getByLabel(/5 gal\/case · Whole packs/)).toBeVisible();
   await page
     .locator('.worksheet-links')
     .getByRole('link', { name: `Preview customer · Order ${info.project.name}`, exact: false })
@@ -133,12 +160,13 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await expect(draft).toContainText('Expected delivery');
   await page.screenshot({ path: info.outputPath('purchasing.png'), fullPage: true });
   await page.goto('/app/receiving');
+  await page.getByText('Receive without a purchase order', { exact: true }).click();
   await page.getByLabel('Quantity received').fill('10');
   await page.getByLabel('Quantity in each physical package').fill('10');
   await page
     .getByLabel('Confirmed inbound order (optional)')
     .selectOption({ label: `PO-${info.project.name} · Preview garlic powder · 60 lb` });
-  await page.getByLabel('Supplier lot *', { exact: true }).fill('TEST-LOT');
+  await page.getByLabel(/^Supplier-provided lot \(if shown\)/).fill('TEST-LOT');
   await page.getByRole('button', { name: 'Post receipt & update inventory' }).click();
   await expect(page.getByRole('status')).toContainText('Receipt posted');
   await page.goto('/app/purchasing');

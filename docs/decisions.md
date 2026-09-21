@@ -1,5 +1,46 @@
 # Implementation decisions
 
+## 2026-09-21 — Manual replenishment creates a purchase order
+
+The owner clarified that contextual manual replenishment is the actual purchase
+order, not a preparation draft. Its reason is optional. Saving it creates a
+confirmed purchase order with a stable generated reference so it is immediately
+available to receiving. Customer-order shortage purchasing retains its separate
+draft and external-confirmation workflow.
+
+## 2026-09-21 — Receive inventory against multiple purchase orders
+
+The owner approved implementing a Receive Inventory entry point that first shows
+all confirmed purchase orders with outstanding quantities. A receiver can filter
+by supplier and select multiple orders from one supplier for one delivery. Keep
+each actual received quantity allocated to its purchase line, source lot and
+physical packages, including separate lot splits against one purchase line.
+
+Ordered, previously received and outstanding quantities are shown before posting.
+Actual quantities start blank; filling outstanding quantities is an explicit
+action. Skipped lines remain outstanding. Post the complete delivery atomically
+with immutable receipt lines, inventory events, source lots and package records.
+Preserve retry identity, authorization, facility isolation, four-decimal base
+units and the existing prohibition on over-receiving. One receipt supports at
+most 100 lines and 200 physical packages so all labels remain available.
+
+Retain manual receiving separately. Package count corrections remain inventory
+adjustments and do not reopen PO quantities. Receipt reversals, supplier returns
+and source-lot evidence corrections require their separate policy and workflow;
+this delivery must not invent those rules or rewrite historical genealogy.
+
+## 2026-09-21 — Purchasing starts from inventory or a supplier
+
+Purchasing is no longer a standalone main-navigation destination. A buyer starts
+a manual replenishment from an active ingredient in Inventory; that ingredient
+remains fixed while the buyer chooses one of its configured active suppliers and
+a whole-pack quantity. A buyer can instead start from an active supplier and
+choose one or more ingredients from that supplier's configured packs. Preserve
+the existing standalone draft, external confirmation, receipt, permission,
+tenant/facility and idempotency rules. Ingredients without an active supplier
+pack cannot be purchased until their supplier configuration is completed.
+Receiving behavior is unchanged and remains separate follow-up work.
+
 ## 2026-09-21 — Compact phone navigation
 
 The owner supersedes the earlier phone navigation treatment with a compact mobile
