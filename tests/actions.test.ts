@@ -60,6 +60,7 @@ vi.mock('../src/lib/auth', () => ({ requireProfile: mocks.profile }));
 vi.mock('../src/lib/supabase', () => ({
   supabase: () => Promise.resolve(mocks.db),
   supabaseAdmin: mocks.admin,
+  SupabaseConfigurationError: class SupabaseConfigurationError extends Error {},
 }));
 
 const inventory = {
@@ -357,6 +358,29 @@ describe('Auth service and invitation failures', () => {
     expect(await directInvite()).toMatchObject({ ok: false });
     expect(mocks.invite).not.toHaveBeenCalled();
     expect(mocks.rpc).not.toHaveBeenCalledWith('approve_access_request', expect.anything());
+  });
+  it('does not mislabel an invitation email delivery failure as an existing account', async () => {
+    mocks.execute.mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: { ...request, display_name: 'New teammate', contact_value: 'new@example.test' }, error: null });
+    mocks.invite.mockResolvedValue({
+      data: { user: null },
+      error: { code: 'unexpected_failure', message: 'Error sending invite email' },
+    });
+    const result = await directInvite();
+    expect(result).toMatchObject({ ok: false });
+    expect(result.message).toContain('could not deliver');
+    expect(result.message).not.toContain('already has');
+  });
+  it('identifies a genuine existing authentication account', async () => {
+    mocks.execute.mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: { ...request, display_name: 'New teammate', contact_value: 'new@example.test' }, error: null });
+    mocks.invite.mockResolvedValue({
+      data: { user: null },
+      error: { code: 'email_exists', message: 'User already exists' },
+    });
+    const result = await directInvite();
+    expect(result).toMatchObject({ ok: false });
+    expect(result.message).toContain('already has an authentication account');
   });
   it('does not create an invitation for an email that already belongs to a user', async () => {
     mocks.execute.mockResolvedValue({ data: { id: savedId }, error: null });

@@ -166,6 +166,36 @@ interface InvitationAssignment {
   accessProfileId: string;
 }
 
+interface InvitationAuthFailure {
+  code?: unknown;
+  message?: unknown;
+  status?: unknown;
+}
+
+/**
+ * Supabase deliberately uses similar responses for several Auth failures. Keep
+ * duplicate-account guidance precise so a delivery or credential problem is not
+ * presented to an administrator as an existing account.
+ */
+function invitationFailureMessage(error: InvitationAuthFailure | null | undefined) {
+  const code = typeof error?.code === 'string' ? error.code.toLowerCase() : '';
+  const message = typeof error?.message === 'string' ? error.message.toLowerCase() : '';
+  if (['email_exists', 'user_already_exists', 'email_already_exists'].includes(code)
+    || /already (been )?(registered|exists)|user already exists/.test(message)) {
+    return 'This email already has an authentication account. Use that account or choose a different email.';
+  }
+  if (code === 'over_email_send_rate_limit' || /rate limit|too many.*email/.test(message)) {
+    return 'Supabase has temporarily limited invitation emails. Wait a few minutes, then try again.';
+  }
+  if (/email|smtp|mail/.test(message)) {
+    return 'Supabase could not deliver the invitation email. Check its Auth email/SMTP settings, then try again.';
+  }
+  if (error?.status === 401 || error?.status === 403) {
+    return 'The server’s Supabase invitation credential was rejected. Update SUPABASE_SECRET_KEY and try again.';
+  }
+  return 'Supabase could not send the invitation. Check the Auth email and redirect settings, then try again.';
+}
+
 /**
  * Sends the Auth invitation only after there is a recoverable access-request record,
  * then uses the database function to assign the approved facility and profile.
@@ -196,14 +226,25 @@ async function sendInvitationAndAssignAccess({
         message: 'Invitations need the Supabase secret configured on the server.',
       };
     }
-    const { data, error } = await admin.auth.admin.inviteUserByEmail(request.contact_value, {
-      data: { display_name: request.display_name },
-      redirectTo: authCallbackUrl(process.env),
-    });
-    if (error || !data.user) {
+    let data;
+    let error;
+    try {
+      ({ data, error } = await admin.auth.admin.inviteUserByEmail(request.contact_value, {
+        data: { display_name: request.display_name },
+        redirectTo: authCallbackUrl(process.env),
+      }));
+    } catch (cause) {
+      logFailure('invitation_send', cause);
       return {
         ok: false,
-        message: 'The invitation could not be sent. The email may already have an account.',
+        message: 'Supabase could not send the invitation. Check the Auth email and redirect settings, then try again.',
+      };
+    }
+    if (error || !data.user) {
+      logFailure('invitation_send', error ?? { code: 'EMPTY_RESPONSE' });
+      return {
+        ok: false,
+        message: invitationFailureMessage(error),
       };
     }
     invitedUserId = data.user.id;

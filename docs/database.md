@@ -50,7 +50,7 @@ Local tests complement, but do not replace, authenticated hosted Auth/API and en
 
 ## App connection
 
-The application uses `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in ignored `.env.local`; these have been configured locally. A publishable key is intentionally public; RLS and authenticated user sessions control access. No service-role key is needed by the application. The environment file is verified as ignored by Git.
+The application uses `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in ignored `.env.local`; these have been configured locally. A publishable key is intentionally public; RLS and authenticated user sessions control access. Direct administrator invitations and user-security actions also require the server-only `SUPABASE_SECRET_KEY`; configure it in the deployment environment and never expose it to the browser. The environment file is verified as ignored by Git.
 
 On this Windows machine, Node needs the operating system certificate store to reach Supabase through the local network. Use `NODE_USE_SYSTEM_CA=1` with Node 24 when running the app. The connection check passed using `node --use-system-ca`; never disable TLS verification.
 
