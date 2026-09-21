@@ -10,38 +10,105 @@ export type Database = {
     Tables: {
       packaging_profile_versions: {
         Row: {
-          id: string; organization_id: string; product_id: string; version: number;
-          status: string; bag_size_gallons: number; bags_per_case: number;
-          label_width_inches: number; label_height_inches: number; labels_per_bag: number;
-          display_name: string; ingredient_statement: string; template_key: string;
-          created_by: string; created_at: string; approved_by: string | null; approved_at: string | null;
+          id: string;
+          organization_id: string;
+          product_id: string;
+          version: number;
+          status: string;
+          bag_size_gallons: number;
+          bags_per_case: number;
+          label_width_inches: number;
+          label_height_inches: number;
+          labels_per_bag: number;
+          display_name: string;
+          ingredient_statement: string;
+          template_key: string;
+          created_by: string;
+          created_at: string;
+          approved_by: string | null;
+          approved_at: string | null;
         };
         Insert: {
-          id: string; product_id: string; version: number; status: string;
-          bag_size_gallons: number; bags_per_case: number; display_name: string;
-          ingredient_statement?: string; label_width_inches?: number; label_height_inches?: number;
+          id: string;
+          product_id: string;
+          version: number;
+          status: string;
+          bag_size_gallons: number;
+          bags_per_case: number;
+          display_name: string;
+          ingredient_statement?: string;
+          label_width_inches?: number;
+          label_height_inches?: number;
         };
         Update: never;
         Relationships: [];
       };
       shipping_drafts: {
         Row: {
-          id: string; organization_id: string; facility_id: string; order_id: string;
-          planned_on: string; method: string; note: string; lines: Json;
-          created_by: string; created_at: string;
+          id: string;
+          organization_id: string;
+          facility_id: string;
+          order_id: string;
+          planned_on: string;
+          method: string;
+          note: string;
+          lines: Json;
+          created_by: string;
+          created_at: string;
         };
-        Insert: { id: string; order_id: string; planned_on: string; method: string; note: string; lines: Json; };
+        Insert: {
+          id: string;
+          order_id: string;
+          planned_on: string;
+          method: string;
+          note: string;
+          lines: Json;
+        };
         Update: never;
         Relationships: [];
       };
       order_production_plans: {
         Row: {
-          id: string; organization_id: string; facility_id: string;
-          start_on: string; finish_on: string; status: string; revision: number;
-          note: string; shortage_reason: string; created_by: string; created_at: string;
+          id: string;
+          organization_id: string;
+          facility_id: string;
+          start_on: string;
+          finish_on: string;
+          status: string;
+          revision: number;
+          note: string;
+          shortage_reason: string;
+          created_by: string;
+          created_at: string;
         };
-        Insert: { id: string; start_on: string; finish_on: string; };
-        Update: { start_on?: string; finish_on?: string; status?: string; revision?: number; note?: string; shortage_reason?: string; };
+        Insert: { id: string; start_on: string; finish_on: string };
+        Update: {
+          start_on?: string;
+          finish_on?: string;
+          status?: string;
+          revision?: number;
+          note?: string;
+          shortage_reason?: string;
+        };
+        Relationships: [];
+      };
+      production_lots: {
+        Row: {
+          id: string;
+          organization_id: string;
+          facility_id: string;
+          order_id: string;
+          product_id: string;
+          assigned_on: string;
+          production_lot_code: string;
+          planned_gallons: number;
+          planned_batch_count: number;
+          status: string;
+          assigned_by: string;
+          assigned_at: string;
+        };
+        Insert: never;
+        Update: never;
         Relationships: [];
       };
       receipt_serializations: {
@@ -124,7 +191,12 @@ export type Database = {
       };
       customers: {
         Row: {
-          contact_name: string; email: string; phone: string; address: string; notes: string; revision: number;
+          contact_name: string;
+          email: string;
+          phone: string;
+          address: string;
+          notes: string;
+          revision: number;
           id: string;
           organization_id: string;
           name: string;
@@ -132,14 +204,22 @@ export type Database = {
           created_at: string;
         };
         Insert: {
-          contact_name?: string; email?: string; phone?: string; address?: string; notes?: string;
+          contact_name?: string;
+          email?: string;
+          phone?: string;
+          address?: string;
+          notes?: string;
           id?: string;
           organization_id?: string;
           name: string;
           created_at?: string;
         };
         Update: {
-          contact_name?: string; email?: string; phone?: string; address?: string; notes?: string;
+          contact_name?: string;
+          email?: string;
+          phone?: string;
+          address?: string;
+          notes?: string;
         };
         Relationships: [];
       };
@@ -827,6 +907,7 @@ export type Database = {
       };
       inventory_receipt_lines: {
         Row: {
+          assigned_source_lot: string | null;
           purchase_draft_line_id: string | null;
           expiration_date: string | null;
           id: string;
@@ -835,9 +916,11 @@ export type Database = {
           quantity: number;
           receipt_id: string;
           supplier_lot: string;
+          source_lot_origin: string | null;
           uom: string;
         };
         Insert: {
+          assigned_source_lot?: string | null;
           purchase_draft_line_id?: string | null;
           expiration_date?: string | null;
           id?: string;
@@ -846,9 +929,11 @@ export type Database = {
           quantity: number;
           receipt_id: string;
           supplier_lot?: string;
+          source_lot_origin?: string | null;
           uom: string;
         };
         Update: {
+          assigned_source_lot?: string | null;
           purchase_draft_line_id?: string | null;
           expiration_date?: string | null;
           id?: string;
@@ -857,6 +942,7 @@ export type Database = {
           quantity?: number;
           receipt_id?: string;
           supplier_lot?: string;
+          source_lot_origin?: string | null;
           uom?: string;
         };
         Relationships: [
@@ -1585,25 +1671,44 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      save_customer_master: { Args: { payload: Json }; Returns: string; };
-      save_packaging_profile: { Args: { payload: Json }; Returns: string; };
-      save_shipping_draft: { Args: { payload: Json }; Returns: string; };
-      save_order_production_plan: { Args: { payload: Json }; Returns: string; };
-      order_production_batches: { Args: { order_id: string }; Returns: Json; };
-      receive_serialized_delivery: { Args: { payload: Json }; Returns: string; };
-      serialize_receipt_line: { Args: { payload: Json }; Returns: string; };
-      change_serialized_unit: { Args: { payload: Json }; Returns: string; };
-      find_serialized_units: { Args: { search_text?: string; receipt_filter?: string; unit_filter?: string }; Returns: Json; };
-      save_customer_product_option: { Args: { payload: Json }; Returns: string; };
-      save_customer_order: { Args: { payload: Json }; Returns: string; };
-      cancel_customer_order: { Args: { order_id: string }; Returns: string; };
-      cancel_material_plan: { Args: { plan_id: string }; Returns: string; };
-      change_purchase_status: { Args: { payload: Json }; Returns: string; };
-      create_purchase_draft: { Args: { payload: Json }; Returns: string; };
-      save_material_plan: { Args: { payload: Json }; Returns: string; };
-      material_requirements: { Args: { plan_id: string }; Returns: Json; };
-      demand_coverage: { Args: Record<PropertyKey, never>; Returns: Json; };
-      generate_demand_purchases: { Args: { request_id: string }; Returns: Json; };
+      save_customer_master: { Args: { payload: Json }; Returns: string };
+      save_packaging_profile: { Args: { payload: Json }; Returns: string };
+      save_shipping_draft: { Args: { payload: Json }; Returns: string };
+      save_order_production_plan: { Args: { payload: Json }; Returns: string };
+      assign_production_lot: { Args: { payload: Json }; Returns: string };
+      open_batch_worksheet: { Args: { batch_id: string }; Returns: string };
+      record_batch_worksheet_usage: { Args: { payload: Json }; Returns: string };
+      complete_batch_worksheet: { Args: { execution_id: string }; Returns: string };
+      order_production_batches: { Args: { order_id: string }; Returns: Json };
+      receive_serialized_delivery: { Args: { payload: Json }; Returns: string };
+      serialize_receipt_line: { Args: { payload: Json }; Returns: string };
+      change_serialized_unit: { Args: { payload: Json }; Returns: string };
+      find_serialized_units: {
+        Args: { search_text?: string; receipt_filter?: string; unit_filter?: string };
+        Returns: Json;
+      };
+      find_traceability_production_lots: {
+        Args: { product_filter: string; production_lot_code_filter: string; page_number?: number; requested_page_size?: number };
+        Returns: Json;
+      };
+      trace_production_lot: {
+        Args: { production_lot_filter: string; page_number?: number; requested_page_size?: number };
+        Returns: Json;
+      };
+      trace_source_material: {
+        Args: { source_lot_filter?: string | null; serialized_unit_filter?: string | null; page_number?: number; requested_page_size?: number };
+        Returns: Json;
+      };
+      save_customer_product_option: { Args: { payload: Json }; Returns: string };
+      save_customer_order: { Args: { payload: Json }; Returns: string };
+      cancel_customer_order: { Args: { order_id: string }; Returns: string };
+      cancel_material_plan: { Args: { plan_id: string }; Returns: string };
+      change_purchase_status: { Args: { payload: Json }; Returns: string };
+      create_purchase_draft: { Args: { payload: Json }; Returns: string };
+      save_material_plan: { Args: { payload: Json }; Returns: string };
+      material_requirements: { Args: { plan_id: string }; Returns: Json };
+      demand_coverage: { Args: Record<PropertyKey, never>; Returns: Json };
+      generate_demand_purchases: { Args: { request_id: string }; Returns: Json };
       approve_access_request: {
         Args: {
           assigned_access_profile_id: string;

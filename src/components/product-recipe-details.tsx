@@ -24,7 +24,7 @@ export default function ProductRecipeDetails({
   return (
     <details className="product-recipe-details">
       <summary>
-        {recipeText(locale, 'Active recipe details')}
+        {recipeText(locale, 'View ingredients and preparation')}
         <span className="product-recipe-meta">
           {`${recipe.name} · v${version.version_number} · ${formatNumber(version.target_yield_gallons)} gal`}
         </span>

@@ -15,11 +15,14 @@ export default async function PackageDetail({ params }: { params: Promise<{ id: 
   const id = z.uuid().safeParse((await params).id);
   if (!id.success) notFound();
   const { db, profile } = await requireProfile();
-  if (!await hasPermission(db, 'inventory.read')) redirect('/app');
+  if (!(await hasPermission(db, 'inventory.read'))) redirect('/app');
   const [units, canChange, response] = await Promise.all([
     loadSerializedUnits(db, { unit_filter: id.data }),
     hasPermission(db, 'inventory.adjust'),
-    db.from('serialized_unit_events').select('*').eq('unit_id', id.data)
+    db
+      .from('serialized_unit_events')
+      .select('*')
+      .eq('unit_id', id.data)
       .order('expected_revision', { ascending: false })
       .limit(100),
   ]);
@@ -50,8 +53,16 @@ export default async function PackageDetail({ params }: { params: Promise<{ id: 
           </dd>
           <dt>Supplier</dt>
           <dd>{unit.supplier_name}</dd>
-          <dt>Supplier lot</dt>
-          <dd>{unit.supplier_lot || 'Not recorded'}</dd>
+          <dt>Source lot</dt>
+          <dd>{unit.source_lot || 'Not recorded'}</dd>
+          <dt>Source-lot origin</dt>
+          <dd>
+            {unit.source_lot_origin === 'supplier_provided'
+              ? 'Supplier-provided'
+              : 'Salad Soulmates-assigned fallback'}
+          </dd>
+          <dt>Supplier-provided lot</dt>
+          <dd>{unit.supplier_lot || 'Not provided'}</dd>
           <dt>Supplier barcode</dt>
           <dd>{unit.supplier_barcode ?? 'Internal label used'}</dd>
           <dt>Received</dt>
@@ -62,10 +73,10 @@ export default async function PackageDetail({ params }: { params: Promise<{ id: 
           <dd>{unit.supplier_reference || '—'}</dd>
         </dl>
         {unit.availability !== 'Available' && (
-        <p className="error-notice">
-          Unavailable for production. A hold release cannot override expiration
-          or an empty balance.
-        </p>
+          <p className="error-notice">
+            Unavailable for production. A hold release cannot override expiration or an empty
+            balance.
+          </p>
         )}
         <Link href={`/receiving/labels?unit=${unit.id}`}>Print this package label</Link>
       </section>
@@ -92,7 +103,6 @@ export default async function PackageDetail({ params }: { params: Promise<{ id: 
               {event.status}
               {' '}
               ·
-              {' '}
               {formatNumber(event.remaining_quantity)}
               {' '}
               {unit.uom}

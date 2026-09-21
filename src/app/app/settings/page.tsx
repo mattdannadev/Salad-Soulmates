@@ -26,12 +26,13 @@ export default async function SettingsPage() {
     'permission_assignments',
   );
   const areas = [...new Set(lists.map((list) => list.area))].sort();
+  const pageDescription = 'Manage dropdown values by business area and define reusable access profiles for users.';
   return (
     <>
       <PageHeader
         eyebrow="ADMINISTRATION"
         title="Settings"
-        description="Manage dropdown values by business area and define reusable access profiles for users."
+        description={pageDescription}
       />
       <section className="panel">
         <h2>Access profiles</h2>
@@ -58,7 +59,9 @@ export default async function SettingsPage() {
                 <AccessProfileForm
                   profile={p}
                   permissions={permissions}
-                  selected={assigned.filter((a) => a.access_profile_id === p.id).map((a) => a.permission_code)}
+                  selected={assigned
+                    .filter((a) => a.access_profile_id === p.id)
+                    .map((a) => a.permission_code)}
                   lockProfile
                 />
               </details>

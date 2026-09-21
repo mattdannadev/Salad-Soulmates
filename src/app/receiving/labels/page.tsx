@@ -12,17 +12,21 @@ import PrintLabels from '@/components/print-labels';
 
 export const dynamic = 'force-dynamic';
 
-export default async function Labels({ searchParams }: {
+export default async function Labels({
+  searchParams,
+}: {
   searchParams: Promise<{ receipt?: string; unit?: string }>;
 }) {
-  const input = z.object({ receipt: z.uuid().optional(), unit: z.uuid().optional() })
+  const input = z
+    .object({ receipt: z.uuid().optional(), unit: z.uuid().optional() })
     .refine((value) => Boolean(value.receipt) !== Boolean(value.unit))
     .safeParse(await searchParams);
   if (!input.success) notFound();
   const { db } = await requireProfile();
-  if (!await hasPermission(db, 'inventory.read')) redirect('/app');
+  if (!(await hasPermission(db, 'inventory.read'))) redirect('/app');
   const units = await loadSerializedUnits(db, {
-    receipt_filter: input.data.receipt, unit_filter: input.data.unit,
+    receipt_filter: input.data.receipt,
+    unit_filter: input.data.unit,
   });
   if (!units.length) notFound();
   return (
@@ -31,15 +35,18 @@ export default async function Labels({ searchParams }: {
         <Link href="/receiving">← Receiving</Link>
         <h1>Ingredient package labels</h1>
         <p>
-          Print at actual size. Reprinting preserves the same package identity.
-          Scan the QR code or type its serial.
+          Print at actual size. Reprinting preserves the same package identity. Scan the QR code or
+          type its serial.
         </p>
         <PrintLabels />
       </div>
       <div className="label-grid">
         {units.map((unit) => {
           const svg = bwipjs.toSVG({
-            bcid: 'qrcode', text: unit.internal_code, scale: 3, padding: 4,
+            bcid: 'qrcode',
+            text: unit.internal_code,
+            scale: 3,
+            padding: 4,
           });
           return (
             <article key={unit.id} className="package-label">
@@ -55,9 +62,13 @@ export default async function Labels({ searchParams }: {
               <p>
                 {unit.supplier_name}
                 {' '}
-                · Lot
-                {' '}
-                {unit.supplier_lot || '—'}
+                · Source lot
+                {unit.source_lot || '—'}
+              </p>
+              <p>
+                {unit.source_lot_origin === 'supplier_provided'
+                  ? 'Supplier-provided source lot'
+                  : 'Salad Soulmates-assigned source lot'}
               </p>
               <p>
                 Received
@@ -72,14 +83,12 @@ export default async function Labels({ searchParams }: {
               </p>
               <p>
                 Expires
-                {' '}
                 {unit.expiration_date ?? 'Not recorded'}
               </p>
               <small>{unit.internal_code}</small>
               {unit.supplier_barcode && (
               <small>
                 Supplier barcode:
-                {' '}
                 {unit.supplier_barcode}
               </small>
               )}

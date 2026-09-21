@@ -8,7 +8,7 @@ import {
   purchaseLineRowSchema,
 } from '@/domain/purchasing';
 import { customerOptionRowSchema, customerRowSchema } from '@/domain/customer-pricing';
-import { productionPlanSchema, mixerBatchSchema } from '@/domain/production';
+import { productionPlanSchema, mixerBatchSchema, productionLotSchema } from '@/domain/production';
 import { customerOrderRowSchema } from '@/domain/customer-orders';
 import { rowSchemas } from '@/domain/master-data';
 import {
@@ -51,6 +51,7 @@ export default async function loadPurchasingWorkspace(selectedId?: string) {
     customers,
     customerOptions,
     productionPlans,
+    productionLots,
   ] = await Promise.all([
     rows(db, 'material_plans', materialPlanRowSchema),
     rows(db, 'purchase_drafts', purchaseDraftRowSchema),
@@ -68,6 +69,7 @@ export default async function loadPurchasingWorkspace(selectedId?: string) {
     rows(db, 'customers', customerRowSchema),
     rows(db, 'customer_product_options', customerOptionRowSchema),
     rows(db, 'order_production_plans', productionPlanSchema),
+    rows(db, 'production_lots', productionLotSchema),
   ]);
   const selected = selectedId ? plans.find((plan) => plan.id === selectedId) : undefined;
   const requirements = selected?.status === 'Active'
@@ -85,6 +87,7 @@ export default async function loadPurchasingWorkspace(selectedId?: string) {
   ) : [];
   return {
     productionPlans,
+    productionLots,
     production,
     productionBatches,
     orders,

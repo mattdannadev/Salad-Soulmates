@@ -1,5 +1,76 @@
 # Implementation decisions
 
+## 2026-09-20 — Source Lots and internal DDDYY Production Lots
+
+Salad Soulmates uses two different lot concepts. They must not be renamed into
+one field or substituted for one another.
+
+**Source Lot** is the incoming-material traceability identifier. At receiving,
+preserve the supplier-provided lot exactly as supplied when it is present. When
+it is absent, Salad Soulmates must assign an immutable fallback Source Lot in
+the format `SL-YYDDD-NNNN`, for example `SL-26263-0001`. `YYDDD` is the
+facility-local received year plus day of year, and `NNNN` is the next
+zero-padded Source Lot sequence for that facility-local day. This compact code
+is intended to be read and typed by workers. It is issued only because source
+evidence was absent; it is never presented as a supplier-issued lot. A Source
+Lot belongs to the receiving record, is carried to every serialized physical
+package from that receipt line, and is the identifier used for material
+genealogy.
+
+A supplier-provided Source Lot is not globally unique: the same text can recur
+across suppliers, ingredients, receipts, facilities, or time. Trace lookup and
+uniqueness rules therefore use the source-lot record/receipt-line identity,
+with supplier, ingredient, organization, facility and receipt context, rather
+than the printed lot text alone. The Salad Soulmates fallback is unique within
+its organization, facility and facility-local day; the system must allocate its
+daily sequence atomically and must never reuse it. A physical package keeps its
+separate serialized-unit identity; neither Source Lot is a package serial.
+
+**Internal DDDYY Production Lot** is a planning/execution grouping code,
+assigned before mixing from the assigned production date in the facility's
+local time. It is `DDDYY` (three-digit day of year plus two-digit year), so
+September 18, 2026 is `26126`. It is internal-only: do not print it on a bag
+label, expose it as the customer lot, or use it as the customer recall key. It
+is not a primary key and it is deliberately non-unique: products and multiple
+runs can share the code on the same facility-local date. The production-lot
+record UUID, with product and assigned production date, is the system identity;
+the code is a human-readable internal grouping/search aid. Actual mix time is
+recorded separately and does not change the assigned DDDYY code.
+
+Source-lot evidence and production-lot assignment are audit-critical. A
+correction must preserve the original value, correction reason, actor,
+timestamp and the record it corrects. It must never silently overwrite a
+supplier value, retire/reuse an assigned fallback code, or rewrite a
+serialized-unit/material-usage genealogy link. After a package has been
+serialized or used, a correction records a linked corrected value and trace
+queries must retain both the original and correction path. A separate,
+approved finished-label lot policy is required before customer-facing lot text
+or recall lookup is implemented; `DDDYY` is expressly not that policy.
+
+Follow-on acceptance criteria:
+
+- Receiving accepts a supplier Source Lot when supplied, otherwise creates the
+  specified fallback exactly once, and shows its origin as Supplier or Salad
+  Soulmates assigned.
+- Serialized packages inherit an immutable Source Lot and retain a distinct
+  unique serial identity; trace queries resolve the package through the source
+  lot to its receipt context.
+- Source-lot searches do not treat matching text alone as globally unique and
+  return enough supplier/ingredient/receipt context to distinguish matches.
+- Production planning assigns one internal DDDYY code from the facility-local
+  assigned date before mixing; multiple products/runs may share it without a
+  collision or identity ambiguity.
+- No customer-facing label, customer portal, or customer recall lookup displays
+  or relies on DDDYY. Such work is blocked on the finished-label lot decision.
+- Corrections are append-only/audited and preserve original-to-corrected
+  lineage, including after serialization or material use.
+
+Dependencies for the follow-on tasks: a canonical facility-local date source;
+an atomically allocated, per-facility daily fallback sequence; a source-lot
+origin and correction/audit model; production-lot UUID and assigned-date model;
+and a separately approved finished-label lot/recall policy. No database or UI
+change is authorized by this decision record.
+
 ## 2026-09-20 — On-hand inventory units follow the receipt ledger
 
 Browser feedback requires every on-hand quantity to display in the unit recorded

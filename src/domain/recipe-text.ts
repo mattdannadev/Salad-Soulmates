@@ -14,7 +14,7 @@ const spanish = {
   'gal per bag': 'gal por bolsa',
   'bags per case': 'bolsas por caja',
   'No recipe linked': 'Sin receta vinculada',
-  'Active recipe details': 'Detalles de la receta activa',
+  'View ingredients and preparation': 'Ver ingredientes y preparación',
   'No products yet': 'Aún no hay productos',
   'Approved products and packaging definitions will appear here.': 'Los productos aprobados y sus empaques aparecerán aquí.',
   'PRODUCTION MASTER DATA': 'DATOS MAESTROS DE PRODUCCIÓN',

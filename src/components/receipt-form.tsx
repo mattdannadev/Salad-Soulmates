@@ -72,16 +72,13 @@ export default function ReceiptForm({
     },
     {
       name: 'purchase_draft_line_id',
-      label: es
-        ? 'Pedido confirmado (opcional)'
-        : 'Confirmed inbound order (optional)',
+      label: es ? 'Pedido confirmado (opcional)' : 'Confirmed inbound order (optional)',
       type: 'select',
       options: [
         { value: '', label: es ? 'Sin pedido vinculado' : 'No linked order' },
         ...inbound
           .filter(
-            (choice) => choice.ingredient_id === ingredientId
-                    && choice.supplier_id === supplierId,
+            (choice) => choice.ingredient_id === ingredientId && choice.supplier_id === supplierId,
           )
           .map((choice) => ({ value: choice.id, label: choice.label })),
       ],
@@ -102,10 +99,13 @@ export default function ReceiptForm({
     },
     {
       name: 'supplier_lot',
-      label: es ? 'Lote del proveedor' : 'Supplier lot',
-      required: ingredients.find((ingredient) => ingredient.id === ingredientId)
-        ?.traceability_mode !== 'not_required',
+      label: es
+        ? 'Lote proporcionado por el proveedor (si aparece)'
+        : 'Supplier-provided lot (if shown)',
       maxLength: 120,
+      hint: es
+        ? 'Si no se proporciona, Salad Soulmates asignará un lote de origen interno al registrar la recepción.'
+        : 'If none is shown, Salad Soulmates assigns a distinct internal source lot when the receipt is posted.',
     },
     {
       name: 'expiration_date',
@@ -122,13 +122,20 @@ export default function ReceiptForm({
       name: 'supplier_item_id',
       label: es ? 'Presentación del proveedor (opcional)' : 'Supplier item / pack (optional)',
       type: 'select',
-      options: [{ value: '', label: es ? 'Sin presentación' : 'No configured pack' },
-        ...packs.filter((pack) => pack.active && pack.ingredient_id === ingredientId
-                && pack.supplier_id === supplierId && pack.pack_quantity_uom === unit)
+      options: [
+        { value: '', label: es ? 'Sin presentación' : 'No configured pack' },
+        ...packs
+          .filter(
+            (pack) => pack.active
+              && pack.ingredient_id === ingredientId
+              && pack.supplier_id === supplierId
+              && pack.pack_quantity_uom === unit,
+          )
           .map((pack) => ({
             value: pack.id,
             label: `${pack.supplier_sku || pack.purchase_uom} · ${pack.pack_quantity} ${unit}`,
-          }))],
+          })),
+      ],
     },
     {
       name: 'package_lines',
@@ -136,7 +143,8 @@ export default function ReceiptForm({
       type: 'textarea',
       required: true,
       maxLength: 30000,
-      hint: es ? 'Una cantidad por línea. Ejemplo: 25 | CODIGO-UNICO. Omite el código para generar una etiqueta.'
+      hint: es
+        ? 'Una cantidad por línea. Ejemplo: 25 | CODIGO-UNICO. Omite el código para generar una etiqueta.'
         : 'One quantity per line, in the base unit. Example: 25 | UNIQUE-PACKAGE-CODE. Leave off the barcode to generate an internal label. Use a supplier barcode only when it uniquely identifies this physical package, never a shared UPC or lot barcode.',
     },
   ];

@@ -133,11 +133,14 @@ These rules are not all executed in Milestone 1, but the first schema must not m
 
 ### 4.1 Product lot
 
-- Customer-facing lot format is `DDDYY`.
-- Lot is assigned early in the production day before dressing is mixed.
+- Internal production code format is `DDDYY`.
+- It is assigned early in the production day before dressing is mixed.
 - Example: September 18, 2026 -> `26126`.
-- Lot code is not a database primary key.
-- Product + Lot Number is the practical customer-facing recall key because more than one product can share the same date-based lot.
+- DDDYY is an internal-only code, not a database primary key or customer-facing lot/recall key.
+- Multiple products and runs may share the code on the same facility-local date; the production-lot UUID is the system identity.
+- Finished-label lot text and customer recall lookup are deferred pending a separately approved policy. Do not print or expose DDDYY to customers.
+
+The authoritative Source Lot origin, fallback, uniqueness and correction rules are in `docs/decisions.md`, **Source Lots and internal DDDYY Production Lots**.
 
 ### 4.2 Mixer batch
 
@@ -165,7 +168,7 @@ Future production must support:
 - holding tank retaining genealogy from all contributing mixer batches;
 - finished product packaged in **1-gallon bags**;
 - **4 bags per case**;
-- bag label containing at minimum Product Name, controlled Ingredient Statement, and Lot Number.
+- bag label containing at minimum Product Name and controlled Ingredient Statement; finished-label lot content is deferred and must not be DDDYY.
 
 The Product model must therefore include configurable packaging and label-profile fields even though finished packaging execution remains later than Increment 1C.
 
@@ -1570,7 +1573,7 @@ At 390px width, a worker can sign in, read today's assignments in Spanish, open 
 
 **Given** the worker is prompted for Garlic  
 **When** a valid serialized Garlic package in Available status is scanned  
-**Then** the serial/supplier lot is attached to that recipe line and the worker may confirm the addition.
+**Then** the serial/Source Lot is attached to that recipe line and the worker may confirm the addition.
 
 ### AT-21 Wrong/held source scan — Increment 1C
 
@@ -1829,7 +1832,7 @@ Deploy staging and validate admin master data/planning/inventory/purchasing plus
 
 ### Increment 1B acceptance gate
 
-Prove that a physical/test supplier package can be received, uniquely identified, found in inventory and scanned back to its supplier lot.
+Prove that a physical/test supplier package can be received, uniquely identified, found in inventory and scanned back to its Source Lot and receipt context.
 
 ### Epic 10 — Spanish digital Batch Worksheet / spice prep — Increment 1C
 
@@ -1891,10 +1894,10 @@ Prove that a physical/test supplier package can be received, uniquely identified
 ### 30.2 Increment 1B Done
 
 1. Supplier deliveries can be received into real ledger inventory.
-2. Supplier lot is preserved.
+2. Source Lot is preserved with Supplier or Salad Soulmates assigned origin.
 3. Every trace-required physical package has a unique scannable serialized identity.
 4. Partially used balances and hold/expired state are represented correctly.
-5. Serialized unit scans resolve reliably back to ingredient, supplier lot and available quantity.
+5. Serialized unit scans resolve reliably back to ingredient, Source Lot and available quantity.
 
 ### 30.3 Increment 1C Done
 
@@ -1916,7 +1919,7 @@ Prove that a physical/test supplier package can be received, uniquely identified
 
 After Increment 1C is accepted, the next build extends the same genealogy into:
 
-`Holding Tank -> 1-gallon Bags -> 4 Bags/Case -> Bag Label (Product + Ingredient Statement + Lot) -> Fulfillment -> Recall Workspace`
+`Holding Tank -> 1-gallon Bags -> 4 Bags/Case -> Bag Label (Product + Ingredient Statement + approved finished-label lot when defined) -> Fulfillment -> Recall Workspace`
 
 Scheduling remains active throughout these later operations so packaging, pickup/shipping and other work can be assigned without creating a separate scheduling system.
 

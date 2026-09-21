@@ -127,8 +127,13 @@ describe('physical package receiving and serialization', () => {
     expect((await query('select * from public.inventory_receipts')).rows).toHaveLength(0);
     expect((await query('select * from public.inventory_events')).rows).toHaveLength(0);
   });
-  it('requires source lots and rejects duplicate supplier serials on another delivery', async () => {
-    await expect(rpc('receive_serialized_delivery', { ...receipt(), supplier_lot: '' })).rejects.toThrow('Supplier lot');
+  it('assigns a fallback source lot and rejects duplicate supplier serials on another delivery', async () => {
+    await rpc('receive_serialized_delivery', { ...receipt(), supplier_lot: '' });
+    expect((await query('select source_lot_origin,assigned_source_lot from public.inventory_receipt_lines')).rows)
+      .toEqual([{ source_lot_origin: 'salad_soulmates_assigned', assigned_source_lot: 'SL-26263-0001' }]);
+    await database.exec('rollback');
+    await database.exec('begin');
+    await actAs(gateActor);
     await rpc('receive_serialized_delivery', receipt());
     await expect(rpc('receive_serialized_delivery', { ...receipt(), request_id: id(501) })).rejects.toThrow('unique');
     expect((await query('select * from public.inventory_receipts')).rows).toHaveLength(1);

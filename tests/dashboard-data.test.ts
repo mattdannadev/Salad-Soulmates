@@ -43,9 +43,15 @@ it('prioritizes open-order ingredients and distinguishes unknown from zero owned
       { id: 'cancelled', status: 'Cancelled', requirements: [{ ingredient_id: 'a', required: 99 }] },
     ],
     ingredients: [
-      { id: 'a', name: 'A', active: true, default_uom: 'lb' },
-      { id: 'b', name: 'B', active: true, default_uom: 'gal' },
-      { id: 'c', name: 'C', active: false, default_uom: 'oz' },
+      {
+        id: 'a', name: 'A', active: true, default_uom: 'lb',
+      },
+      {
+        id: 'b', name: 'B', active: true, default_uom: 'gal',
+      },
+      {
+        id: 'c', name: 'C', active: false, default_uom: 'oz',
+      },
     ],
     inventory_events: [
       { ingredient_id: 'b', quantity_delta: 10, uom: 'gal' },

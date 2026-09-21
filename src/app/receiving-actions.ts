@@ -20,7 +20,7 @@ const operations = {
 } as const;
 const safeMessages = [
   'Package quantities must equal the received quantity',
-  'Supplier lot is required before serialization',
+  'Source lot is required before serialization',
   'Receipt already serialized with different values',
   'Request ID already used with different values',
   'Package changed; reload before trying again',
@@ -53,7 +53,8 @@ export default async function saveReceiving(
       logFailure(`receiving_${kind.data}`, result.error);
       return {
         ok: false,
-        message: safeMessages.find((message) => result.error.message.includes(message))
+        message:
+          safeMessages.find((message) => result.error.message.includes(message))
           ?? (result.error.code === '23505'
             ? 'This barcode or request is already in use. Give each physical package a unique identity.'
             : 'Could not save. Check your entries and retry with the same request.'),
@@ -64,14 +65,25 @@ export default async function saveReceiving(
       logFailure(`receiving_${kind.data}`, { code: 'INVALID_RESPONSE' });
       return { ok: false, message: 'Save could not be confirmed. Retry with the same entries.' };
     }
-    ['/app/receiving', '/receiving', '/app/inventory', '/app/materials', '/app/orders', '/app/purchasing', '/app/suppliers', '/receiving/packages', '/receiving/labels']
-      .forEach((path) => revalidatePath(path));
+    [
+      '/app/receiving',
+      '/receiving',
+      '/app/inventory',
+      '/app/materials',
+      '/app/orders',
+      '/app/purchasing',
+      '/app/suppliers',
+      '/receiving/packages',
+      '/receiving/labels',
+    ].forEach((path) => revalidatePath(path));
     revalidatePath('/receiving/packages/[id]', 'page');
     return {
       ok: true,
       id: id.data,
-      message: kind.data === 'receive'
-        ? 'Receipt posted, inventory updated, and packages serialized.' : 'Package records saved.',
+      message:
+        kind.data === 'receive'
+          ? 'Receipt posted, inventory updated, and packages serialized.'
+          : 'Package records saved.',
     };
   } catch (error) {
     logFailure(`receiving_${kind.data}`, error);

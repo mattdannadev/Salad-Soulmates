@@ -80,6 +80,10 @@ export function AccessProfileForm({
   const [result, setResult] = useState<{ ok: boolean; message: string }>();
   const [pending, start] = useTransition();
   const router = useRouter();
+  let submitLabel = 'Create profile';
+  if (profile) submitLabel = 'Save profile';
+  if (lockProfile) submitLabel = 'Save access areas';
+  if (pending) submitLabel = 'Saving…';
   return (
     <form
       className="record-form"
@@ -154,7 +158,7 @@ export function AccessProfileForm({
         </p>
       ) : null}
       <button type="submit" disabled={pending}>
-        {pending ? 'Saving…' : lockProfile ? 'Save access areas' : (profile && 'Save profile') || 'Create profile'}
+        {submitLabel}
       </button>
     </form>
   );

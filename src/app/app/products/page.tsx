@@ -62,7 +62,6 @@ export default async function Products() {
                         <tr>
                           <td>
                             <strong>{product.name}</strong>
-                            <p>{product.product_code ?? recipeText(locale, 'No product code')}</p>
                             <span className={`badge ${product.active ? '' : 'muted'}`}>
                               {product.active ? recipeText(locale, 'Active') : recipeText(locale, 'Inactive')}
                             </span>
@@ -90,27 +89,29 @@ export default async function Products() {
                           </td>
                           <td>
                             {recipe ? (
-                              <>
-                                <Link href={activeVersion
-                                  ? `/app/recipes/${recipe.id}?version=${activeVersion.id}`
-                                  : `/app/recipes/${recipe.id}`}
-                                >
-                                  {activeVersion ? `${recipe.name} · v${activeVersion.version_number}` : recipe.name}
-                                </Link>
-                                {activeVersion && (
-                                  <ProductRecipeDetails
-                                    recipe={recipe}
-                                    version={activeVersion}
-                                    sections={sections}
-                                    lines={lines}
-                                    ingredients={ingredients}
-                                    locale={locale}
-                                  />
-                                )}
-                              </>
+                              <Link href={activeVersion
+                                ? `/app/recipes/${recipe.id}?version=${activeVersion.id}`
+                                : `/app/recipes/${recipe.id}`}
+                              >
+                                {activeVersion ? `${recipe.name} · v${activeVersion.version_number}` : recipe.name}
+                              </Link>
                             ) : recipeText(locale, 'No recipe linked')}
                           </td>
                         </tr>
+                        {recipe && activeVersion && (
+                        <tr className="product-recipe-row">
+                          <td colSpan={4}>
+                            <ProductRecipeDetails
+                              recipe={recipe}
+                              version={activeVersion}
+                              sections={sections}
+                              lines={lines}
+                              ingredients={ingredients}
+                              locale={locale}
+                            />
+                          </td>
+                        </tr>
+                        )}
                         <tr>
                           <td colSpan={4}>
                             <PackagingSetup

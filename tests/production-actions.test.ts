@@ -1,7 +1,7 @@
 import {
   beforeEach, expect, it, vi,
 } from 'vitest';
-import saveProduction from '@/app/production-actions';
+import saveProduction, { assignProductionLot } from '@/app/production-actions';
 
 const mocks = vi.hoisted(() => ({
   profile: vi.fn(),
@@ -65,4 +65,11 @@ it('preserves retryability on lost responses and invalid acknowledgments', async
 it('keeps authentication redirects outside mutation error handling', async () => {
   mocks.profile.mockRejectedValueOnce(new Error('REDIRECT:/login'));
   await expect(saveProduction(input)).rejects.toThrow('REDIRECT:/login');
+});
+it('assigns a validated facility-local production lot through its RPC', async () => {
+  const result = await assignProductionLot({ order_id: id, product_id: id, assigned_on: '2026-09-18' });
+  expect(result).toMatchObject({ ok: true, id });
+  expect(mocks.rpc).toHaveBeenCalledWith('assign_production_lot', {
+    payload: { order_id: id, product_id: id, assigned_on: '2026-09-18' },
+  });
 });

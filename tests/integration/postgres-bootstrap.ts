@@ -20,6 +20,10 @@ const migrations = [
   '20260920051826_shipping_drafts.sql',
   '20260920063447_customer_directory.sql',
   '20260920124904_dashboard_demand_purchasing.sql',
+  '20260920190000_production_lots.sql',
+  '20260920194000_receipt_source_lots.sql',
+  '20260920193000_batch_worksheet_execution.sql',
+  '20260920195000_traceability_lookup.sql',
 ];
 
 /** Apply migrations and synthetic identity data only inside the newly created test database. */

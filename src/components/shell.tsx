@@ -13,6 +13,7 @@ import {
   ArrowUpRight,
   BookOpen,
   ClipboardList,
+  Search,
   Users,
   ShieldCheck,
   PackageCheck,
@@ -89,6 +90,13 @@ const links = [
     en: 'Inventory',
     es: 'Inventario',
     icon: Package,
+    permission: 'inventory.read',
+  },
+  {
+    href: '/app/traceability',
+    en: 'Traceability',
+    es: 'Trazabilidad',
+    icon: Search,
     permission: 'inventory.read',
   },
   {

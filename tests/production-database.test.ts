@@ -29,6 +29,11 @@ async function actAs(actor: string) {
 async function rpc(name: 'save_customer_order' | 'save_order_production_plan' | 'post_inventory_receipt' | 'create_purchase_draft' | 'change_purchase_status', payload: unknown) {
   return query(`select public.${name}($1::jsonb) as id`, [JSON.stringify(payload)]);
 }
+async function assignLot(productId = id(300), assignedOn = '2026-09-18') {
+  return query('select public.assign_production_lot($1::jsonb) as id', [JSON.stringify({
+    order_id: id(800), product_id: productId, assigned_on: assignedOn,
+  })]);
+}
 beforeAll(async () => {
   database = new PGlite();
   await initializeGateDatabase((sql) => database.exec(sql));
@@ -111,6 +116,56 @@ it('creates exactly one spice preparation per mixer batch, with no physical inve
     })),
   }).parse(result.rows[0]);
   expect(batchRows.batches).toHaveLength(4);
+});
+it('assigns a product-specific DDDYY lot to every existing mixer/spice pair without consumption', async () => {
+  await prepareOrder();
+  await rpc('save_order_production_plan', productionInput());
+  await assignLot();
+  const lots = z.array(z.object({
+    production_lot_code: z.string(),
+    assigned_on: z.coerce.date().transform((value) => value.toISOString().slice(0, 10)),
+    planned_gallons: z.coerce.number(),
+    planned_batch_count: z.number(),
+    status: z.string(),
+  })).parse((await query(`select production_lot_code, assigned_on, planned_gallons, planned_batch_count, status
+    from public.production_lots`)).rows);
+  expect(lots).toEqual([{
+    production_lot_code: '26126',
+    assigned_on: '2026-09-18',
+    planned_gallons: 160,
+    planned_batch_count: 4,
+    status: 'Assigned',
+  }]);
+  expect((await query(`select count(*)::int count from public.planned_mixer_batches batch
+    join public.planned_spice_preparations prep on prep.planned_mixer_batch_id=batch.id
+    where batch.production_lot_id is not null`)).rows).toEqual([{ count: 4 }]);
+  expect((await counts()).events).toBe(0);
+});
+it('allows the same DDDYY on distinct products while rejecting duplicate lot assignment for one product', async () => {
+  const secondProduct = id(301);
+  const secondRecipe = id(410);
+  const secondVersion = id(411);
+  await database.exec(`insert into public.products(id,name) values('${secondProduct}','Second synthetic dressing');
+    insert into public.recipes(id,product_id,name) values('${secondRecipe}','${secondProduct}','Second formula');
+    insert into public.recipe_versions(id,recipe_id,version_number) values('${secondVersion}','${secondRecipe}',1);
+    insert into public.recipe_sections(id,recipe_version_id,name,sequence) values('${id(412)}','${secondVersion}','Ingredients',1);
+    insert into public.recipe_lines(id,recipe_version_id,recipe_section_id,ingredient_id,source_line_key,sequence,display_measurement,normalized_quantity,normalized_uom)
+      values('${id(413)}','${secondVersion}','${id(412)}','${id(100)}','GARLIC',1,'10 lb',10,'lb');
+    update public.recipe_versions set status='Released',released_by='${gateActor}' where id='${secondVersion}';
+    update public.recipes set active_version_id='${secondVersion}' where id='${secondRecipe}';`);
+  await rpc('save_customer_order', {
+    ...orderInput(),
+    products: [
+      { product_id: id(300), batch_count: 1, customer_product_option_id: null },
+      { product_id: secondProduct, batch_count: 1, customer_product_option_id: null },
+    ],
+  });
+  await rpc('save_order_production_plan', productionInput());
+  await assignLot(id(300));
+  await assignLot(secondProduct);
+  expect((await query('select production_lot_code from public.production_lots order by product_id')).rows)
+    .toEqual([{ production_lot_code: '26126' }, { production_lot_code: '26126' }]);
+  await expect(assignLot(id(300))).rejects.toThrow('already assigned');
 });
 it('retries creation and confirmation without duplicate records or revisions', async () => {
   await prepareOrder();

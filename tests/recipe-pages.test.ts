@@ -53,7 +53,7 @@ describe('recipe and product screens', () => {
     expect(products).toContain('Customer pricing &amp; packaging');
     expect(products).toContain('<details class="product-customer-options">');
     expect(products).toContain('<details class="product-recipe-details">');
-    expect(products).toContain('Active recipe details');
+    expect(products).toContain('View ingredients and preparation');
     expect(products).toContain('Preview garlic powder');
     expect(products).toContain('Preview Italian recipe · v1 · 40 gal');
     const recipes = renderToStaticMarkup(await Recipes());

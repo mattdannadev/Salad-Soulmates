@@ -90,6 +90,7 @@ export default async function Orders({ searchParams }: {
             order={order}
             plan={workspace.production}
             batches={workspace.productionBatches}
+            lots={workspace.productionLots.filter((lot) => lot.order_id === order.id)}
             requirements={requirements}
             canWrite={workspace.canOrder}
             active={selected.status === 'Active'}

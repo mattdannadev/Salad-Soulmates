@@ -1,15 +1,17 @@
 import type { CustomerOrder } from '@/domain/customer-orders';
-import type { ProductionPlan, MixerBatch } from '@/domain/production';
+import type { ProductionPlan, MixerBatch, ProductionLot } from '@/domain/production';
 import type { MaterialAvailability } from '@/domain/purchasing';
 import { formatDate, formatNumber } from '@/domain/format';
 import ProductionForm from './production-form';
+import ProductionLotForm from './production-lot-form';
 
 export default function OrderProduction({
-  order, plan, batches, requirements, canWrite, active, locale,
+  order, plan, batches, lots, requirements, canWrite, active, locale,
 }: {
   order: CustomerOrder;
   plan: ProductionPlan | undefined;
   batches: (MixerBatch & { spice_preparation_id: string })[];
+  lots: ProductionLot[];
   requirements: MaterialAvailability[];
   canWrite: boolean;
   active: boolean;
@@ -56,7 +58,11 @@ export default function OrderProduction({
             : coveredLabel}
         </p>
       )}
-      <p className="muted">{es ? 'Fechas locales de la planta. La confirmación conserva los compromisos; no descuenta inventario. La asignación del equipo se realiza en la siguiente etapa.' : 'Dates use the facility calendar. Confirmation keeps ingredient commitments; it does not consume inventory. Crew assignments come in the scheduling step.'}</p>
+      <p className="muted">
+        {es
+          ? 'Fechas locales de la planta. La confirmación conserva los compromisos; no descuenta inventario. La asignación del equipo se realiza en la siguiente etapa.'
+          : 'Dates use the facility calendar. Confirmation keeps ingredient commitments; it does not consume inventory. Crew assignments come in the scheduling step.'}
+      </p>
       {plan?.shortage_reason && (
       <p>
         <strong>{es ? 'Plan para faltantes: ' : 'Shortage resolution: '}</strong>
@@ -71,6 +77,34 @@ export default function OrderProduction({
           plan={plan}
           locale={locale}
         />
+      )}
+      {plan?.status === 'Draft' && canWrite && active && (
+        <section className="production-lots" aria-label={es ? 'Lotes de producción' : 'Production lots'}>
+          <h3>{es ? 'Lotes de producción' : 'Production lots'}</h3>
+          <p className="muted">
+            {es
+              ? 'Cada producto recibe un lote interno. El código interno usa la fecha local de la planta (DDDYY) y puede coincidir entre productos.'
+              : 'Each product receives its own internal lot. Its internal code uses the facility-local date (DDDYY) and may match across products.'}
+          </p>
+          {order.items.map((item) => {
+            const lot = lots.find((candidate) => candidate.product_id === item.product_id && candidate.status === 'Assigned');
+            return lot ? (
+              <p key={item.product_id}>
+                <strong>{item.product_name}</strong>
+                {`: ${lot.production_lot_code} · ${formatDate(lot.assigned_on)} · ${formatNumber(lot.planned_batch_count)} ${es ? 'lotes de mezcla' : 'mixer batches'}`}
+              </p>
+            )
+              : (
+                <ProductionLotForm
+                  key={item.product_id}
+                  orderId={order.id}
+                  productId={item.product_id}
+                  productName={item.product_name}
+                  locale={locale}
+                />
+              );
+          })}
+        </section>
       )}
       {!!batches.length && (
         <details>
@@ -89,6 +123,13 @@ export default function OrderProduction({
                   .toSorted((a, b) => a.sequence - b.sequence).map((batch) => (
                     <p className="production-batch" key={batch.id}>
                       <strong>{`${es ? 'Lote' : 'Batch'} ${batch.sequence} · ${batch.target_gallons} gal`}</strong>
+                      {batch.production_lot_id && (
+                        <span>
+                          {lots
+                            .find((lot) => lot.id === batch.production_lot_id)
+                            ?.production_lot_code}
+                        </span>
+                      )}
                       <span>{`MX-${batch.id.slice(0, 8)}`}</span>
                       <span>{`SP-${batch.spice_preparation_id.slice(0, 8)}`}</span>
                     </p>

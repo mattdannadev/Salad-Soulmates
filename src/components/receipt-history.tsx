@@ -3,6 +3,11 @@ import type {
   Receipt, ReceiptLine, Ingredient, Supplier,
 } from '@/domain/master-data';
 
+const sourceLotLabels: Record<Exclude<ReceiptLine['source_lot_origin'], null>, string> = {
+  supplier_provided: ' · Supplier-provided',
+  salad_soulmates_assigned: ' · Salad Soulmates-assigned',
+};
+
 export default function ReceiptHistory({
   receipts,
   lines,
@@ -36,12 +41,15 @@ export default function ReceiptHistory({
                 <th>{es ? 'Ingrediente' : 'Ingredient'}</th>
                 <th>{es ? 'Cantidad' : 'Quantity'}</th>
                 <th>{es ? 'Referencia' : 'Reference'}</th>
-                <th>{es ? 'Lote / vencimiento' : 'Lot / expiration'}</th>
+                <th>{es ? 'Lote de origen / vencimiento' : 'Source lot / expiration'}</th>
               </tr>
             </thead>
             <tbody>
               {recent.map((line) => {
                 const receipt = receiptMap.get(line.receipt_id);
+                const sourceLotLabel = line.source_lot_origin === null
+                  ? ''
+                  : sourceLotLabels[line.source_lot_origin];
                 return (
                   <tr key={line.id}>
                     <td>{receipt ? date(receipt.received_on) : '—'}</td>
@@ -54,7 +62,10 @@ export default function ReceiptHistory({
                     </td>
                     <td>{receipt?.supplier_reference || '—'}</td>
                     <td>
-                      {line.supplier_lot || '—'}
+                      {line.source_lot_origin === 'supplier_provided'
+                        ? line.supplier_lot
+                        : line.assigned_source_lot || '—'}
+                      {sourceLotLabel}
                       {line.expiration_date ? ` · ${date(line.expiration_date)}` : ''}
                     </td>
                   </tr>

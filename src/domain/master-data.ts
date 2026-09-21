@@ -71,7 +71,7 @@ export const receiptSchema = z.object({
   uom: z.enum(units),
   received_on: z.iso.date(),
   supplier_reference: z.string().trim().max(120),
-  supplier_lot: z.string().trim().max(120),
+  supplier_lot: z.string().max(120),
   expiration_date: z.union([z.iso.date(), z.literal('')]),
   note: z.string().trim().max(1000),
   request_id: z.uuid(),
@@ -165,6 +165,7 @@ export const receiptRowSchema = z.object({
 });
 export type Receipt = z.infer<typeof receiptRowSchema>;
 export const receiptLineRowSchema = z.object({
+  assigned_source_lot: z.string().nullable().default(null),
   purchase_draft_line_id: z.uuid().nullable().default(null),
   id: z.uuid(),
   receipt_id: z.uuid(),
@@ -172,6 +173,10 @@ export const receiptLineRowSchema = z.object({
   quantity: z.number().finite(),
   uom: z.string(),
   supplier_lot: z.string(),
+  source_lot_origin: z
+    .enum(['supplier_provided', 'salad_soulmates_assigned'])
+    .nullable()
+    .default(null),
   expiration_date: z.string().nullable(),
 });
 export type ReceiptLine = z.infer<typeof receiptLineRowSchema>;

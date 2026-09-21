@@ -238,15 +238,13 @@ Supplier package conversions belong in supplier-item configuration, not recipe c
 
 ### 3.1 Lot assignment
 
-- The finished customer-facing lot is assigned **early in the production day, before the dressing has actually been mixed**.
-- Format is **DDDYY**: three-digit day-of-year + two-digit year.
-- Example: September 18, 2026 is day 261, so the lot is **26126**.
-- The lot is normally generated automatically from the assigned production/lot date in facility local time.
-- The lot must not depend on the mix being completed before the code exists.
-- Mix Date remains a separate production timestamp/field.
-- Customer-facing lot code is not the database primary key.
+- The **internal DDDYY Production Lot** is assigned early in the production day, before the dressing is mixed.
+- Format is **DDDYY**: three-digit day-of-year + two-digit year. September 18, 2026 is day 261, so the code is **26126**.
+- It is generated from the assigned production date in facility local time; it does not depend on mix completion. Mix Date remains separate.
+- DDDYY is internal-only, not a database primary key or customer-facing label/recall value. Products and multiple runs may share it on the same date; the production-lot UUID is the system identity.
+- Customer-facing finished-label lot text and customer recall lookup require a separately approved finished-label lot policy. They must not use DDDYY.
 
-Because the same DDDYY may be used by more than one product on the same day, customer recall lookup should use **Product + Lot #** whenever the product is known from the bag label.
+See `docs/decisions.md`, **Source Lots and internal DDDYY Production Lots**, for the authoritative Source Lot, fallback, correction and uniqueness rules.
 
 ### 3.2 Planned 40-gallon mixer batches
 
@@ -254,7 +252,7 @@ Because the same DDDYY may be used by more than one product on the same day, cus
 - The number of mixer batches needed is calculated **before production** from upcoming customer demand and planned finished-product gallons.
 - The exact rounding/overage rule when demand is not evenly divisible by 40 gallons must be validated with Salad Soulmates.
 - Each planned mixer batch has a sequence within the production lot, e.g. Batch 1 of 4.
-- Internally, each mixer batch has a globally unique ID even when several share the same customer-facing lot.
+- Internally, each mixer batch has a globally unique ID even when several share the same DDDYY production code.
 
 ### 3.3 One spice-prep bucket per mixer batch
 
@@ -315,7 +313,7 @@ A label is printed for the bags placed in the case. The label contains at minimu
 - **Ingredient list / ingredient statement**;
 - **Lot #**.
 
-This bag label is the customer's primary recall reference. If a customer reports a concern, Salad Soulmates asks for the product and lot printed on the bag label.
+Customer-facing recall is deferred until the finished-label lot policy is approved. DDDYY must not be used as the bag-label lot or the customer recall reference.
 
 The system should treat the ingredient statement as controlled product/label content, not casually generate regulatory label wording from raw recipe lines without approval.
 
@@ -495,7 +493,7 @@ Includes:
 - retain all contributing genealogy;
 - 1-gallon bag packaging;
 - 4 bags per case;
-- bag label printing with approved Product Name + Ingredient Statement + Lot #;
+- bag label printing with approved Product Name + Ingredient Statement; finished-label lot content remains pending policy;
 - packaged quantity / case counts;
 - customer fulfillment and shipment/pickup;
 - exact product/lot shipped to customer;
@@ -566,13 +564,13 @@ Permissions must be role-based. Historical recipe versions, serialized-source us
 |---|---|
 | Customer order | Customer demand by product/date/quantity |
 | Production plan | Converts order demand into gallons and planned mixer batches |
-| Production lot | Product + assigned production date + DDDYY lot + planned quantity/status |
+| Production lot | Product + assigned production date + internal DDDYY code + planned quantity/status |
 | Planned mixer batch | One planned standard 40-gallon batch; sequence within production lot |
 | Spice preparation | Exactly one spice bucket for one planned mixer batch |
 | Material requirement | Calculated ingredient need from planned batches |
 | Purchase/inbound record | Future order/inbound quantity by supplier item |
 | Receipt | Supplier delivery header/document |
-| Receipt line | Supplier item, supplier lot, quantity, date, expiration if applicable |
+| Receipt line | Supplier item, Source Lot with Supplier or Salad Soulmates assigned origin, quantity, date, expiration if applicable |
 | Serialized ingredient unit | Unique physical supplier package/container identifier linked to receipt/lot |
 | Inventory event | Receipt, commitment, usage, move, adjustment, hold/release/disposal |
 | Spice material usage | Serialized unit + quantity tied to one spice-prep recipe line |
@@ -673,11 +671,11 @@ This preview replaces the earlier assumption that the system should simply recre
 **SUP-03** Pack definitions are effective-dated/versioned where practical so later pack changes do not rewrite old planning calculations.  
 **SUP-04** Recipes remain ingredient-based; supplier pack changes never alter the formula.
 
-**REC-01** Receiver records supplier, supplier item/ingredient, supplier lot, received quantity, UOM, date and optional expiration/best-by.  
+**REC-01** Receiver records supplier, supplier item/ingredient, Source Lot, received quantity, UOM, date and optional expiration/best-by. Preserve the supplier-provided lot when present; otherwise assign the approved Salad Soulmates fallback.
 **REC-02** If the supplier's existing barcode uniquely identifies the physical package at the needed traceability level, it may be used.  
 **REC-03** Otherwise Salad Soulmates generates an internal barcode/serial label.  
-**REC-04** Every serialized physical ingredient unit links to its receipt line and supplier lot.  
-**REC-05** Multiple physical units may share a supplier lot while retaining individual serial identities.  
+**REC-04** Every serialized physical ingredient unit links to its receipt line and Source Lot.
+**REC-05** Multiple physical units may share a Source Lot while retaining individual serial identities.
 **REC-06** A partially used physical unit retains identity and remaining quantity.  
 **REC-07** Duplicate serial scans are blocked/resolved explicitly.  
 **REC-08** Hold/quarantine/expired material cannot be selected for production.
@@ -689,9 +687,9 @@ This preview replaces the earlier assumption that the system should simply recre
 ### 12.1 Create production lot and planned batches
 
 **PROD-01** Administrator creates/confirms a production lot before mixing begins.  
-**PROD-02** Lot code is generated from the assigned local production date using DDDYY.  
+**PROD-02** Internal DDDYY code is generated from the assigned local production date. It is not customer-facing and is not the finished-label lot.
 **PROD-03** Mix Date is captured separately and does not have to exist before the lot is assigned.  
-**PROD-04** Production lot stores product, customer-facing lot, planned gallons, planned mixer batch count and status.  
+**PROD-04** Production lot stores product, internal DDDYY code, planned gallons, planned mixer batch count and status; its UUID remains the system identity.
 **PROD-05** System creates the planned sequence of 40-gallon mixer batches under the lot.  
 **PROD-06** System creates exactly one spice-prep record for each mixer batch.  
 **PROD-07** Each mixer batch/spice-prep pair receives a unique internal ID and scannable identifier.
@@ -714,7 +712,7 @@ This preview replaces the earlier assumption that the system should simply recre
 
 ### 12.3 Mixer batch
 
-**MIX-01** Mixer task clearly shows Product, customer-facing Lot #, and `Mixer Batch X of N — 40 gal`.  
+**MIX-01** Mixer task clearly shows Product, internal DDDYY production code, and `Mixer Batch X of N — 40 gal`.
 **MIX-02** Mixer batch requires its one linked spice prep to be Ready unless an authorized exception exists.  
 **MIX-03** Operator records required production/QC results and signoffs configured from the product recipe.  
 **MIX-04** Completion records actual batch/yield information required by Salad Soulmates.  
@@ -746,8 +744,8 @@ This preview replaces the earlier assumption that the system should simply recre
 
 ### 14.2 Bag label
 
-**LBL-01** System prints a bag label containing at minimum Product Name, approved Ingredient Statement, and Lot #.  
-**LBL-02** Lot # is inherited from the production lot; packer does not re-key it manually.  
+**LBL-01** System prints a bag label containing at minimum Product Name and approved Ingredient Statement. Finished-label lot content is deferred pending the separate approved customer-facing lot policy.
+**LBL-02** Packer does not re-key the finished-label lot once that policy is approved. The internal DDDYY production code must not be printed as that lot.
 **LBL-03** Product name and ingredient statement come from controlled product/label configuration.  
 **LBL-04** The label template/version used is auditable.  
 **LBL-05** Label print/reprint events are logged where practical.  
@@ -775,7 +773,7 @@ This preview replaces the earlier assumption that the system should simply recre
 **ORD-01** Customer order records customer, requested date, product and requested quantity.  
 **ORD-02** Order demand feeds production planning and material requirements.  
 **ORD-03** Partial fulfillment remains open for remaining quantity.  
-**ORD-04** Actual shipment/pickup records product, customer-facing lot and quantity delivered.  
+**ORD-04** Actual shipment/pickup records product, approved customer-facing finished-label lot when that policy exists, and quantity delivered.
 **ORD-05** Shipment/pickup confirmation is distinct from a scheduled pickup task.  
 **ORD-06** Returns reference original fulfillment and preserve lot identity.
 
@@ -787,9 +785,9 @@ This preview replaces the earlier assumption that the system should simply recre
 
 Primary use case:
 
-1. Customer reads the **Product Name** and **Lot #** from the label on the 1-gallon bag.
-2. Salad Soulmates searches Product + Lot.
-3. System opens the production lot.
+1. After the finished-label lot policy is approved, customer reads the **Product Name** and approved lot from the label on the 1-gallon bag.
+2. Salad Soulmates searches using that approved customer recall key.
+3. System resolves the linked production lot.
 4. System identifies the holding-tank session and every 40-gallon mixer batch contributing to that lot/tank.
 5. Each mixer batch reveals its one spice-prep record.
 6. Each spice-prep record reveals every serialized ingredient package/lot used.
@@ -806,8 +804,8 @@ Primary use case:
 
 ### 17.3 Requirements
 
-**TRC-01** Search supports Product + Lot, lot alone, internal mixer-batch ID, spice-prep ID, serialized ingredient barcode, supplier lot, receipt, shipment and customer identifiers as available.  
-**TRC-02** If lot alone matches multiple products, show candidates rather than guessing.  
+**TRC-01** Search supports the approved customer recall key when available, internal DDDYY production code, internal mixer-batch ID, spice-prep ID, serialized ingredient barcode, Source Lot, receipt, shipment and customer identifiers as available.
+**TRC-02** If a non-unique code or lot text matches multiple records, show context/candidates rather than guessing.
 **TRC-03** Results show quantities at each branch where captured.  
 **TRC-04** Recall workspace identifies affected on-hand raw material, affected finished product, open orders, shipments and customers.  
 **TRC-05** Authorized users can quarantine/hold affected inventory.  
@@ -1128,7 +1126,7 @@ Interactive mockups must remain clearly separate from live production data.
 - id (UUID)
 - product_id
 - assigned_production_date
-- customer_lot_code (DDDYY)
+- internal_dddyy_code (internal-only; non-unique)
 - planned_gallons
 - planned_mixer_batch_count
 - status
@@ -1252,7 +1250,7 @@ This record is a primary genealogy edge for recall.
 
 ### 25.4 Spice prep / mixer batch — later slice
 
-1. Assign production Lot `26126` early in the production day before mixing.
+1. Assign internal production code `26126` early in the production day before mixing.
 2. Planned production creates multiple 40-gallon mixer batches as required.
 3. Every mixer batch has exactly one spice-prep bucket.
 4. Scan the spice-prep/batch identifier once to open the correct recipe.
@@ -1268,8 +1266,8 @@ This record is a primary genealogy edge for recall.
 
 1. Record multiple mixer-batch transfers into a holding tank while retaining each batch's genealogy.
 2. Package product into 1-gallon bags and 4 bags per case.
-3. Print bag labels showing the correct Product Name, Ingredient Statement and Lot #.
-4. Search Product + Lot from a bag label and return all contributing mixer batches and serialized source ingredients.
+3. Print bag labels showing the correct Product Name and Ingredient Statement; do not print DDDYY.
+4. Defer bag-label lot lookup until the customer-facing finished-label lot policy is approved.
 5. Search a supplier lot and return every affected production lot and customer shipment.
 
 ---
@@ -1279,9 +1277,9 @@ This record is a primary genealogy edge for recall.
 These do not block the initial master-data/scheduling build, but they matter before receiving, live worker production, packaging and recall are finalized.
 
 1. What exact rule is used when order demand is not an even multiple of 40 gallons: round up to a full batch, allow a partial final batch, or plan standard overage?
-2. Is the same DDDYY lot used for all products made that day, making Product + Lot the definitive customer lookup key?
-3. If the same product has multiple production lots/runs in one day, do they still share the same DDDYY bag lot?
-4. If a planned lot is assigned early in the day but the actual mixing occurs the next day, does the lot remain the originally assigned code or change to the actual mix date?
+2. What approved finished-label lot format and customer recall key should replace the former DDDYY assumption?
+3. If the same product has multiple production lots/runs in one day, what customer-facing finished-label lot distinguishes them, if required?
+4. If a planned lot is assigned early in the day but the actual mixing occurs the next day, does the internal DDDYY code remain the originally assigned code or change to the actual mix date?
 5. What exactly does **Fix Date** mean operationally?
 6. What does **Added Lot #** represent on the current paper worksheets?
 7. What do `PL`, `RACKS`, and other product-specific yield/header fields mean?
@@ -1330,11 +1328,11 @@ These are discovery evidence and should remain beside the PRD so mockup/build de
 - Scheduling, PTO/conflict checks and draft/publish behavior are core product requirements, not a later add-on.
 - Supplier physical ingredient packages are serialized/barcoded so the exact source can be traced.
 - Production lot is assigned early in the day before mixing begins.
-- Customer-facing lot format remains **DDDYY**.
+- DDDYY is an internal production code, not a customer-facing lot format.
 - Mix Date is separate from lot assignment.
-- The customer recall reference comes from the **bag label**, using Product Name + Lot #.
+- Customer-facing recall reference and finished-label lot policy remain pending; they must not use DDDYY.
 - Current packaging is **1-gallon bags, 4 bags per case**; the earlier 2-gallon assumption is superseded.
-- Bag label contains at minimum Product Name, approved Ingredient Statement, and Lot #.
+- Bag label contains at minimum Product Name and approved Ingredient Statement; finished-label lot content remains pending its separate policy and must not be DDDYY.
 - Completed 40-gallon mixer batches transfer to a holding tank while retaining individual batch/source genealogy.
 - Inventory is still required, but the primary inventory question is material availability for current/upcoming orders rather than maximizing warehouse stock.
 - Inventory views must show on hand, available, committed, inbound, projected remaining and shortage.
