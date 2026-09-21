@@ -739,6 +739,57 @@ dialog::backdrop {
   padding-top: 26px;
   border-top: 1px solid var(--line);
 }
+.invite-user-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.8fr);
+  gap: 28px;
+  align-items: start;
+  margin-top: 22px;
+}
+.invite-email-preview {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fbfcf8;
+}
+.invite-email-preview .eyebrow {
+  margin-bottom: 10px;
+}
+.email-preview-card {
+  padding: 22px;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 4px 14px rgb(22 45 34 / 8%);
+}
+.email-preview-card p {
+  margin-bottom: 12px;
+}
+.email-brand {
+  color: var(--green-dark);
+  font-family: var(--font-display);
+  font-size: 24px;
+}
+.email-preview-card h3 {
+  margin-bottom: 12px;
+}
+.email-preview-card a {
+  display: inline-block;
+  margin: 5px 0 16px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  color: white;
+  background: var(--green-dark);
+  font-weight: 700;
+}
+.email-preview-note,
+.invite-email-preview .hint {
+  font-size: 13px;
+}
+@media (max-width: 760px) {
+  .invite-user-layout {
+    grid-template-columns: 1fr;
+  }
+}
 .permission-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1344,6 +1395,23 @@ dialog::backdrop {
 .packaging-editor textarea {
   width: 100%;
   resize: vertical;
+}
+.packaging-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+@media (max-width: 480px) {
+  .packaging-form-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.875rem;
+  }
+  .packaging-form-actions .button {
+    width: 100%;
+    min-height: 52px;
+  }
 }
 .packaging-preview {
   margin: 0;

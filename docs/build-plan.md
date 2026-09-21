@@ -7,7 +7,16 @@ Updated: September 20, 2026
 Supplier directory follow-up: show a catalog table and header Add supplier action,
 retaining open purchase-order counts and expandable purchasing/customer demand.
 Verify creation returns to the directory and purchase access remains available
+
+Purchasing follow-up: allow an explicit standalone supplier PO for manual ingredient
+replenishment while retaining customer-order demand/gap purchasing and receiving.
 on desktop and phone, using disposable browser fixtures only.
+
+Administration follow-up: let access managers create a user directly in Settings
+with its facility and access profile selected before invitation. Show the branded
+setup-email preview, preserve the existing recoverable invitation workflow, and
+validate the real Supabase Auth template/callback in an approved non-production
+environment before treating email delivery as accepted.
 
 Shipping usability follow-up: unavailable actions must not display a busy cursor.
 Keep confirmation disabled until physical fulfillment is implemented; cover its

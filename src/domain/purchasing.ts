@@ -64,24 +64,22 @@ export const materialPlanRowSchema = z.object({
   created_at: z.string(),
 });
 export type MaterialPlan = z.infer<typeof materialPlanRowSchema>;
-export const purchaseDraftInputSchema = z
-  .object({
-    id: z.uuid(),
-    material_plan_id: z.uuid(),
-    supplier_id: z.uuid(),
-    expected_on: z.iso.date(),
-    lines: z
-      .array(
-        z.object({
-          ingredient_id: z.uuid(),
-          supplier_item_id: z.uuid(),
-          purchase_units: z.number().int().min(1).max(MAX_PURCHASE_UNITS),
-          override_reason: z.string().trim().max(1000),
-        }),
-      )
-      .min(1)
-      .max(200),
-  })
+const purchaseLineInputSchema = z.object({
+  ingredient_id: z.uuid(),
+  supplier_item_id: z.uuid(),
+  purchase_units: z.number().int().min(1).max(MAX_PURCHASE_UNITS),
+  override_reason: z.string().trim().max(1000),
+});
+const purchaseDraftBaseSchema = z.object({
+  id: z.uuid(),
+  supplier_id: z.uuid(),
+  expected_on: z.iso.date(),
+  lines: z.array(purchaseLineInputSchema).min(1).max(200),
+});
+export const purchaseDraftInputSchema = z.discriminatedUnion('kind', [
+  purchaseDraftBaseSchema.extend({ kind: z.literal('order'), material_plan_id: z.uuid() }),
+  purchaseDraftBaseSchema.extend({ kind: z.literal('standalone') }),
+])
   .refine(
     (draft) => new Set(draft.lines.map((line) => line.ingredient_id)).size === draft.lines.length,
     'An ingredient may appear only once per draft.',
@@ -104,7 +102,7 @@ export const purchaseStatusInputSchema = z
   );
 export const purchaseDraftRowSchema = z.object({
   id: z.uuid(),
-  material_plan_id: z.uuid(),
+  material_plan_id: z.uuid().nullable(),
   supplier_id: z.uuid(),
   expected_on: z.iso.date(),
   status: z.enum(['Draft', 'Confirmed', 'Cancelled']),

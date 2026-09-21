@@ -5,13 +5,14 @@ import { purchaseProgress, purchaseStatusLabel, type PurchaseReceipt } from '@/d
 import PurchaseStatusForm from './purchase-status-form';
 
 export default function PurchaseOrderCard({
-  draft, lines, receipts, supplierName, orderLabel, neededOn = undefined, canWrite, locale,
+  draft, lines, receipts, supplierName, orderLabel = undefined, neededOn = undefined, canWrite,
+  locale,
 }: {
   draft: PurchaseDraft;
   lines: PurchaseLine[];
   receipts: PurchaseReceipt[];
   supplierName: string;
-  orderLabel: string;
+  orderLabel?: string;
   neededOn?: string;
   canWrite: boolean;
   locale: 'en' | 'es';
@@ -25,7 +26,7 @@ export default function PurchaseOrderCard({
         <span className="badge">{purchaseStatusLabel(progress.status, locale)}</span>
       </div>
       <p><strong>{draft.reference || `${es ? 'Compra' : 'Purchase'} · ${draft.id.slice(0, 8)}`}</strong></p>
-      <Link href={`/app/orders?estimate=${draft.material_plan_id}`}>{orderLabel}</Link>
+      {draft.material_plan_id && orderLabel ? <Link href={`/app/orders?estimate=${draft.material_plan_id}`}>{orderLabel}</Link> : <p>{es ? 'Compra independiente de proveedor' : 'Standalone supplier purchase'}</p>}
       <dl className="purchase-dates">
         <div>
           <dt>{es ? 'Creado' : 'Created'}</dt>

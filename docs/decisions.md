@@ -1,5 +1,36 @@
 # Implementation decisions
 
+## 2026-09-20 — Direct administrator invitations and branded setup email preview
+
+An administrator with access-management permission can create an email user directly
+from Settings, selecting the facility, access profile, and default language before
+sending the invitation. The application first stores a recoverable access request,
+then invokes Supabase Auth and assigns the selected profile with the existing
+authorized database function. Duplicate open requests are rejected and partial
+Auth/database failures retain the existing administrator recovery path.
+
+Settings shows the simple Salad Soulmates invitation message that the recipient
+will use to set a password. The actual delivery remains Supabase Auth's Invite
+email template; production branding requires copying the approved template in
+`docs/auth-invitation-email.md` into that Auth setting (and a custom SMTP provider
+if the Supabase plan prevents template changes). No Auth email configuration or
+operational user record was changed by this implementation.
+
+## 2026-09-20 — Standalone supplier purchasing and visible order gaps
+
+Browser feedback authorized purchasing without an active customer order. A standalone
+purchase order is an explicit manual replenishment: the purchaser chooses an active
+supplier, its saved ingredient packs, whole pack quantities, delivery date, and a
+reason. It remains subject to the same draft, external-confirmation, receipt,
+audit, tenant/facility, and idempotency rules as an order-backed purchase. It is
+not a substitute for a customer demand estimate. Confirmed standalone supply is
+available as inbound inventory at its expected date; drafts do not affect supply.
+
+Customer-order purchasing remains optional and shows the existing live demand,
+on-hand stock, commitments, confirmed inbound, projected balance, and resulting
+purchase gap before pack rounding. Supplier pages open the optional-order
+purchasing screen so a buyer can start a replenishment PO directly.
+
 ## 2026-09-20 — Supplier directory and visible creation action
 
 The owner requested adding suppliers and listing them like the other catalog

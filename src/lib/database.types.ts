@@ -269,7 +269,7 @@ export type Database = {
           id: string;
           organization_id: string;
           facility_id: string;
-          material_plan_id: string;
+          material_plan_id: string | null;
           supplier_id: string;
           expected_on: string;
           status: string;
@@ -283,7 +283,7 @@ export type Database = {
           id: string;
           organization_id?: string;
           facility_id?: string;
-          material_plan_id: string;
+          material_plan_id: string | null;
           supplier_id: string;
           expected_on: string;
           status?: string;
@@ -297,7 +297,7 @@ export type Database = {
           id?: string;
           organization_id?: string;
           facility_id?: string;
-          material_plan_id?: string;
+          material_plan_id?: string | null;
           supplier_id?: string;
           expected_on?: string;
           status?: string;

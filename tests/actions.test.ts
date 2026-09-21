@@ -4,7 +4,7 @@ import {
 
 import {
   saveRecord, signIn, signOut, updatePassword, requestPasswordReset, approveAccessRequest,
-  setPreferredLocale,
+  inviteUserFromSettings, setPreferredLocale,
 } from '../src/app/actions';
 
 const mocks = vi.hoisted(() => {
@@ -304,6 +304,43 @@ describe('Auth service and invitation failures', () => {
     form.set('access_profile_id', inventory.request_id);
     return approveAccessRequest(initial, form);
   };
+  const directInvite = () => {
+    const form = new FormData();
+    form.set('display_name', 'New teammate');
+    form.set('email', 'new@example.test');
+    form.set('preferred_locale', 'en');
+    form.set('facility_id', inventory.ingredient_id);
+    form.set('access_profile_id', inventory.request_id);
+    return inviteUserFromSettings(initial, form);
+  };
+  it('creates a recoverable request before sending a direct administrator invitation', async () => {
+    mocks.execute.mockResolvedValueOnce({
+      data: { ...request, display_name: 'New teammate', contact_value: 'new@example.test' }, error: null,
+    });
+    expect(await directInvite()).toMatchObject({ ok: true });
+    expect(mocks.query.insert).toHaveBeenCalledWith({
+      display_name: 'New teammate',
+      contact_kind: 'email',
+      contact_value: 'new@example.test',
+      preferred_locale: 'en',
+      requested_role: 'reviewer',
+    });
+    expect(mocks.invite).toHaveBeenCalledWith('new@example.test', expect.anything());
+    expect(mocks.rpc).toHaveBeenCalledWith('approve_access_request', {
+      request_id: savedId,
+      invited_user_id: savedId,
+      assigned_facility_id: inventory.ingredient_id,
+      assigned_access_profile_id: inventory.request_id,
+    });
+    expect(mocks.revalidate).toHaveBeenCalledWith('/app/settings');
+    expect(mocks.revalidate).toHaveBeenCalledWith('/app/access-requests');
+  });
+  it('does not send a direct invitation when the email already has an open request', async () => {
+    mocks.execute.mockResolvedValue({ data: null, error: { code: '23505', message: 'duplicate' } });
+    expect(await directInvite()).toMatchObject({ ok: false });
+    expect(mocks.invite).not.toHaveBeenCalled();
+    expect(mocks.rpc).not.toHaveBeenCalledWith('approve_access_request', expect.anything());
+  });
   it('stops before assigning access when saving a successful invitation fails', async () => {
     mocks.execute.mockResolvedValueOnce({ data: request, error: null })
       .mockResolvedValueOnce({ data: null, error: { code: '503', message: 'private' } });

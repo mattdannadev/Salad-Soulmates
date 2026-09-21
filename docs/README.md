@@ -22,6 +22,7 @@ on access to previous chat history.
 - [Materials and purchasing](materials-purchasing.md)
 - [Receiving and serialization](receiving-serialization.md)
 - [Order-linked production preparation](order-production-planning.md)
+- [Two-lot traceability release gate](two-lot-traceability-release.md)
 - [Packaging and label setup](packaging-setup.md)
 - [Shipping preparation](shipping.md)
 - [Database setup](database.md)
