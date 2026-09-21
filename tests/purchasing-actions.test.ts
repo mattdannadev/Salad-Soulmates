@@ -54,6 +54,28 @@ it('does not report SDK errors or malformed write acknowledgements as success', 
   expect((await savePurchasing('save-order', input)).ok).toBe(false);
   expect(mocks.revalidate).not.toHaveBeenCalled();
 });
+it('identifies an outdated database that still requires a standalone purchase reason', async () => {
+  mocks.rpc.mockResolvedValueOnce({
+    data: null,
+    error: { code: 'P0001', message: 'A standalone purchase requires a reason' },
+  });
+  const purchase = {
+    id,
+    kind: 'standalone' as const,
+    supplier_id: id,
+    expected_on: '2026-10-01',
+    lines: [{
+      ingredient_id: id,
+      supplier_item_id: id,
+      purchase_units: 1,
+      override_reason: '',
+    }],
+  };
+  await expect(savePurchasing('create-draft', purchase)).resolves.toMatchObject({
+    ok: false,
+    message: 'The purchase database needs the optional-reason update. Contact an administrator.',
+  });
+});
 it('handles lost connections with safe diagnostics and retry instructions', async () => {
   mocks.rpc.mockRejectedValueOnce(new Error('Connection lost'));
   expect((await savePurchasing('save-order', input)).message).toContain('Retry');

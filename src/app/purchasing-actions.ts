@@ -48,6 +48,7 @@ const safeDatabaseMessages = [
   'Configure a validated pack in the ingredient base unit',
   'This ingredient has no current shortage',
   'A purchase quantity override requires a reason',
+  'A standalone purchase requires a reason',
   'Received purchases cannot be cancelled',
 ];
 
@@ -111,6 +112,7 @@ export default async function savePurchasing(
         ok: false,
         message:
           message?.replace('this worksheet', 'this order')
+            .replace('A standalone purchase requires a reason', 'The purchase database needs the optional-reason update. Contact an administrator.')
           ?? (result.error.code === '23505'
             ? 'An entry with these details already exists. Review it before adding another.'
             : 'Could not save. Check the values and retry; your entries are preserved.'),

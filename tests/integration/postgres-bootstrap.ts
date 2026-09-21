@@ -28,6 +28,7 @@ const migrations = [
   '20260920210000_customer_order_units.sql',
   '20260921132435_receive_purchase_delivery.sql',
   '20260921150000_standalone_purchase_orders.sql',
+  '20260921160000_allow_optional_standalone_purchase_reason.sql',
 ];
 
 /** Apply migrations and synthetic identity data only inside the newly created test database. */
