@@ -31,7 +31,7 @@ export const config = {
     '/login',
     '/auth/:path*',
     '/access',
-    '/register',
+    '/register/:path*',
     '/forgot-password',
     '/reset-password',
   ],

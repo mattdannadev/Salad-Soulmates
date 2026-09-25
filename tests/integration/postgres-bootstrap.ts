@@ -34,6 +34,9 @@ const migrations = [
   '20260921180100_change_user_access_profile.sql',
   '20260921190000_resync_profile_work_emails.sql',
   '20260921190200_preserve_access_manager.sql',
+  '20260925202120_tenant_specific_signup_links.sql',
+  '20260925211750_secure_production_rpc_tenant_scope.sql',
+  '20260925213118_rate_limit_tenant_signup_requests.sql',
 ];
 
 /** Apply migrations and synthetic identity data only inside the newly created test database. */

@@ -50,45 +50,6 @@ export async function signIn(_previous: ActionResult, form: FormData): Promise<A
   return redirect('/app');
 }
 
-export async function requestAccess(
-  _previous: ActionResult,
-  form: FormData,
-): Promise<ActionResult> {
-  if (form.get('website')) return { ok: true, message: 'Request received.' };
-  const parsed = z
-    .object({
-      display_name: z.string().trim().min(2).max(120),
-      contact: z.string().trim().min(5).max(254),
-      preferred_locale: z.enum(['en', 'es']),
-      requested_role: z.enum(['reviewer', 'worker', 'receiver']),
-    })
-    .safeParse(Object.fromEntries(form));
-  if (!parsed.success) return { ok: false, message: 'Enter your name and a valid email or phone number.' };
-  const isEmail = z.email().safeParse(parsed.data.contact).success;
-  const phone = parsed.data.contact.replace(/[\s().-]/g, '');
-  const isPhone = /^\+[1-9]\d{7,14}$/.test(phone);
-  if (!isEmail && !isPhone) {
-    return {
-      ok: false,
-      message: 'Use a valid email or a phone number with country code, such as +13125551234.',
-    };
-  }
-  const db = await supabase({ readOnly: false });
-  const { error } = await db.from('access_requests').insert({
-    display_name: parsed.data.display_name,
-    contact_kind: isEmail ? 'email' : 'phone',
-    contact_value: isEmail ? parsed.data.contact.toLowerCase() : phone,
-    preferred_locale: parsed.data.preferred_locale,
-    requested_role: parsed.data.requested_role,
-  });
-  if (error?.code === '23505') return { ok: true, message: 'A request for this email or phone number is already pending.' };
-  if (error) return { ok: false, message: 'We could not submit your request. Please try again.' };
-  return {
-    ok: true,
-    message: 'Request submitted. An administrator will contact you after reviewing access.',
-  };
-}
-
 export async function setPreferredLocale(form: FormData): Promise<ActionResult> {
   const parsed = z.enum(['en', 'es']).safeParse(form.get('locale'));
   if (!parsed.success) return { ok: false, message: 'Choose English or Spanish.' };

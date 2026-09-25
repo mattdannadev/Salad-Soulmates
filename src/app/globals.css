@@ -1945,25 +1945,96 @@ dialog::backdrop {
   border-radius: 0.8rem;
   background: linear-gradient(135deg, #fff 0%, #f5f8f0 100%);
 }
-.order-card-main > * { margin: 0; }
-.order-card-main > * + * { margin-top: 0.45rem; }
-.order-card-reference { color: var(--muted); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
-.order-card-main h4 { font-family: var(--font-display); font-size: 1.35rem; }
-.order-card-badges { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-.order-card-actions { display: flex; flex-direction: column; align-items: stretch; gap: 0.5rem; min-width: 10.75rem; }
-.order-card-actions .button, .order-deactivate-action .button { justify-content: center; margin: 0; }
-.danger-button { background: #9f3f35; color: #fff; border-color: #9f3f35; }
-.danger-button:hover { background: #7f3029; border-color: #7f3029; }
-.order-confirmation { width: min(100% - 2rem, 32rem); border: 0; border-radius: 0.9rem; padding: 1.5rem; box-shadow: 0 20px 60px rgb(27 45 32 / 30%); }
-.order-confirmation::backdrop { background: rgb(22 35 26 / 55%); }
-.order-confirmation h2 { margin-top: 0; }
-.order-dialog-actions { display: flex; justify-content: end; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.25rem; }
-.order-toast { position: sticky; top: 0.75rem; z-index: 4; margin: 0.75rem 0; padding: 0.8rem 1rem; border-radius: 0.6rem; background: #e6f1df; color: #245a37; box-shadow: 0 4px 14px rgb(28 71 39 / 12%); }
+.order-card-main > * {
+  margin: 0;
+}
+.order-card-main > * + * {
+  margin-top: 0.45rem;
+}
+.order-card-reference {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.order-card-main h4 {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+}
+.order-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.order-card-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+  min-width: 10.75rem;
+}
+.order-card-actions .button,
+.order-deactivate-action .button {
+  justify-content: center;
+  margin: 0;
+}
+.danger-button {
+  background: #9f3f35;
+  color: #fff;
+  border-color: #9f3f35;
+}
+.danger-button:hover {
+  background: #7f3029;
+  border-color: #7f3029;
+}
+.order-confirmation {
+  width: min(100% - 2rem, 32rem);
+  border: 0;
+  border-radius: 0.9rem;
+  padding: 1.5rem;
+  box-shadow: 0 20px 60px rgb(27 45 32 / 30%);
+}
+.order-confirmation::backdrop {
+  background: rgb(22 35 26 / 55%);
+}
+.order-confirmation h2 {
+  margin-top: 0;
+}
+.order-dialog-actions {
+  display: flex;
+  justify-content: end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+.order-toast {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 4;
+  margin: 0.75rem 0;
+  padding: 0.8rem 1rem;
+  border-radius: 0.6rem;
+  background: #e6f1df;
+  color: #245a37;
+  box-shadow: 0 4px 14px rgb(28 71 39 / 12%);
+}
 @media (max-width: 640px) {
-  .order-card { grid-template-columns: 1fr; }
-  .order-card-actions { min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .order-card-actions .button, .order-deactivate-action { width: 100%; }
-  .order-deactivate-action .button { min-height: 44px; }
+  .order-card {
+    grid-template-columns: 1fr;
+  }
+  .order-card-actions {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .order-card-actions .button,
+  .order-deactivate-action {
+    width: 100%;
+  }
+  .order-deactivate-action .button {
+    min-height: 44px;
+  }
 }
 .purchase-group {
   margin-top: 1.5rem;

@@ -528,6 +528,7 @@ export type Database = {
           created_at: string;
           display_name: string;
           id: string;
+          organization_id: string;
           preferred_locale: string;
           requested_role: string;
           review_note: string;
@@ -542,6 +543,7 @@ export type Database = {
           created_at?: string;
           display_name: string;
           id?: string;
+          organization_id?: string;
           preferred_locale?: string;
           requested_role?: string;
           review_note?: string;
@@ -556,6 +558,7 @@ export type Database = {
           created_at?: string;
           display_name?: string;
           id?: string;
+          organization_id?: string;
           preferred_locale?: string;
           requested_role?: string;
           review_note?: string;
@@ -563,7 +566,15 @@ export type Database = {
           reviewed_by?: string | null;
           status?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'access_requests_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       allergens: {
         Row: {
@@ -1080,18 +1091,21 @@ export type Database = {
           created_at: string;
           id: string;
           name: string;
+          signup_enabled: boolean;
           slug: string;
         };
         Insert: {
           created_at?: string;
           id?: string;
           name: string;
+          signup_enabled?: boolean;
           slug: string;
         };
         Update: {
           created_at?: string;
           id?: string;
           name?: string;
+          signup_enabled?: boolean;
           slug?: string;
         };
         Relationships: [];
@@ -1796,6 +1810,21 @@ export type Database = {
           assigned_facility_id: string;
           invited_user_id: string;
           request_id: string;
+        };
+        Returns: string;
+      };
+      resolve_signup_organization: {
+        Args: { tenant_slug: string };
+        Returns: { name: string; slug: string }[];
+      };
+      submit_access_request: {
+        Args: {
+          contact_kind: string;
+          contact_value: string;
+          display_name: string;
+          preferred_locale: string;
+          requested_role: string;
+          tenant_slug: string;
         };
         Returns: string;
       };
