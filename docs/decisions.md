@@ -1,5 +1,16 @@
 # Implementation decisions
 
+## 2026-09-25 — Active customer-order directory and soft deactivation
+
+The owner requested an orders grid grouped by customer and ordered by newest pickup
+date first. The directory shows active orders only and provides customer, pickup
+date, product and production-status filtering. Each card offers the relevant
+order actions: review, ingredient purchasing and pickup preparation. Deleting an
+order is a confirmed soft deactivation: it uses the existing cancellation workflow
+to retain the order and its history while releasing active commitments, removes it
+from the active directory, confirms the result with a toast and returns from the
+detail page to the prior directory.
+
 ## 2026-09-21 — Manual replenishment creates a purchase order
 
 The owner clarified that contextual manual replenishment is the actual purchase

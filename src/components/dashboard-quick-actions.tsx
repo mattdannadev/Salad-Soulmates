@@ -10,7 +10,6 @@ const quickActions = (es: boolean) => [
   {
     href: '/app/orders#new-order',
     label: es ? '+ Nuevo pedido' : '+ New order',
-    primary: true,
   },
   {
     href: '/app/receiving',
@@ -31,12 +30,12 @@ export default function DashboardQuickActions({ es }: DashboardQuickActionsProps
     <nav className={styles.actions} aria-label={es ? 'Acciones rápidas' : 'Quick actions'}>
       {quickActions(es).map((action) => (
         <Link
-          className={`button${action.primary ? '' : ' secondary'}`}
+          className={`button ${styles.action}`}
           href={action.href}
           key={action.href}
         >
           {action.label}
-          {!action.primary && <ArrowUpRight size={16} aria-hidden="true" />}
+          <ArrowUpRight size={16} aria-hidden="true" />
         </Link>
       ))}
     </nav>

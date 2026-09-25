@@ -44,6 +44,14 @@ it('preserves request identity and invalidates purchasing and receiving after su
   expect(mocks.revalidate).toHaveBeenCalledWith('/app/receiving');
   expect(mocks.revalidate).toHaveBeenCalledWith('/app/suppliers');
 });
+it('soft-deactivates an order through the cancellation RPC', async () => {
+  expect(await savePurchasing('cancel-order', { id })).toMatchObject({
+    ok: true,
+    id,
+    message: 'Order deactivated.',
+  });
+  expect(mocks.rpc).toHaveBeenCalledWith('cancel_customer_order', { order_id: id });
+});
 it('does not report SDK errors or malformed write acknowledgements as success', async () => {
   mocks.rpc.mockResolvedValueOnce({
     data: null,

@@ -6,16 +6,30 @@ import CustomerOrderForm from '@/components/customer-order-form';
 import OrderProduction from '@/components/order-production';
 import OrderRequirements from '@/components/order-requirements';
 import { CancelMaterialPlan } from '@/components/purchase-status-form';
+import OrderDeactivateAction from '@/components/order-deactivate-action';
+import OrdersToast from '@/components/orders-toast';
 import { formatPrice } from '@/domain/customer-pricing';
 import { customerOrderLabel } from '@/domain/customer-orders';
 import { formatDate, formatNumber } from '@/domain/format';
 import loadPurchasingWorkspace from '@/lib/purchasing-data';
 
 export default async function Orders({ searchParams }: {
-  searchParams: Promise<{ order?: string; estimate?: string; customer?: string }>;
+  searchParams: Promise<{
+    order?: string;
+    estimate?: string;
+    customer?: string;
+    q?: string;
+    product?: string;
+    status?: string;
+  }>;
 }) {
   const query = z.object({
-    order: z.uuid().optional(), estimate: z.uuid().optional(), customer: z.uuid().optional(),
+    order: z.uuid().optional(),
+    estimate: z.uuid().optional(),
+    customer: z.uuid().optional(),
+    q: z.string().trim().max(120).catch(''),
+    product: z.string().trim().max(120).catch('all'),
+    status: z.enum(['all', 'unplanned', 'draft', 'confirmed']).catch('all'),
   })
     .refine((value) => !value.order || !value.estimate).safeParse(await searchParams);
   if (!query.success) notFound();
@@ -42,6 +56,30 @@ export default async function Orders({ searchParams }: {
   const legacy = workspace.plans.filter(
     (plan) => !workspace.orders.some((item) => item.id === plan.id),
   );
+  const activeOrders = workspace.orders.filter((item) => (
+    workspace.plans.find((plan) => plan.id === item.id)?.status === 'Active'
+  ));
+  const productTypes = [...new Set(activeOrders.flatMap(
+    (item) => item.items.map((line) => line.product_name),
+  ))].sort();
+  const search = query.data.q.toLowerCase();
+  const directoryOrders = activeOrders
+    .filter((item) => query.data.product === 'all' || item.items.some((line) => line.product_name === query.data.product))
+    .filter((item) => {
+      const production = workspace.productionPlans.find((plan) => plan.id === item.id && plan.status !== 'Cancelled');
+      return query.data.status === 'all'
+        || (query.data.status === 'unplanned' && !production)
+        || production?.status.toLowerCase() === query.data.status;
+    })
+    .filter((item) => !search || [
+      item.customer_name,
+      item.reference,
+      item.needed_on,
+      formatDate(item.needed_on),
+      ...item.items.map((line) => line.product_name),
+      workspace.productionPlans.find((plan) => plan.id === item.id && plan.status !== 'Cancelled')?.status ?? unplannedLabel,
+    ].some((value) => value.toLowerCase().includes(search)))
+    .toSorted((a, b) => b.needed_on.localeCompare(a.needed_on));
   return (
     <>
       <PageHeader
@@ -58,6 +96,13 @@ export default async function Orders({ searchParams }: {
             <h2>{order ? customerOrderLabel(order) : selected.name}</h2>
             {order && <p><Link href={`/app/shipping?order=${order.id}`}>{es ? 'Preparar envío / recogida' : 'Prepare shipment / pickup'}</Link></p>}
             <p>{`${es ? 'Fecha de recogida' : 'Pickup date'} ${formatDate(selected.needed_on)} · ${selected.status === 'Active' ? activeLabel : cancelledLabel}`}</p>
+            {order && selected.status === 'Active' && workspace.canOrder ? (
+              <OrderDeactivateAction
+                orderId={order.id}
+                orderLabel={customerOrderLabel(order)}
+                returnToDirectory
+              />
+            ) : null}
             {order ? (
               <div className="table-wrap">
                 <table>
@@ -116,20 +161,77 @@ export default async function Orders({ searchParams }: {
         <>
           <section className="panel">
             <h2>{es ? 'Pedidos guardados' : 'Saved customer orders'}</h2>
-            {!workspace.orders.length && <p className="empty order-empty-state">{es ? 'Aún no hay pedidos de clientes.' : 'No customer orders yet.'}</p>}
-            <div className="worksheet-links">
-              {workspace.orders.toSorted((a, b) => b.created_at.localeCompare(a.created_at))
-                .map((item) => (
-                  <Link className="worksheet-link" href={`/app/orders?order=${item.id}`} key={item.id}>
-                    <strong>{customerOrderLabel(item)}</strong>
-                    <span>{formatDate(item.needed_on)}</span>
-                    <span>{workspace.plans.find((plan) => plan.id === item.id)?.status === 'Cancelled' ? cancelledLabel : activeLabel}</span>
-                    <span>
-                      {workspace.productionPlans.find((plan) => plan.id === item.id && plan.status !== 'Cancelled')?.start_on
-                        ? `${productionLabel} ${formatDate(workspace.productionPlans.find((plan) => plan.id === item.id)?.start_on ?? '')}`
-                        : unplannedLabel}
-                    </span>
-                  </Link>
+            <OrdersToast />
+            <form className="search inventory-filters order-filters">
+              <label className="inventory-filter-search" htmlFor="order-search">
+                <span className="sr-only">Search orders</span>
+                <input id="order-search" name="q" placeholder="Search customer, pickup date, product, or status…" defaultValue={query.data.q} />
+              </label>
+              <label className="inventory-filter-field" htmlFor="order-product">
+                <span>Product type</span>
+                <select id="order-product" name="product" defaultValue={query.data.product}>
+                  <option value="all">All products</option>
+                  {productTypes.map((product) => (
+                    <option key={product} value={product}>{product}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="inventory-filter-field" htmlFor="order-status">
+                <span>Production status</span>
+                <select id="order-status" name="status" defaultValue={query.data.status}>
+                  <option value="all">All statuses</option>
+                  <option value="unplanned">Not planned</option>
+                  <option value="draft">Draft</option>
+                  <option value="confirmed">Confirmed</option>
+                </select>
+              </label>
+              <button type="submit" className="secondary">Filter</button>
+              <Link className="inventory-clear-filters" href="/app/orders" aria-label="Clear order filters" title="Clear filters">
+                <span aria-hidden="true">×</span>
+                <span>Clear</span>
+              </Link>
+            </form>
+            {!activeOrders.length && <p className="empty order-empty-state">{es ? 'Aún no hay pedidos activos.' : 'No active customer orders.'}</p>}
+            {activeOrders.length > 0 && !directoryOrders.length && <p className="empty order-empty-state">No active orders match these filters.</p>}
+            <div className="orders-by-customer">
+              {Object.entries(Object.groupBy(directoryOrders, (item) => item.customer_name))
+                .toSorted(([a], [b]) => a.localeCompare(b))
+                .map(([customerName, customerOrders]) => (
+                  <section className="order-customer-group" key={customerName} aria-label={`${customerName} active orders`}>
+                    <h3>{customerName}</h3>
+                    <div className="orders-grid">
+                      {customerOrders?.map((item) => {
+                        const production = workspace.productionPlans.find((plan) => plan.id === item.id && plan.status !== 'Cancelled');
+                        const productionText = production?.start_on
+                          ? `${productionLabel} ${formatDate(production.start_on)}`
+                          : unplannedLabel;
+                        return (
+                          <article className="order-card" key={item.id}>
+                            <div className="order-card-main">
+                              <p className="order-card-reference">{item.reference || item.id.slice(0, 8)}</p>
+                              <h4><Link href={`/app/orders?order=${item.id}`}>{formatDate(item.needed_on)}</Link></h4>
+                              <p>{item.items.map((line) => line.product_name).join(', ')}</p>
+                              <div className="order-card-badges">
+                                <span className="badge">{activeLabel}</span>
+                                <span className="badge">{productionText}</span>
+                              </div>
+                            </div>
+                            <div className="order-card-actions">
+                              <Link className="button secondary" href={`/app/orders?order=${item.id}`}>View order</Link>
+                              <Link className="button secondary" href={`/app/purchasing?plan=${item.id}`}>Purchase ingredients</Link>
+                              <Link className="button secondary" href={`/app/shipping?order=${item.id}`}>Prepare pickup</Link>
+                              {workspace.canOrder ? (
+                                <OrderDeactivateAction
+                                  orderId={item.id}
+                                  orderLabel={customerOrderLabel(item)}
+                                />
+                              ) : null}
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  </section>
                 ))}
             </div>
           </section>

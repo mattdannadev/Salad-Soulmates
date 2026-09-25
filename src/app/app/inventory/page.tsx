@@ -71,18 +71,20 @@ export default async function Inventory({
         </p>
         <Link href="/receiving/packages">View package balances, holds, and supplier lots →</Link>
         <Link href="/app/ingredients">Manage ingredient details and availability →</Link>
-        <form className="search">
-          <label className="sr-only" htmlFor="inventory-search">Search ingredients</label>
-          <input id="inventory-search" name="q" placeholder="Search ingredients…" defaultValue={query.q} />
-          <label htmlFor="inventory-category">
-            Ingredient type
+        <form className="search inventory-filters">
+          <label className="inventory-filter-search" htmlFor="inventory-search">
+            <span className="sr-only">Search ingredients</span>
+            <input id="inventory-search" name="q" placeholder="Search ingredients…" defaultValue={query.q} />
+          </label>
+          <label className="inventory-filter-field" htmlFor="inventory-category">
+            <span>Ingredient type</span>
             <select id="inventory-category" name="category" defaultValue={category}>
               <option value="all">All types</option>
               {categories.map((value) => <option key={value} value={value}>{value}</option>)}
             </select>
           </label>
-          <label htmlFor="inventory-status">
-            Availability
+          <label className="inventory-filter-field" htmlFor="inventory-status">
+            <span>Availability</span>
             <select id="inventory-status" name="status" defaultValue={status}>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
@@ -90,15 +92,25 @@ export default async function Inventory({
             </select>
           </label>
           <button type="submit" className="secondary">Filter</button>
+          <Link
+            className="inventory-clear-filters"
+            href="/app/inventory"
+            aria-label="Clear inventory filters"
+            title="Clear filters"
+          >
+            <span aria-hidden="true">×</span>
+            <span>Clear</span>
+          </Link>
         </form>
         {filteredIngredients.length ? (
           <div className="table-wrap">
-            <table>
+            <table className="inventory-table">
               <thead>
                 <tr>
                   <th>Ingredient</th>
                   <th>On hand</th>
-                  <th>Status</th>
+                  <th>Reorder point</th>
+                  <th>Par level</th>
                   {canPurchase && <th>Purchase</th>}
                   {canAdjust && <th>Adjust</th>}
                 </tr>
@@ -109,27 +121,40 @@ export default async function Inventory({
                     <td>
                       <Link href={`/app/ingredients/${i.id}`}>{i.name}</Link>
                     </td>
-                    <td>
-                      {number(balances[i.id] ?? 0)}
-                      {' '}
-                      {receivedUnits[i.id] ?? i.default_uom}
+                    <td className="inventory-on-hand">
+                      <span>
+                        {number(balances[i.id] ?? 0)}
+                        {' '}
+                        {receivedUnits[i.id] ?? i.default_uom}
+                      </span>
+                      {i.reorder_point !== null && i.reorder_point !== undefined
+                        && (balances[i.id] ?? 0) <= i.reorder_point && (
+                        <small className="inventory-stock-alert">At or below reorder point</small>
+                      )}
                     </td>
                     <td>
-                      {(balances[i.id] ?? 0) < 0 ? (
-                        <span className="badge warning">Review negative balance</span>
-                      ) : (
-                        <span>
-                          {events.some((e) => e.ingredient_id === i.id)
-                            ? 'Recorded'
-                            : 'Not entered'}
-                        </span>
+                      {i.reorder_point === null || i.reorder_point === undefined ? 'Not set' : (
+                        <>
+                          {number(i.reorder_point)}
+                          {' '}
+                          {receivedUnits[i.id] ?? i.default_uom}
+                        </>
+                      )}
+                    </td>
+                    <td>
+                      {i.par_level === null || i.par_level === undefined ? 'Not set' : (
+                        <>
+                          {number(i.par_level)}
+                          {' '}
+                          {receivedUnits[i.id] ?? i.default_uom}
+                        </>
                       )}
                     </td>
                     {canPurchase && (
                       <td>
                         {i.active ? (
                           <Link
-                            className="button secondary"
+                            className="button"
                             href={`/app/purchasing?ingredient=${i.id}`}
                             aria-label={`Purchase ${i.name}`}
                           >
