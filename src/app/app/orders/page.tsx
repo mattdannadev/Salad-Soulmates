@@ -198,7 +198,11 @@ export default async function Orders({ searchParams }: {
                 .toSorted(([a], [b]) => a.localeCompare(b))
                 .map(([customerName, customerOrders]) => (
                   <section className="order-customer-group" key={customerName} aria-label={`${customerName} active orders`}>
-                    <h3>{customerName}</h3>
+                    <h3>
+                      <span className="order-customer-label">Customer</span>
+                      <span>{customerName}</span>
+                      <span className="order-customer-count">{`${customerOrders?.length ?? 0} ${(customerOrders?.length ?? 0) === 1 ? 'order' : 'orders'}`}</span>
+                    </h3>
                     <div className="orders-grid">
                       {customerOrders?.map((item) => {
                         const production = workspace.productionPlans.find((plan) => plan.id === item.id && plan.status !== 'Cancelled');
