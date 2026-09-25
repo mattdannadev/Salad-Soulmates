@@ -5,6 +5,7 @@ import { requireAdminShell } from '@/lib/auth';
 import { rows } from '@/lib/data';
 import { PageHeader } from '@/components/shell';
 import inventoryBalances, { inventoryUnits } from '@/domain/inventory';
+import IngredientActivityAction from '@/components/ingredient-activity-action';
 
 export default async function Ingredients({
   searchParams,
@@ -87,6 +88,7 @@ export default async function Ingredients({
                   <th>
                     <span className="sr-only">Open ingredient</span>
                   </th>
+                  {profile.role === 'admin' && <th>Availability</th>}
                 </tr>
               </thead>
               <tbody>
@@ -113,6 +115,15 @@ export default async function Ingredients({
                     <td>
                       <Link href={`/app/ingredients/${i.id}`}>View details →</Link>
                     </td>
+                    {profile.role === 'admin' && (
+                      <td>
+                        <IngredientActivityAction
+                          ingredientId={i.id}
+                          ingredientName={i.name}
+                          active={i.active}
+                        />
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

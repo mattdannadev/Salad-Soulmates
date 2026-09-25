@@ -6,7 +6,7 @@ import {
   rows, number, readResult,
 } from '@/lib/data';
 import inventoryBalances, { inventoryUnits } from '@/domain/inventory';
-import InventoryForm from '@/components/inventory-form';
+import InventoryAdjustmentControls from '@/components/inventory-adjustment-controls';
 import { PageHeader } from '@/components/shell';
 import hasPermission from '@/lib/permissions';
 
@@ -19,8 +19,18 @@ const purchasePermissions = [
   'master_data.read',
 ];
 
-export default async function Inventory() {
+export default async function Inventory({
+  searchParams = Promise.resolve({}),
+}: {
+  searchParams?: Promise<{ q?: string; category?: string; status?: string }>;
+} = {}) {
   const { db, profile } = await requireAdminShell();
+  const query = await searchParams;
+  const q = z
+    .string().trim().max(120).catch('')
+    .parse(query.q)
+    .toLowerCase();
+  const status = z.enum(['active', 'inactive', 'all']).catch('active').parse(query.status);
   const [ingredients, events, facility, purchasePermissionsResult, canAdjust] = await Promise.all([
     rows(db, 'ingredients', rowSchemas.ingredients),
     rows(db, 'inventory_events', rowSchemas.inventory_events),
@@ -30,6 +40,15 @@ export default async function Inventory() {
   ]);
   const facilityData = readResult(facility, z.object({ name: z.string() }), 'inventory_facility');
   const canPurchase = purchasePermissionsResult.every(Boolean);
+  const categories = [...new Set(ingredients.map((ingredient) => ingredient.category))].sort();
+  const category = z
+    .string().trim().max(120).catch('all')
+    .parse(query.category);
+  const filteredIngredients = ingredients
+    .filter((ingredient) => ingredient.name.toLowerCase().includes(q))
+    .filter((ingredient) => status === 'all' || ingredient.active === (status === 'active'))
+    .filter((ingredient) => category === 'all' || ingredient.category === category);
+  const activeIngredients = ingredients.filter((ingredient) => ingredient.active);
   const balances = inventoryBalances(events);
   const receivedUnits = inventoryUnits(events);
   const recent = [...events].sort((a, b) => (
@@ -41,6 +60,9 @@ export default async function Inventory() {
         eyebrow={facilityData.name}
         title="Ingredient inventory"
         description="Reviewed opening balances and adjustments for your facility. Every change keeps its history."
+        action={
+          canAdjust ? <InventoryAdjustmentControls ingredients={activeIngredients} /> : undefined
+        }
       />
       <section className="panel">
         <h2>On hand</h2>
@@ -48,7 +70,28 @@ export default async function Inventory() {
           Owned stock includes held and expired material. Planning excludes unavailable packages.
         </p>
         <Link href="/receiving/packages">View package balances, holds, and supplier lots →</Link>
-        {ingredients.length ? (
+        <Link href="/app/ingredients">Manage ingredient details and availability →</Link>
+        <form className="search">
+          <label className="sr-only" htmlFor="inventory-search">Search ingredients</label>
+          <input id="inventory-search" name="q" placeholder="Search ingredients…" defaultValue={query.q} />
+          <label htmlFor="inventory-category">
+            Ingredient type
+            <select id="inventory-category" name="category" defaultValue={category}>
+              <option value="all">All types</option>
+              {categories.map((value) => <option key={value} value={value}>{value}</option>)}
+            </select>
+          </label>
+          <label htmlFor="inventory-status">
+            Availability
+            <select id="inventory-status" name="status" defaultValue={status}>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="all">Active and inactive</option>
+            </select>
+          </label>
+          <button type="submit" className="secondary">Filter</button>
+        </form>
+        {filteredIngredients.length ? (
           <div className="table-wrap">
             <table>
               <thead>
@@ -57,10 +100,11 @@ export default async function Inventory() {
                   <th>On hand</th>
                   <th>Status</th>
                   {canPurchase && <th>Purchase</th>}
+                  {canAdjust && <th>Adjust</th>}
                 </tr>
               </thead>
               <tbody>
-                {ingredients.map((i) => (
+                {filteredIngredients.map((i) => (
                   <tr key={i.id}>
                     <td>
                       <Link href={`/app/ingredients/${i.id}`}>{i.name}</Link>
@@ -94,6 +138,16 @@ export default async function Inventory() {
                         ) : 'Unavailable'}
                       </td>
                     )}
+                    {canAdjust && (
+                      <td>
+                        {i.active ? (
+                          <InventoryAdjustmentControls
+                            ingredients={[i]}
+                            ingredientToAdjustId={i.id}
+                          />
+                        ) : 'Unavailable'}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -101,16 +155,11 @@ export default async function Inventory() {
           </div>
         ) : (
           <div className="empty">
-            <h3>No ingredients yet</h3>
-            <Link href="/app/ingredients">Build your ingredient library →</Link>
+            <h3>No matching ingredients</h3>
+            <Link href="/app/inventory">Clear filters →</Link>
           </div>
         )}
       </section>
-      {canAdjust && ingredients.some((i) => i.active) && (
-        <section className="panel">
-          <InventoryForm ingredients={ingredients.filter((i) => i.active)} />
-        </section>
-      )}
       <section className="panel">
         <h2>Recent history</h2>
         <p>

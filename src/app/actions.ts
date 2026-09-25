@@ -453,6 +453,37 @@ export async function signOut() {
   redirect('/login');
 }
 
+/** Changes an ingredient's availability without altering its historical records. */
+export async function setIngredientActivity(
+  _previous: ActionResult,
+  form: FormData,
+): Promise<ActionResult> {
+  const parsed = z.object({
+    id: z.uuid(),
+    active: z.enum(['true', 'false']).transform((value) => value === 'true'),
+  }).safeParse(Object.fromEntries(form));
+  if (!parsed.success) return { ok: false, message: 'Invalid ingredient.' };
+  const { db } = await requireProfile({ readOnly: false });
+  if (!(await hasPermission(db, 'master_data.write'))) {
+    return { ok: false, message: 'Ingredient management permission required.' };
+  }
+  const { data, error } = await db
+    .from('ingredients')
+    .update({ active: parsed.data.active })
+    .eq('id', parsed.data.id)
+    .select('id,active')
+    .single();
+  if (error || !data || data.active !== parsed.data.active) {
+    logFailure('ingredient_activity_update', error ?? { code: 'INVALID_RESPONSE' });
+    return { ok: false, message: 'Could not update the ingredient. Please try again.' };
+  }
+  revalidatePath('/app', 'layout');
+  return {
+    ok: true,
+    message: parsed.data.active ? 'Ingredient reactivated.' : 'Ingredient deactivated.',
+  };
+}
+
 /** Public server-action contract; authorization precedes each focused operation. */
 export async function saveRecord(kind: string, input: unknown): Promise<ActionResult> {
   const parsed = recordKindSchema.safeParse(kind);

@@ -11,8 +11,14 @@ const adjustmentTypes = [
   { value: 'OrderUsage', label: 'Usage for filling orders', direction: -1 },
 ] as const;
 
-export default function InventoryForm({ ingredients }: { ingredients: Ingredient[] }) {
-  const [ingredientId, setIngredientId] = useState('');
+export default function InventoryForm({
+  ingredients,
+  initialIngredientId = '',
+}: {
+  ingredients: Ingredient[];
+  initialIngredientId?: string;
+}) {
+  const [ingredientId, setIngredientId] = useState(initialIngredientId);
   const [result, setResult] = useState<ActionResult>();
   const requestId = useRef<string | undefined>(undefined);
   const [pending, start] = useTransition();
