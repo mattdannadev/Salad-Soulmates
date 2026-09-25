@@ -65,10 +65,11 @@ vi.mock('../src/lib/supabase', () => ({
 
 const inventory = {
   ingredient_id: '00000000-0000-4000-8000-000000000001',
-  event_type: 'Adjustment',
+  event_type: 'ManualGain',
   quantity_delta: 2,
   uom: 'lb',
   reason_note: 'Physical count',
+  effective_on: '2026-09-24',
   request_id: '00000000-0000-4000-8000-000000000002',
 };
 const savedId = '00000000-0000-4000-8000-000000000003';
@@ -386,7 +387,7 @@ describe('Auth service and invitation failures', () => {
     mocks.execute.mockResolvedValue({ data: { id: savedId }, error: null });
     const result = await directInvite();
     expect(result).toMatchObject({ ok: false });
-    expect(result.message).toContain('already belongs to a user');
+    expect(result.message).toContain('belongs to a deactivated user');
     expect(mocks.query.insert).not.toHaveBeenCalled();
     expect(mocks.invite).not.toHaveBeenCalled();
   });

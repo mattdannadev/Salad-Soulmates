@@ -40,6 +40,9 @@ const ingredient: Ingredient = {
   description: '',
   storage_notes: '',
   traceability_mode: 'future_required',
+  reorder_point: null,
+  par_level: null,
+  reorder_quantity: null,
 };
 const supplier: Supplier = {
   id: receipt.supplier_id,

@@ -339,7 +339,7 @@ export async function inviteUserFromSettings(
   const email = parsed.data.email.toLowerCase();
   const { data: existingUser, error: existingUserError } = await db
     .from('profiles')
-    .select('id')
+    .select('id,active')
     .eq('organization_id', profile.organization_id)
     .eq('work_email', email)
     .maybeSingle();
@@ -350,7 +350,9 @@ export async function inviteUserFromSettings(
   if (existingUser) {
     return {
       ok: false,
-      message: 'This email already belongs to a user. Each teammate signs in with one email address.',
+      message: existingUser.active
+        ? 'This email already belongs to an active user. Each teammate signs in with one email address.'
+        : 'This email belongs to a deactivated user. Do not delete their Supabase Auth account; reactivate their existing user record to restore access.',
     };
   }
   const { data, error } = await db

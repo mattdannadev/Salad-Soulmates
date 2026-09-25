@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { z } from 'zod';
 import { requireAdminShell } from '@/lib/auth';
 import {
-  rows, number, date, readResult,
+  rows, number, readResult,
 } from '@/lib/data';
 import inventoryBalances, { inventoryUnits } from '@/domain/inventory';
 import InventoryForm from '@/components/inventory-form';
@@ -21,17 +21,20 @@ const purchasePermissions = [
 
 export default async function Inventory() {
   const { db, profile } = await requireAdminShell();
-  const [ingredients, events, facility, purchaseAccess] = await Promise.all([
+  const [ingredients, events, facility, purchasePermissionsResult, canAdjust] = await Promise.all([
     rows(db, 'ingredients', rowSchemas.ingredients),
     rows(db, 'inventory_events', rowSchemas.inventory_events),
     db.from('facilities').select('name').eq('id', profile.facility_id).single(),
     Promise.all(purchasePermissions.map((permission) => hasPermission(db, permission))),
+    hasPermission(db, 'inventory.adjust'),
   ]);
   const facilityData = readResult(facility, z.object({ name: z.string() }), 'inventory_facility');
-  const canPurchase = purchaseAccess.every(Boolean);
+  const canPurchase = purchasePermissionsResult.every(Boolean);
   const balances = inventoryBalances(events);
   const receivedUnits = inventoryUnits(events);
-  const recent = [...events].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 50);
+  const recent = [...events].sort((a, b) => (
+    b.effective_on.localeCompare(a.effective_on) || b.created_at.localeCompare(a.created_at)
+  )).slice(0, 50);
   return (
     <>
       <PageHeader
@@ -103,7 +106,7 @@ export default async function Inventory() {
           </div>
         )}
       </section>
-      {profile.role === 'admin' && ingredients.some((i) => i.active) && (
+      {canAdjust && ingredients.some((i) => i.active) && (
         <section className="panel">
           <InventoryForm ingredients={ingredients.filter((i) => i.active)} />
         </section>
@@ -126,7 +129,7 @@ export default async function Inventory() {
             <table>
               <thead>
                 <tr>
-                  <th>When</th>
+                  <th>Effective date</th>
                   <th>Ingredient</th>
                   <th>Type</th>
                   <th>Change</th>
@@ -136,11 +139,19 @@ export default async function Inventory() {
               <tbody>
                 {recent.map((e) => (
                   <tr key={e.id}>
-                    <td>{date(e.created_at)}</td>
+                    <td>{e.effective_on}</td>
                     <td>
                       {ingredients.find((i) => i.id === e.ingredient_id)?.name ?? 'Unavailable'}
                     </td>
-                    <td>{e.event_type === 'OpeningBalance' ? 'Opening balance' : e.event_type}</td>
+                    <td>
+                      {({
+                        OpeningBalance: 'Opening balance',
+                        Receipt: 'Purchase order receipt',
+                        ManualGain: 'Manual gain',
+                        ManualShrink: 'Manual shrink',
+                        OrderUsage: 'Usage for filling orders',
+                      }[e.event_type] ?? e.event_type)}
+                    </td>
                     <td>
                       {Number(e.quantity_delta) > 0 ? '+' : ''}
                       {number(Number(e.quantity_delta))}

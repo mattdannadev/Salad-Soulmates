@@ -524,3 +524,9 @@ when due by the production date, or pickup date until production is scheduled.
 Shared supply counts once. Held/expired stock is excluded by existing availability
 rules, and later deliveries cannot conceal an earlier shortage. Expiry treatment
 is conservative: stock must remain usable at each demand horizon.
+
+## 2026-09-24 — Inventory controls and adjustment history
+
+Inventory adjustments require an ingredient, effective date, adjustment type and reason. Manual gains add stock; manual shrinks and usage for filling orders remove stock. Purchase-order receipts remain their own receiving workflow and appear in the same immutable inventory history. Ingredients may define optional base-unit reorder point, par level and default reorder quantity; a par level cannot be below its reorder point.
+
+Ingredients are retained by deactivation rather than hard deletion so their inventory, recipe, receiving and purchasing history stays valid. The normal Ingredients grid defaults to active ingredients; staff can explicitly filter for inactive or all ingredients, and filter the existing Liquid category as Wet and Dry category as Dry.

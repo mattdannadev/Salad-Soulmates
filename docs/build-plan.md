@@ -1,8 +1,15 @@
 # Salad Soulmates — current build plan
 
-Updated: September 21, 2026
+Updated: September 24, 2026
 
 ## Current checkpoint
+
+Inventory management follow-up: make the Inventory workspace writable for users with
+inventory-adjust permission. Record immutable manual gains, manual shrinks and
+order-fill usage with ingredient, effective date, type and reason; show those
+alongside purchase-order receipts. Ingredients must support optional base-unit
+reorder point, par level and default reorder quantity, and the Ingredients grid
+must show those controls with on-hand and low-stock status.
 
 Receive Inventory follow-up: show all confirmed outstanding purchase orders,
 filter by supplier, and select multiple orders from the same supplier. Populate
@@ -25,6 +32,19 @@ above-content sidebar with a compact fixed navigation bar: Dashboard is the
 visually prominent home destination, primary sections remain one tap away, and a
 menu exposes every permission-allowed section with clear active states. Verify both
 desktop states, mobile menu opening/closing, route changes and localized labels.
+
+Phone Safari responsiveness follow-up: at the iPhone 12 acceptance viewport
+(390px wide), ensure the post-login application shell has no horizontal overflow
+or clipped left/right page edges. Apply safe-area-aware horizontal gutters and
+audit the fixed drawer, scrim, feedback control, and bottom navigation so they do
+not exceed the visual viewport. Make the top-left hamburger the prominent phone
+navigation control with a 48px minimum touch target (52px preferred), a larger
+visible menu icon, and preserved accessible name, expanded state, keyboard use,
+and close behavior. Retain the bottom “More” control as an optional thumb-reach
+entry to the same drawer unless a subsequent product decision replaces it. Add
+browser coverage at 390px for no horizontal overflow, the header control opening
+and closing navigation, scrim dismissal, route-selection dismissal, and reachable
+focusable controls; then confirm the result on a physical iPhone 12 in Safari.
 
 Customer and dashboard follow-up: see [scope and acceptance](customer-dashboard.md).
 Use saved customer lookup and package pricing; calculate batch totals from package

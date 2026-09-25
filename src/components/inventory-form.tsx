@@ -5,6 +5,12 @@ import { useRouter } from 'next/navigation';
 import { saveRecord } from '@/app/actions';
 import type { Ingredient, ActionResult } from '@/domain/master-data';
 
+const adjustmentTypes = [
+  { value: 'ManualGain', label: 'Manual gain', direction: 1 },
+  { value: 'ManualShrink', label: 'Manual shrink', direction: -1 },
+  { value: 'OrderUsage', label: 'Usage for filling orders', direction: -1 },
+] as const;
+
 export default function InventoryForm({ ingredients }: { ingredients: Ingredient[] }) {
   const [ingredientId, setIngredientId] = useState('');
   const [result, setResult] = useState<ActionResult>();
@@ -12,6 +18,9 @@ export default function InventoryForm({ ingredients }: { ingredients: Ingredient
   const [pending, start] = useTransition();
   const router = useRouter();
   const selected = ingredients.find((i) => i.id === ingredientId);
+  const [eventType, setEventType] = useState<(typeof adjustmentTypes)[number]['value']>('ManualGain');
+  const selectedType = adjustmentTypes.find((type) => type.value === eventType)
+    ?? adjustmentTypes[0];
   return (
     <form
       className="record-form"
@@ -25,9 +34,10 @@ export default function InventoryForm({ ingredients }: { ingredients: Ingredient
         const payload = {
           ingredient_id: selected.id,
           uom: selected.default_uom,
-          event_type: values.get('event_type'),
-          quantity_delta: Number(values.get('quantity_delta')),
+          event_type: eventType,
+          quantity_delta: selectedType.direction * Number(values.get('quantity')),
           reason_note: values.get('reason_note'),
+          effective_on: values.get('effective_on'),
           request_id: token,
         };
         start(async () => {
@@ -51,7 +61,7 @@ export default function InventoryForm({ ingredients }: { ingredients: Ingredient
       }}
     >
       <fieldset disabled={pending}>
-        <legend>New inventory entry</legend>
+        <legend>Record inventory adjustment</legend>
         <div className="form-grid">
           <label>
             Ingredient *
@@ -65,21 +75,34 @@ export default function InventoryForm({ ingredients }: { ingredients: Ingredient
             </select>
           </label>
           <label>
-            Entry type
-            <select name="event_type">
-              <option value="OpeningBalance">Opening balance</option>
-              <option value="Adjustment">Adjustment</option>
+            Adjustment type
+            <select
+              value={eventType}
+              onChange={(event) => {
+                const nextEventType = adjustmentTypes.find(
+                  (type) => type.value === event.target.value,
+                );
+                if (nextEventType) setEventType(nextEventType.value);
+              }}
+            >
+              {adjustmentTypes.map((type) => (
+                <option key={type.value} value={type.value}>{type.label}</option>
+              ))}
             </select>
           </label>
           <label>
-            Quantity change
+            Effective date *
+            <input name="effective_on" type="date" required defaultValue={new Date().toLocaleDateString('en-CA')} />
+          </label>
+          <label>
+            Quantity
             {' '}
             {selected ? `(${selected.default_uom})` : ''}
             {' '}
             *
-            <input name="quantity_delta" type="number" required step="0.0001" />
+            <input name="quantity" type="number" required min="0.0001" step="0.0001" />
             <small>
-              Opening balance: positive quantity. Adjustment: add with +, subtract with −.
+              {selectedType.direction > 0 ? 'This will add stock.' : 'This will remove stock.'}
             </small>
           </label>
           <label>
@@ -94,11 +117,11 @@ export default function InventoryForm({ ingredients }: { ingredients: Ingredient
           </label>
         </div>
         <p className="subtle">
-          Entries preserve history. Correct a mistake with a new adjustment. This does not record
-          production consumption.
+          Entries preserve history. Correct a mistake with a new adjustment. Purchase-order receipts
+          are recorded from Receiving, not here.
         </p>
         <button type="submit" disabled={!selected || pending}>
-          {pending ? 'Saving…' : 'Record inventory entry'}
+          {pending ? 'Saving…' : 'Record adjustment'}
         </button>
       </fieldset>
       {result && (

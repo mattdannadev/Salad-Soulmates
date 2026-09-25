@@ -151,6 +151,41 @@ const safeDeactivationMessages = new Set([
   'A deactivation reason between 3 and 500 characters is required',
 ]);
 
+const safeReactivationMessages = new Set([
+  'Access management permission required',
+  'User must belong to your organization',
+  'User access is already active',
+]);
+
+/** Restore access for an existing Auth identity through the audited database function. */
+export async function reactivateManagedUser(
+  _previous: UserManagementActionResult,
+  form: FormData,
+): Promise<UserManagementActionResult> {
+  const input = userTargetSchema.safeParse(Object.fromEntries(form));
+  if (!input.success) return { ok: false, message: 'Invalid user selection.' };
+  const access = await requireAccessManager(input.data.user_id);
+  if (!access.ok) return { ok: false, message: access.error };
+  if (access.target.active) return { ok: false, message: 'User access is already active.' };
+  let result;
+  try {
+    result = await access.db.rpc('reactivate_user_access', { target_user_id: access.target.id });
+  } catch (cause) {
+    logFailure('user_management_reactivate', cause);
+    return { ok: false, message: 'Could not reactivate this user. Reload and try again.' };
+  }
+  if (result.error) {
+    logFailure('user_management_reactivate', result.error);
+    const safeMessage = safeReactivationMessages.has(result.error.message)
+      ? `${result.error.message}.`
+      : 'Could not reactivate this user. Reload and try again.';
+    return { ok: false, message: safeMessage };
+  }
+  revalidatePath('/app/user-management/users');
+  revalidatePath(`/app/user-management/users/${access.target.id}`);
+  return { ok: true, message: 'User access reactivated. Their existing account and history were retained.' };
+}
+
 const safeAccessProfileMessages = new Set([
   'Access management permission required',
   'User must belong to your organization',

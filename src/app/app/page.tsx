@@ -4,6 +4,8 @@ import {
 } from 'lucide-react';
 import loadDashboard from '@/lib/dashboard-data';
 import DemandCoveragePanel from '@/components/demand-coverage-panel';
+import DashboardPriorities, { type DashboardPriority } from '@/components/dashboard-priorities';
+import DashboardQuickActions from '@/components/dashboard-quick-actions';
 import { facilityDate, formatDate, formatNumber } from '@/domain/format';
 import { purchaseStatusLabel } from '@/domain/supplier-orders';
 
@@ -28,7 +30,7 @@ export default async function Home() {
   const today = facilityDate();
   const futurePickups = openOrders.filter((order) => order.needed_on > today)
     .toSorted((a, b) => a.needed_on.localeCompare(b.needed_on) || a.id.localeCompare(b.id));
-  const upcomingLabel = es ? 'Próximas recogidas' : 'Upcoming customer pickups';
+  const activeOrdersLabel = es ? 'Pedidos activos de clientes' : 'Active customer orders';
   const lateLabel = es ? 'Fecha vencida' : 'Past pickup date';
   const todayLabel = es ? 'Hoy' : 'Today';
   const overdueLabel = es ? 'Atrasada' : 'Overdue';
@@ -41,16 +43,60 @@ export default async function Home() {
   }
   const overdue = openOrders.filter((order) => order.needed_on < today).length;
   const dueToday = openOrders.filter((order) => order.needed_on === today).length;
+  const arrivalsDue = incoming.filter((purchase) => purchase.expected_on <= today);
+  const shortages = coverage.filter((line) => line.shortage > 0).length;
 
   const unprepared = openOrders.filter(
     (order) => !production.some((plan) => plan.id === order.id && plan.status === 'Confirmed'),
   );
+  const priorities: DashboardPriority[] = [];
+  if (canOrders && overdue + dueToday > 0) {
+    priorities.push({
+      id: 'pickups',
+      title: es ? 'Revisar recogidas pendientes' : 'Review pickups due',
+      detail: `${dueToday} ${es ? 'para hoy' : 'due today'} · ${overdue} ${es ? 'con fecha vencida' : 'past pickup date'}`,
+      href: '/app/orders',
+      icon: CalendarDays,
+      urgent: overdue > 0,
+    });
+  }
+  if (canPurchases && arrivalsDue.length > 0) {
+    priorities.push({
+      id: 'arrivals',
+      title: es ? 'Revisar entregas pendientes' : 'Check deliveries due',
+      detail: `${es ? 'Previstas para hoy o antes' : 'Expected today or earlier'}: ${arrivalsDue.length}`,
+      href: '#supplier-arrivals',
+      icon: Truck,
+      urgent: arrivalsDue.some((purchase) => purchase.expected_on < today),
+    });
+  }
+  if (canCoverage && shortages > 0) {
+    priorities.push({
+      id: 'ingredients',
+      title: es ? 'Resolver faltantes de ingredientes' : 'Resolve ingredient shortages',
+      detail: `${es ? 'Ingredientes sin cubrir la demanda' : 'Ingredients below demand'}: ${shortages}`,
+      href: '#ingredient-demand',
+      icon: Leaf,
+      urgent: true,
+    });
+  }
+  if (canOrders && unprepared.length > 0) {
+    priorities.push({
+      id: 'preparation',
+      title: es ? 'Preparar próximos pedidos' : 'Prepare open orders',
+      detail: `${es ? 'Pedidos sin preparación confirmada' : 'Orders awaiting confirmed preparation'}: ${unprepared.length}`,
+      href: '#order-preparation',
+      icon: ClipboardList,
+      urgent: false,
+    });
+  }
   const metrics = [
     {
       title: es ? 'Recogidas hoy' : 'Pickups today',
       value: canOrders ? dueToday : '—',
       icon: CalendarDays,
       href: '/app/orders',
+      available: canOrders,
       note: es ? 'Pedidos activos para hoy' : 'Active orders due today',
     },
     {
@@ -58,22 +104,25 @@ export default async function Home() {
       value: canOrders ? openOrders.length : '—',
       icon: ClipboardList,
       href: '/app/orders',
+      available: canOrders,
       note: overdue
         ? `${overdue} ${es ? 'con fecha vencida' : 'past pickup date'}`
-        : upcomingLabel,
+        : activeOrdersLabel,
     },
     {
       title: es ? 'Compras por recibir' : 'Purchases due in',
       value: canPurchases ? incoming.length : '—',
       icon: Truck,
       href: '/app/purchasing',
+      available: canPurchases,
       note: es ? 'Confirmadas, aún pendientes' : 'Confirmed, not fully received',
     },
     {
       title: es ? 'Ingredientes con faltantes' : 'Ingredients short',
-      value: canCoverage ? coverage.filter((line) => line.shortage > 0).length : '—',
+      value: shortages,
       icon: Leaf,
       href: '#ingredient-demand',
+      available: canCoverage,
       note: es ? 'Demanda abierta frente a disponibilidad' : 'Open demand versus usable supply',
     },
   ];
@@ -88,19 +137,10 @@ export default async function Home() {
           <h1>{`${es ? 'Bienvenido' : 'Welcome'}, ${profile.display_name.split(' ')[0]}`}</h1>
           <p>
             {es
-              ? 'Tus pedidos, entregas e ingredientes. Todo lo que necesita atención, en un solo lugar.'
-              : 'Your orders, arrivals, and ingredients. A clear view of what needs attention.'}
+              ? 'Tu día de producción, en un solo lugar. Revisa pendientes y da el siguiente paso.'
+              : 'Your production day, in one place. See what needs attention and take the next step.'}
           </p>
-          <div className="dashboard-quick-links">
-            <Link className="button" href="/app/orders#new-order">
-              {es ? '+ Nuevo pedido' : '+ New order'}
-            </Link>
-            <Link href="/app/receiving">
-              {es ? 'Registrar recepción' : 'Receive a delivery'}
-              {' '}
-              <ArrowUpRight size={16} />
-            </Link>
-          </div>
+          <DashboardQuickActions es={es} />
         </div>
         <div className="dashboard-date">
           <Leaf size={28} />
@@ -110,7 +150,7 @@ export default async function Home() {
         </div>
       </header>
       <div className="dashboard-metrics">
-        {metrics.map((metric) => (
+        {metrics.filter((metric) => metric.available).map((metric) => (
           <Link className="dashboard-metric" href={metric.href} key={metric.title}>
             <metric.icon size={21} />
             <span>{metric.title}</span>
@@ -119,6 +159,9 @@ export default async function Home() {
           </Link>
         ))}
       </div>
+      {(canOrders || canPurchases || canCoverage) && (
+        <DashboardPriorities items={priorities} es={es} />
+      )}
 
       <div className="dashboard-columns">
         <section className="panel dashboard-pickups">
@@ -126,6 +169,9 @@ export default async function Home() {
             <div>
               <p className="eyebrow">{es ? 'PRÓXIMAS SALIDAS' : 'UP NEXT'}</p>
               <h2>{es ? 'Próximas recogidas' : 'Upcoming pickups'}</h2>
+              <p className="dashboard-panel-description">
+                {es ? 'Después de hoy, en orden de fecha.' : 'After today, earliest first.'}
+              </p>
             </div>
             <CalendarDays size={24} />
           </div>
@@ -133,11 +179,11 @@ export default async function Home() {
           {canOrders && (!futurePickups.length ? (
             <div className="dashboard-empty">
               <CalendarDays size={30} />
-              <h3>{es ? 'Sin recogidas pendientes' : 'No pickups on the board'}</h3>
+              <h3>{es ? 'Sin recogidas futuras programadas' : 'No future pickups scheduled'}</h3>
               <p>
                 {es
-                  ? 'Los pedidos nuevos aparecerán aquí con productos, lotes y fechas.'
-                  : 'New orders appear here with dressing names, batch counts, and pickup dates.'}
+                  ? 'Los pedidos con fechas futuras aparecerán aquí con productos y lotes.'
+                  : 'Orders with future pickup dates appear here with dressing names and batch counts.'}
               </p>
               <Link href="/app/orders#new-order">
                 {es ? 'Preparar un pedido →' : 'Prepare an order →'}
@@ -181,7 +227,7 @@ export default async function Home() {
             <ArrowUpRight size={16} />
           </Link>
         </section>
-        <section className="panel">
+        <section className="panel" id="supplier-arrivals">
           <div className="dashboard-panel-heading">
             <div>
               <p className="eyebrow">{es ? 'ENTREGAS DE PROVEEDORES' : 'SUPPLIER ARRIVALS'}</p>
@@ -295,7 +341,7 @@ export default async function Home() {
           </Link>
         </section>
         <div className="dashboard-side-stack">
-          <section className="panel dashboard-preparation">
+          <section className="panel dashboard-preparation" id="order-preparation">
             <ClipboardList size={24} />
             <p className="eyebrow">{es ? 'ANTES DE PRODUCIR' : 'BEFORE PRODUCTION'}</p>
             <h2>{es ? 'Preparación de pedidos' : 'Order preparation'}</h2>

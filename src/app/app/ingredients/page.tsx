@@ -1,19 +1,33 @@
 import { rowSchemas } from '@/domain/master-data';
 import Link from 'next/link';
+import { z } from 'zod';
 import { requireAdminShell } from '@/lib/auth';
 import { rows } from '@/lib/data';
 import { PageHeader } from '@/components/shell';
+import inventoryBalances, { inventoryUnits } from '@/domain/inventory';
 
 export default async function Ingredients({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; type?: string }>;
 }) {
   const { db, profile } = await requireAdminShell();
-  const { q = '' } = await searchParams;
-  const ingredients = (await rows(db, 'ingredients', rowSchemas.ingredients))
+  const query = await searchParams;
+  const q = z.string().trim().max(120).catch('')
+    .parse(query.q);
+  const status = z.enum(['active', 'inactive', 'all']).catch('active').parse(query.status);
+  const type = z.enum(['all', 'dry', 'wet']).catch('all').parse(query.type);
+  const [allIngredients, events] = await Promise.all([
+    rows(db, 'ingredients', rowSchemas.ingredients),
+    rows(db, 'inventory_events', rowSchemas.inventory_events),
+  ]);
+  const ingredients = allIngredients
     .filter((i) => i.name.toLowerCase().includes(q.toLowerCase()))
+    .filter((i) => status === 'all' || (status === 'active' ? i.active : !i.active))
+    .filter((i) => type === 'all' || (type === 'dry' ? i.category === 'Dry' : i.category === 'Liquid'))
     .sort((a, b) => a.name.localeCompare(b.name));
+  const balances = inventoryBalances(events);
+  const inventoryUnitsByIngredient = inventoryUnits(events);
   return (
     <>
       <PageHeader
@@ -35,6 +49,22 @@ export default async function Ingredients({
               Search ingredients
             </label>
             <input id="search" name="q" placeholder="Search ingredients…" defaultValue={q} />
+            <label htmlFor="ingredient-type">
+              Type
+              <select id="ingredient-type" name="type" defaultValue={type}>
+                <option value="all">All types</option>
+                <option value="dry">Dry</option>
+                <option value="wet">Wet</option>
+              </select>
+            </label>
+            <label htmlFor="ingredient-status">
+              Status
+              <select id="ingredient-status" name="status" defaultValue={status}>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="all">Active and inactive</option>
+              </select>
+            </label>
             <button type="submit" className="secondary">
               Search
             </button>
@@ -49,7 +79,11 @@ export default async function Ingredients({
                   <th>Ingredient</th>
                   <th>Category</th>
                   <th>Base unit</th>
-                  <th>Status</th>
+                  <th>On hand</th>
+                  <th>Reorder point</th>
+                  <th>Par level</th>
+                  <th>Reorder quantity</th>
+                  <th>Stock status</th>
                   <th>
                     <span className="sr-only">Open ingredient</span>
                   </th>
@@ -64,9 +98,17 @@ export default async function Ingredients({
                     <td>{i.category}</td>
                     <td>{i.default_uom}</td>
                     <td>
-                      <span className={`badge ${i.active ? '' : 'muted'}`}>
-                        {i.active ? 'Active' : 'Inactive'}
-                      </span>
+                      {balances[i.id] ?? 0}
+                      {' '}
+                      {inventoryUnitsByIngredient[i.id] ?? i.default_uom}
+                    </td>
+                    <td>{i.reorder_point ?? 'Not set'}</td>
+                    <td>{i.par_level ?? 'Not set'}</td>
+                    <td>{i.reorder_quantity ?? 'Not set'}</td>
+                    <td>
+                      {i.reorder_point !== null && (balances[i.id] ?? 0) <= i.reorder_point ? (
+                        <span className="badge warning">Reorder</span>
+                      ) : <span>OK</span>}
                     </td>
                     <td>
                       <Link href={`/app/ingredients/${i.id}`}>View details →</Link>
@@ -78,9 +120,9 @@ export default async function Ingredients({
           </div>
         ) : (
           <div className="empty">
-            <h2>{q ? 'No matching ingredients' : 'Your ingredient library starts here'}</h2>
+            <h2>{q || status !== 'active' || type !== 'all' ? 'No matching ingredients' : 'Your ingredient library starts here'}</h2>
             <p>
-              {q
+              {q || status !== 'active' || type !== 'all'
                 ? 'Try another search.'
                 : 'Add your first ingredient with its base unit and reviewed Spanish name.'}
             </p>

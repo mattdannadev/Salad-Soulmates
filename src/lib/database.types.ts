@@ -799,6 +799,9 @@ export type Database = {
           internal_code: string | null;
           name: string;
           organization_id: string;
+          par_level: number | null;
+          reorder_point: number | null;
+          reorder_quantity: number | null;
           storage_notes: string;
           traceability_mode: string;
           updated_at: string;
@@ -813,6 +816,9 @@ export type Database = {
           internal_code?: string | null;
           name: string;
           organization_id?: string;
+          par_level?: number | null;
+          reorder_point?: number | null;
+          reorder_quantity?: number | null;
           storage_notes?: string;
           traceability_mode?: string;
           updated_at?: string;
@@ -827,6 +833,9 @@ export type Database = {
           internal_code?: string | null;
           name?: string;
           organization_id?: string;
+          par_level?: number | null;
+          reorder_point?: number | null;
+          reorder_quantity?: number | null;
           storage_notes?: string;
           traceability_mode?: string;
           updated_at?: string;
@@ -845,6 +854,7 @@ export type Database = {
         Row: {
           created_at: string;
           created_by: string;
+          effective_on: string;
           event_type: string;
           facility_id: string;
           id: string;
@@ -859,6 +869,7 @@ export type Database = {
         Insert: {
           created_at?: string;
           created_by?: string;
+          effective_on?: string;
           event_type: string;
           facility_id?: string;
           id?: string;
@@ -873,6 +884,7 @@ export type Database = {
         Update: {
           created_at?: string;
           created_by?: string;
+          effective_on?: string;
           event_type?: string;
           facility_id?: string;
           id?: string;
@@ -1789,6 +1801,10 @@ export type Database = {
       };
       deactivate_user_access: {
         Args: { reason: string; target_user_id: string };
+        Returns: undefined;
+      };
+      reactivate_user_access: {
+        Args: { target_user_id: string };
         Returns: undefined;
       };
       change_user_access_profile: {

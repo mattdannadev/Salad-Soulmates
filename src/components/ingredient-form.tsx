@@ -25,6 +25,9 @@ export default function IngredientForm({
   const router = useRouter();
   const confirmation = useRef<HTMLDialogElement>(null);
   const pendingForm = useRef<FormData | undefined>(undefined);
+  function optionalQuantity(value: FormDataEntryValue | null) {
+    return value === null || value === '' ? null : Number(value);
+  }
   function submitIngredient(f: FormData) {
     start(async () => {
       try {
@@ -36,6 +39,9 @@ export default function IngredientForm({
           default_uom: f.get('default_uom'),
           description: f.get('description'),
           storage_notes: f.get('storage_notes'),
+          reorder_point: optionalQuantity(f.get('reorder_point')),
+          par_level: optionalQuantity(f.get('par_level')),
+          reorder_quantity: optionalQuantity(f.get('reorder_quantity')),
           active: f.has('active'),
           allergen_ids: f.getAll('allergen_ids'),
         });
@@ -109,6 +115,31 @@ export default function IngredientForm({
           </select>
           <small>Inventory stays in this unit. Mass and volume are never guessed.</small>
         </label>
+        <fieldset className="wide">
+          <legend>
+            Inventory controls (
+            {ingredient?.default_uom ?? 'base unit'}
+            )
+          </legend>
+          <div className="form-grid">
+            <label>
+              Low-stock / reorder point
+              <input name="reorder_point" type="number" min="0" max="1000000" step="0.0001" defaultValue={ingredient?.reorder_point ?? ''} />
+            </label>
+            <label>
+              Par level
+              <input name="par_level" type="number" min="0" max="1000000" step="0.0001" defaultValue={ingredient?.par_level ?? ''} />
+            </label>
+            <label>
+              Default reorder quantity
+              <input name="reorder_quantity" type="number" min="0.0001" max="1000000" step="0.0001" defaultValue={ingredient?.reorder_quantity ?? ''} />
+            </label>
+          </div>
+          <small>
+            Set the low-stock trigger, target on-hand level, and usual quantity to order. Par must
+            be at least the reorder point.
+          </small>
+        </fieldset>
         <label className="wide">
           Description
           <textarea name="description" defaultValue={ingredient?.description} maxLength={1000} />
