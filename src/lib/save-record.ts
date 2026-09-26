@@ -12,6 +12,10 @@ import {
 } from '@/domain/master-data';
 import {
   referenceOptionSchema,
+  referenceOptionDeleteSchema,
+  uomFamilySchema,
+  uomSchema,
+  uomDeleteSchema,
   accessProfileSchema,
   feedbackStatusSchema,
   invalidInput,
@@ -149,6 +153,45 @@ async function saveReferenceOption(db: Client, input: unknown) {
     : await db.from('reference_options').insert(values).select('id').single();
   return saved(result, 'reference-option');
 }
+async function deleteReferenceOption(db: Client, input: unknown) {
+  const parsed = referenceOptionDeleteSchema.safeParse(input);
+  if (!parsed.success) return invalidInput(parsed.error);
+  const { id, list_code: listCode, code } = parsed.data;
+  const usage = listCode === 'ingredient_category'
+    ? await db.from('ingredients').select('id', { count: 'exact', head: true }).eq('category', code)
+    : listCode === 'feedback_type'
+      ? await db.from('feedback_items').select('id', { count: 'exact', head: true }).eq('feedback_type', code)
+      : { count: 0, error: null };
+  if (usage.error) return saved(usage, 'reference-option-delete', false);
+  if ((usage.count ?? 0) > 0) return { ok: false, message: 'This value is already in use. Deactivate it instead to preserve history.' };
+  return saved(await db.from('reference_options').delete().eq('id', id), 'reference-option-delete', false);
+}
+async function saveUomFamily(db: Client, input: unknown) {
+  const parsed = uomFamilySchema.safeParse(input);
+  if (!parsed.success) return invalidInput(parsed.error);
+  return saved(await db.from('uom_families').upsert(parsed.data, { onConflict: 'organization_id,code' }).select('code').single(), 'uom-family', false);
+}
+async function saveUom(db: Client, input: unknown) {
+  const parsed = uomSchema.safeParse(input);
+  if (!parsed.success) return invalidInput(parsed.error);
+  const { id, ...values } = parsed.data;
+  const result = id
+    ? await db.from('uoms').update(values).eq('id', id).select('id').single()
+    : await db.from('uoms').insert(values).select('id').single();
+  return saved(result, 'uom');
+}
+async function deleteUom(db: Client, input: unknown) {
+  const parsed = uomDeleteSchema.safeParse(input);
+  if (!parsed.success) return invalidInput(parsed.error);
+  const { id, code } = parsed.data;
+  const [ingredientUsage, packUsage] = await Promise.all([
+    db.from('ingredients').select('id', { count: 'exact', head: true }).eq('default_uom', code),
+    db.from('supplier_items').select('id', { count: 'exact', head: true }).or(`purchase_uom.eq.${code},pack_quantity_uom.eq.${code}`),
+  ]);
+  if (ingredientUsage.error || packUsage.error) return { ok: false, message: 'Could not verify whether this unit is in use. Deactivate it instead.' };
+  if ((ingredientUsage.count ?? 0) + (packUsage.count ?? 0) > 0) return { ok: false, message: 'This unit is already in use. Deactivate it instead to preserve history.' };
+  return saved(await db.from('uoms').delete().eq('id', id), 'uom-delete', false);
+}
 async function saveAccessProfile(db: Client, input: unknown) {
   const parsed = accessProfileSchema.safeParse(input);
   if (!parsed.success) return invalidInput(parsed.error);
@@ -190,6 +233,10 @@ export const recordOperations = {
   inventory: saveInventory,
   receipt: saveReceipt,
   'reference-option': saveReferenceOption,
+  'reference-option-delete': deleteReferenceOption,
+  'uom-family': saveUomFamily,
+  uom: saveUom,
+  'uom-delete': deleteUom,
   'access-profile': saveAccessProfile,
   feedback: saveFeedback,
   'feedback-status': saveFeedbackStatus,
@@ -203,6 +250,10 @@ export const recordPermissions: Record<RecordKind, string | null> = {
   receipt: 'inventory.receive',
   'feedback-status': 'feedback.manage',
   'reference-option': 'settings.manage',
+  'reference-option-delete': 'settings.manage',
+  'uom-family': 'settings.manage',
+  uom: 'settings.manage',
+  'uom-delete': 'settings.manage',
   'access-profile': 'settings.manage',
   feedback: null,
 };

@@ -46,11 +46,15 @@ export function PackForm({
   ingredientId,
   unit,
   suppliers,
+  purchaseUnits,
+  contentUnits,
 }: {
   pack?: SupplierItem;
   ingredientId: string;
   unit: string;
   suppliers: Supplier[];
+  purchaseUnits: { code: string; label_en: string }[];
+  contentUnits: { code: string; label_en: string }[];
 }) {
   const fields: Field[] = [
     {
@@ -70,7 +74,7 @@ export function PackForm({
       label: 'Purchase unit',
       type: 'select',
       value: pack?.purchase_uom ?? 'bag',
-      options: ['pail', 'bag', 'case', 'each'].map((value) => ({ value, label: value })),
+      options: purchaseUnits.map((value) => ({ value: value.code, label: value.label_en })),
     },
     {
       name: 'pack_quantity',
@@ -85,7 +89,7 @@ export function PackForm({
       label: 'Content unit',
       type: 'select',
       value: pack?.pack_quantity_uom ?? unit,
-      options: ['lb', 'oz', 'gal', 'each'].map((value) => ({ value, label: value })),
+      options: contentUnits.map((value) => ({ value: value.code, label: value.label_en })),
       hint: `Inventory uses ${unit}. A different unit needs a validated conversion before future purchasing.`,
     },
     {

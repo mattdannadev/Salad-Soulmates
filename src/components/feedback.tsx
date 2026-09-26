@@ -5,7 +5,18 @@ import { usePathname } from 'next/navigation';
 import { MessageCircle, X } from 'lucide-react';
 import { RecordForm } from './record-form';
 
-export default function FeedbackDrawer({ locale = 'en' }: { locale?: 'en' | 'es' }) {
+export default function FeedbackDrawer({
+  locale = 'en',
+  feedbackTypes = [
+    { code: 'Suggestion', label_en: 'Suggestion', label_es: 'Sugerencia' },
+    { code: 'Issue', label_en: 'Issue', label_es: 'Problema' },
+    { code: 'Positive', label_en: 'Positive', label_es: 'Positivo' },
+    { code: 'Question', label_en: 'Question', label_es: 'Pregunta' },
+  ],
+}: {
+  locale?: 'en' | 'es';
+  feedbackTypes?: { code: string; label_en: string; label_es: string }[];
+}) {
   const dialog = useRef<HTMLDialogElement>(null);
   const route = usePathname();
   const es = locale === 'es';
@@ -48,17 +59,10 @@ export default function FeedbackDrawer({ locale = 'en' }: { locale?: 'en' | 'es'
               name: 'feedback_type',
               label: es ? 'Tipo' : 'Type',
               type: 'select',
-              value: 'Suggestion',
-              options: (['Suggestion', 'Issue', 'Positive', 'Question'] as const).map((value) => ({
-                value,
-                label: es
-                  ? {
-                    Suggestion: 'Sugerencia',
-                    Issue: 'Problema',
-                    Positive: 'Me gusta',
-                    Question: 'Pregunta',
-                  }[value]
-                  : value,
+              value: feedbackTypes[0]?.code,
+              options: feedbackTypes.map((value) => ({
+                value: value.code,
+                label: es ? value.label_es : value.label_en,
               })),
             },
           ]}

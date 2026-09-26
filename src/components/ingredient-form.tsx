@@ -11,6 +11,7 @@ export default function IngredientForm({
   allergens = [],
   selected = [],
   categories = [],
+  baseUnits = [],
   locale = 'en',
 }: {
   ingredient?: Ingredient;
@@ -18,6 +19,7 @@ export default function IngredientForm({
   allergens?: { id: string; name: string }[];
   selected?: string[];
   categories?: { code: string; label_en: string; label_es: string }[];
+  baseUnits?: { code: string; label_en: string; label_es: string; family_code: string; measurement_system: string }[];
   locale?: 'en' | 'es';
 }) {
   const [pending, start] = useTransition();
@@ -108,12 +110,14 @@ export default function IngredientForm({
         </label>
         <label>
           Base unit
-          <select name="default_uom" defaultValue={ingredient?.default_uom ?? 'lb'}>
-            {['lb', 'oz', 'gal', 'each'].map((x) => (
-              <option key={x}>{x}</option>
+          <select name="default_uom" defaultValue={ingredient?.default_uom ?? baseUnits[0]?.code}>
+            {baseUnits.map((unit) => (
+              <option key={unit.code} value={unit.code}>
+                {unit.label_en} · {unit.measurement_system}
+              </option>
             ))}
           </select>
-          <small>Inventory stays in this unit. Mass and volume are never guessed.</small>
+          <small>Available units come from the shared UOM catalog. Mass and volume are never guessed.</small>
         </label>
         <fieldset className="wide">
           <legend>

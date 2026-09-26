@@ -8,6 +8,10 @@ export const recordKindSchema = z.enum([
   'inventory',
   'receipt',
   'reference-option',
+  'reference-option-delete',
+  'uom-family',
+  'uom',
+  'uom-delete',
   'access-profile',
   'feedback',
   'feedback-status',
@@ -22,6 +26,22 @@ export const referenceOptionSchema = z.object({
   sort_order: z.number().int().min(0).max(10000),
   active: z.boolean(),
 });
+export const referenceOptionDeleteSchema = z.object({ id: z.uuid(), list_code: z.string().min(1).max(80), code: z.string().min(1).max(50) });
+export const uomFamilySchema = z.object({
+  code: z.string().trim().regex(/^[a-z][a-z0-9_]{0,49}$/),
+  label_en: z.string().trim().min(1).max(100),
+  label_es: z.string().trim().min(1).max(100),
+  sort_order: z.number().int().min(0).max(10000),
+  active: z.boolean(),
+});
+export const uomSchema = uomFamilySchema.extend({
+  id: z.uuid().optional(),
+  family_code: z.string().trim().regex(/^[a-z][a-z0-9_]{0,49}$/),
+  measurement_system: z.enum(['metric', 'imperial', 'universal']),
+  is_inventory_unit: z.boolean(),
+  is_purchase_unit: z.boolean(),
+}).refine((value) => value.is_inventory_unit || value.is_purchase_unit, 'Choose at least one usage.');
+export const uomDeleteSchema = z.object({ id: z.uuid(), code: z.string().min(1).max(50) });
 export const accessProfileSchema = z.object({
   id: z.uuid().optional(),
   name: z.string().trim().min(2).max(100),

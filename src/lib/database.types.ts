@@ -8,6 +8,53 @@ export type Database = {
   };
   public: {
     Tables: {
+      application_error_logs: {
+        Row: {
+          error_code: string;
+          error_name: string;
+          id: string;
+          occurred_at: string;
+          operation: string;
+          organization_id: string;
+          release_id: string | null;
+          reported_by: string | null;
+          request_id: string | null;
+          route: string | null;
+          safe_message: string;
+          severity: 'warning' | 'error' | 'critical';
+        };
+        Insert: {
+          error_code: string;
+          error_name: string;
+          id?: string;
+          occurred_at?: string;
+          operation: string;
+          organization_id?: string;
+          release_id?: string | null;
+          reported_by?: string | null;
+          request_id?: string | null;
+          route?: string | null;
+          safe_message: string;
+          severity?: 'warning' | 'error' | 'critical';
+        };
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: 'application_error_logs_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'application_error_logs_reported_by_fkey';
+            columns: ['reported_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       packaging_profile_versions: {
         Row: {
           id: string;
@@ -1670,6 +1717,75 @@ export type Database = {
             referencedColumns: ['organization_id', 'code'];
           },
         ];
+      };
+      uom_families: {
+        Row: {
+          organization_id: string;
+          code: string;
+          label_en: string;
+          label_es: string;
+          sort_order: number;
+          active: boolean;
+        };
+        Insert: {
+          organization_id?: string;
+          code: string;
+          label_en: string;
+          label_es: string;
+          sort_order?: number;
+          active?: boolean;
+        };
+        Update: {
+          organization_id?: string;
+          code?: string;
+          label_en?: string;
+          label_es?: string;
+          sort_order?: number;
+          active?: boolean;
+        };
+        Relationships: [];
+      };
+      uoms: {
+        Row: {
+          id: string;
+          organization_id: string;
+          family_code: string;
+          code: string;
+          label_en: string;
+          label_es: string;
+          measurement_system: 'metric' | 'imperial' | 'universal';
+          is_inventory_unit: boolean;
+          is_purchase_unit: boolean;
+          sort_order: number;
+          active: boolean;
+        };
+        Insert: {
+          id?: string;
+          organization_id?: string;
+          family_code: string;
+          code: string;
+          label_en: string;
+          label_es: string;
+          measurement_system: 'metric' | 'imperial' | 'universal';
+          is_inventory_unit?: boolean;
+          is_purchase_unit?: boolean;
+          sort_order?: number;
+          active?: boolean;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          family_code?: string;
+          code?: string;
+          label_en?: string;
+          label_es?: string;
+          measurement_system?: 'metric' | 'imperial' | 'universal';
+          is_inventory_unit?: boolean;
+          is_purchase_unit?: boolean;
+          sort_order?: number;
+          active?: boolean;
+        };
+        Relationships: [];
       };
       supplier_items: {
         Row: {
