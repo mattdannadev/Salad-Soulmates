@@ -6,10 +6,14 @@ async function createConfirmedPurchase(page: import('@playwright/test').Page) {
   await page.goto(`/app/purchasing?ingredient=${ingredientId}`);
   await page.getByLabel('Expected delivery').fill('2026-10-01');
   await page.getByLabel(/Whole packs \(0 skips this ingredient\)/).fill('1');
+  const references = page.getByRole('article').filter({ hasText: 'Confirmed' }).locator('strong');
+  const previousReferences = await references.allTextContents();
   await page.getByRole('button', { name: 'Create purchase order for Preview supplier' }).click();
-  const purchase = page.getByRole('article').filter({ hasText: 'Confirmed' }).first();
-  await expect(purchase).toBeVisible();
-  return purchase.locator('strong').first().innerText();
+  await expect(references).toHaveCount(previousReferences.length + 1);
+  const createdReference = (await references.allTextContents())
+    .find((reference) => !previousReferences.includes(reference));
+  if (!createdReference) throw new Error('The newly created purchase order was not displayed');
+  return createdReference;
 }
 
 test('receives multiple same-supplier POs with source-lot splits and package labels', async ({

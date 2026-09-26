@@ -318,6 +318,15 @@ it('keeps two actual source packages as immutable contributions to one recipe li
   ).trace);
   expect(forward.matches).toHaveLength(1);
   expect(forward.affected_batches).toHaveLength(3);
+  // Production workers can post consumption without inventory adjustment access.
+  await database.exec('reset role');
+  await database.query(`delete from public.access_profile_permissions
+    where access_profile_id=(select access_profile_id from public.profiles where id=$1)
+      and permission_code='inventory.adjust'`, [gateActor]);
+  await actAs(gateActor);
+  expect(z.object({ allowed: z.boolean() }).parse((await query(
+    "select public.has_permission('inventory.adjust') allowed",
+  )).rows[0]).allowed).toBe(false);
   await query('select public.complete_batch_worksheet($1)', [execution.id]);
   await query('select public.complete_batch_worksheet($1)', [execution.id]);
   await database.exec('savepoint issue_after_completion');

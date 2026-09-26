@@ -51,7 +51,7 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await addOption.getByLabel('Customer', { exact: true }).fill('Preview customer');
   await addOption.getByLabel('Option name', { exact: true }).fill('2-gallon bag');
   await addOption.getByRole('combobox', { name: /^Packaging/ }).selectOption('custom');
-  await addOption.getByLabel('Sales unit', { exact: true }).selectOption('bag');
+  await addOption.getByRole('combobox', { name: 'Sales unit', exact: true }).selectOption('bag');
   await addOption.getByLabel('Gallons per sales unit', { exact: true }).fill('2');
   await addOption.getByLabel('Price per unit (USD)', { exact: true }).fill('12.50');
   await addOption.getByRole('button', { name: 'Save customer option', exact: true }).click();

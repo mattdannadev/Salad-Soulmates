@@ -39,6 +39,56 @@ create trigger spice_consumption_audit after insert on public.spice_preparation_
   for each row execute function public.audit_change();
 alter table public.serialized_unit_events add column spice_consumption_id uuid unique references public.spice_preparation_consumptions(id);
 
+-- Inventory controls added manual event types after the original locking guard.
+-- Keep the ingredient row locked through the posting transaction so changing its
+-- base unit cannot race the first inventory event. Worker consumption is allowed
+-- only through its linked package event; direct inserts still obey inventory RLS.
+create or replace function public.validate_inventory() returns trigger
+language plpgsql security definer set search_path='' as $$
+declare ingredient_unit text; worker_consumption boolean := false;
+begin
+  if auth.uid() is null or new.created_by is distinct from auth.uid() then
+    raise exception 'Invalid inventory actor';
+  end if;
+  if new.organization_id is distinct from public.current_org()
+    or new.facility_id is distinct from public.current_facility() then
+    raise exception 'Invalid inventory organization or facility';
+  end if;
+  if new.event_type='OrderUsage' and new.serialized_unit_event_id is not null then
+    select exists(select 1 from public.serialized_unit_events event
+      where event.id=new.serialized_unit_event_id
+        and event.organization_id=new.organization_id
+        and event.facility_id=new.facility_id
+        and event.created_by=auth.uid()
+        and event.spice_consumption_id is not null) into worker_consumption;
+  end if;
+  if not public.has_permission(case
+    when new.event_type='Receipt' then 'inventory.receive'
+    when worker_consumption then 'production.mobile'
+    else 'inventory.adjust' end) then
+    raise exception 'Inventory permission required';
+  end if;
+  select default_uom into ingredient_unit from public.ingredients
+    where id=new.ingredient_id and organization_id=new.organization_id for share;
+  if ingredient_unit is null or new.uom is distinct from ingredient_unit then
+    raise exception 'Inventory unit must match ingredient base unit';
+  end if;
+  if new.event_type='OpeningBalance' and new.quantity_delta<0 then
+    raise exception 'Opening balance must be positive';
+  end if;
+  if new.event_type='ManualGain' and new.quantity_delta<=0 then
+    raise exception 'Manual gain must be positive';
+  end if;
+  if new.event_type in ('ManualShrink','OrderUsage') and new.quantity_delta>=0 then
+    raise exception 'Inventory shrink and order usage must be negative';
+  end if;
+  if new.event_type='Receipt' and new.quantity_delta<=0 then
+    raise exception 'Receipt must be positive';
+  end if;
+  return new;
+end $$;
+revoke execute on function public.validate_inventory() from public,anon,authenticated;
+
 -- Physical spice consumption is an order usage; other package adjustments retain
 -- their existing ledger classification.
 create or replace function public.post_serialized_unit_delta() returns trigger

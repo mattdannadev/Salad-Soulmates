@@ -1,6 +1,7 @@
 import { expect, test } from './fixtures';
 
 test('sidebar collapses to accessible icons and expands after navigation', async ({ page }, info) => {
+  await page.setViewportSize({ width: 1200, height: 800 });
   await page.goto('/login');
   await page.getByLabel('Email or phone number').fill('admin@example.test');
   await page.getByLabel('Password', { exact: true }).fill('local-test-password');
@@ -11,6 +12,8 @@ test('sidebar collapses to accessible icons and expands after navigation', async
   await expect(page.getByRole('button', { name: 'Expand navigation' })).toHaveAttribute('aria-expanded', 'false');
   await expect(page.locator('.brand strong')).toBeHidden();
   await expect(navigation.locator('.nav-label').first()).toBeHidden();
+  const catalog = navigation.locator('.nav-group').filter({ hasText: 'Product catalog' });
+  await catalog.locator('summary').click();
   await expect(navigation.getByRole('link', { name: 'Ingredients', exact: true })).toBeVisible();
   await page.screenshot({ path: info.outputPath('sidebar-collapsed.png'), fullPage: true });
   await navigation.getByRole('link', { name: 'Ingredients', exact: true }).click();
@@ -25,5 +28,6 @@ test('sidebar collapses to accessible icons and expands after navigation', async
   await page.locator('#locale').selectOption('es');
   await page.getByRole('button', { name: 'Contraer navegación' }).click();
   await expect(page.getByRole('button', { name: 'Expandir navegación' })).toBeVisible();
-  await expect(page.getByRole('navigation').getByRole('link', { name: 'Inicio', exact: true })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Navegación principal' })
+    .getByRole('link', { name: 'Panel', exact: true })).toBeVisible();
 });
