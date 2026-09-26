@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { z } from 'zod';
 import { PageHeader } from '@/components/shell';
 import CustomerOrderForm from '@/components/customer-order-form';
+import OrderCardDetails from '@/components/order-card-details';
 import OrderProduction from '@/components/order-production';
 import OrderRequirements from '@/components/order-requirements';
 import { CancelMaterialPlan } from '@/components/purchase-status-form';
@@ -10,6 +11,7 @@ import { formatPrice } from '@/domain/customer-pricing';
 import { customerOrderLabel } from '@/domain/customer-orders';
 import { formatDate, formatNumber } from '@/domain/format';
 import loadPurchasingWorkspace from '@/lib/purchasing-data';
+import orderCards from '@/services/order-cards';
 
 export default async function Orders({ searchParams }: {
   searchParams: Promise<{ order?: string; estimate?: string; customer?: string }>;
@@ -42,6 +44,10 @@ export default async function Orders({ searchParams }: {
   const legacy = workspace.plans.filter(
     (plan) => !workspace.orders.some((item) => item.id === plan.id),
   );
+  const {
+    orders, customers, plans, productionPlans,
+  } = workspace;
+  const savedCards = orderCards(orders, customers, plans, productionPlans);
   return (
     <>
       <PageHeader
@@ -118,19 +124,17 @@ export default async function Orders({ searchParams }: {
             <h2>{es ? 'Pedidos guardados' : 'Saved customer orders'}</h2>
             {!workspace.orders.length && <p className="empty order-empty-state">{es ? 'Aún no hay pedidos de clientes.' : 'No customer orders yet.'}</p>}
             <div className="worksheet-links">
-              {workspace.orders.toSorted((a, b) => b.created_at.localeCompare(a.created_at))
-                .map((item) => (
-                  <Link className="worksheet-link" href={`/app/orders?order=${item.id}`} key={item.id}>
-                    <strong>{customerOrderLabel(item)}</strong>
-                    <span>{formatDate(item.needed_on)}</span>
-                    <span>{workspace.plans.find((plan) => plan.id === item.id)?.status === 'Cancelled' ? cancelledLabel : activeLabel}</span>
-                    <span>
-                      {workspace.productionPlans.find((plan) => plan.id === item.id && plan.status !== 'Cancelled')?.start_on
-                        ? `${productionLabel} ${formatDate(workspace.productionPlans.find((plan) => plan.id === item.id)?.start_on ?? '')}`
-                        : unplannedLabel}
-                    </span>
-                  </Link>
-                ))}
+              {savedCards.map((card) => (
+                <Link className="worksheet-link" href={`/app/orders?order=${card.order.id}`} key={card.order.id}>
+                  <strong>{customerOrderLabel(card.order)}</strong>
+                  <span>{card.status === 'Cancelled' ? cancelledLabel : activeLabel}</span>
+                  <span>
+                    {card.productionStart
+                      ? `${productionLabel} ${formatDate(card.productionStart)}` : unplannedLabel}
+                  </span>
+                  <OrderCardDetails card={card} locale={locale} />
+                </Link>
+              ))}
             </div>
           </section>
           {workspace.canOrder && (

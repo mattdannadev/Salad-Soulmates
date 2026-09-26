@@ -45,6 +45,35 @@ phase complete from memory.
 - Extract meaningful magic numbers and strings into named constants or
   configuration. Preserve business rules when moving their values.
 
+## Layered application architecture
+
+All new and changed application code must preserve a proportional presentation,
+service, and data-layer design. Keep dependencies flowing from presentation to
+service to data; do not bypass a lower layer.
+
+- The presentation layer (pages, components, route handlers/actions, and view
+  models) renders state, manages interaction and framework lifecycle concerns,
+  maps user input/output, and invokes services. It must not contain business
+  rules, direct database/external-SDK access, privileged credentials, or
+  persistence-specific transformations.
+- The service layer implements named use cases and owns business rules,
+  validation orchestration, transaction/workflow boundaries, authorization
+  decisions, and mapping between presentation contracts and data contracts. It
+  must not depend on UI components or framework rendering concerns.
+- The data layer encapsulates database, storage, and external-service access.
+  It owns query/persistence details and maps provider-specific representations;
+  it must not contain presentation logic or product workflow decisions.
+- Define explicit, typed layer interfaces and keep them independently testable.
+  Reuse the project’s existing conventions and introduce abstractions only when
+  they represent a real boundary; do not create ceremonial layers for trivial,
+  local logic.
+
+During implementation and review, reject direct presentation-to-data calls,
+business logic in views or repositories, and layer violations hidden behind
+generic utilities. Refactor the smallest affected boundary when correcting an
+existing violation, preserving public contracts unless a requested change says
+otherwise.
+
 ## Validation, errors, and reliability
 
 - Validate all input arguments before core logic. At trust boundaries use runtime

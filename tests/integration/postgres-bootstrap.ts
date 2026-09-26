@@ -30,6 +30,8 @@ const migrations = [
   '20260921150000_standalone_purchase_orders.sql',
   '20260921160000_allow_optional_standalone_purchase_reason.sql',
   '20260921170000_user_management_foundation.sql',
+  '20260925120000_spice_preparation_consumption.sql',
+  '20260925130000_spice_preparation_issues.sql',
 ];
 
 /** Apply migrations and synthetic identity data only inside the newly created test database. */

@@ -1156,6 +1156,267 @@ dialog::backdrop {
 .worker-page .panel {
   padding: 24px;
 }
+.worker-day {
+  margin: 32px 0;
+}
+.worker-day > .section-heading {
+  margin-bottom: 14px;
+}
+.worker-preparation h3 {
+  margin: 0;
+  font-size: 19px;
+}
+.worker-preparation-list {
+  display: grid;
+  gap: 18px;
+}
+.worker-card-top,
+.worker-ingredient-heading,
+.worker-quantity-line,
+.worker-record-summary,
+.worker-step-heading,
+.worker-progress > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.worker-card-top {
+  align-items: flex-start;
+}
+.worker-card-top .badge {
+  flex-shrink: 0;
+}
+.worker-page .worker-kicker {
+  margin: 0 0 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.worker-page .worker-card-subtitle {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.worker-step-heading {
+  margin: 18px 0 9px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.worker-text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  background: transparent;
+  color: var(--green);
+  padding: 8px 2px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.worker-text-button:focus-visible,
+.worker-page button:focus-visible,
+.worker-page input:focus-visible,
+.worker-page select:focus-visible,
+.worker-page textarea:focus-visible {
+  outline: 3px solid var(--green);
+  outline-offset: 2px;
+}
+.worker-preparation .muted {
+  font-size: 14px;
+}
+.worker-progress {
+  display: grid;
+  gap: 6px;
+  margin: 18px 0;
+  font-size: 14px;
+}
+.worker-progress progress {
+  width: 100%;
+  height: 12px;
+  accent-color: var(--green);
+}
+.worker-ingredient-list {
+  display: grid;
+  gap: 7px;
+  margin: 20px 0;
+}
+.worker-ingredient-list button {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  text-align: left;
+  background: #f5f8f1;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.worker-ingredient-list button.active {
+  border-color: var(--green);
+  background: #e9f3e5;
+}
+.worker-ingredient-list small {
+  flex-shrink: 0;
+}
+.worker-ingredient-entry {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+.worker-ingredient-entry h4 {
+  margin: 0;
+  font-size: 24px;
+}
+.worker-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 700;
+}
+.worker-quantity-line {
+  margin: 16px 0;
+  padding: 12px 0;
+  border-block: 1px solid var(--line);
+  font-size: 13px;
+}
+.worker-quantity-line span {
+  display: grid;
+  gap: 3px;
+}
+.worker-quantity-line strong {
+  font-size: 18px;
+}
+.worker-ingredient-entry form > button[type='submit'] {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.worker-ingredient-entry p {
+  font-size: 15px;
+}
+.worker-ingredient-entry label {
+  display: grid;
+  gap: 5px;
+  margin: 12px 0;
+}
+.worker-lot-records {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0;
+  font-size: 14px;
+}
+.worker-record {
+  border-top: 1px solid var(--line);
+  padding-top: 7px;
+}
+.worker-record-summary {
+  min-height: 40px;
+  font-size: 14px;
+}
+.worker-inline-form {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  margin: 8px 0 12px;
+  border-radius: 12px;
+  background: #f5f8f1;
+}
+.worker-ingredient-entry .worker-inline-form label {
+  margin: 0;
+}
+.worker-page .worker-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.worker-inline-actions {
+  display: flex;
+  gap: 8px;
+}
+.worker-inline-actions button {
+  flex: 1;
+  min-height: 44px;
+}
+.worker-report {
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.worker-issue-type {
+  display: flex;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.worker-issue-type legend {
+  margin-bottom: 5px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.worker-ingredient-entry .worker-issue-type label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.worker-issue-type input {
+  width: auto;
+}
+.worker-issues {
+  display: grid;
+  gap: 5px;
+}
+.worker-issues p {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  padding: 9px;
+  border-radius: 8px;
+  background: #fff7e8;
+}
+.worker-issues svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.worker-step-controls {
+  display: flex;
+  gap: 10px;
+  margin: 16px 0;
+}
+.worker-step-controls button {
+  flex: 1;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+@media (max-width: 520px) {
+  .worker-page {
+    padding-inline: 14px;
+  }
+  .worker-page .panel {
+    padding: 16px;
+  }
+  .worker-card-top .badge {
+    font-size: 11px;
+  }
+  .worker-ingredient-entry {
+    padding: 14px;
+  }
+}
 .sr-only {
   position: absolute;
   width: 1px;

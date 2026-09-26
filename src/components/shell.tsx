@@ -28,6 +28,7 @@ import {
   Building2,
   UserCog,
   History,
+  CalendarDays,
 } from 'lucide-react';
 import { signOut } from '@/app/actions';
 import FeedbackDrawer from './feedback';
@@ -92,6 +93,21 @@ const navigationGroups = [
         permission: 'orders.read',
       },
       {
+        href: '/app/shipping',
+        en: 'Shipping',
+        es: 'Envíos',
+        icon: Truck,
+        permission: 'orders.read',
+      },
+    ],
+  },
+  {
+    id: 'production-planning',
+    en: 'Production Planning',
+    es: 'Planificación de producción',
+    icon: CalendarDays,
+    items: [
+      {
         href: '/app/orders',
         en: 'Orders',
         es: 'Pedidos',
@@ -99,11 +115,11 @@ const navigationGroups = [
         permission: 'orders.read',
       },
       {
-        href: '/app/shipping',
-        en: 'Shipping',
-        es: 'Envíos',
-        icon: Truck,
-        permission: 'orders.read',
+        href: '/worker',
+        en: 'Spice preparations',
+        es: 'Preparaciones de especias',
+        icon: ClipboardList,
+        permission: 'production.mobile',
       },
     ],
   },
@@ -289,7 +305,11 @@ export function Shell({
             );
             const hasCurrentPage = visibleItems.some((item) => isCurrentPath(item.href));
 
-            if (visibleItems.length === 1 && group.id !== 'user-management') {
+            if (visibleItems.length === 0) return null;
+
+            if (visibleItems.length === 1
+              && group.id !== 'user-management'
+              && group.id !== 'production-planning') {
               const item = visibleItems[0];
               if (!item) return null;
               const {

@@ -79,3 +79,16 @@ Worker/crew scheduling is the next build item. Physical production scans, actual
 ingredient consumption, packaging and shipping remain later phases. Existing
 real-Auth, independent-review and physical printer/scanner acceptance items are
 not silently marked complete by these automated checks.
+
+## Navigation and order-card follow-up
+
+The September 25 implementation candidate groups existing production entry points
+under Production Planning and adds an authorized path to worker preparations.
+Saved-order cards expose products and batch counts, customer notes, order date,
+and pickup date. Customer notes refer to the current customer record, not a new
+order-specific notes field. The schema does not yet distinguish a separately
+requested pickup date from the saved customer pickup date.
+
+Verify role-filtered navigation, worker return navigation, missing notes/dates,
+multiple product lines, and mobile readability before accepting this increment.
+No production deployment or shared-database changes are part of this follow-up.

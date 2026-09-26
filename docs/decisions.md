@@ -524,3 +524,16 @@ when due by the production date, or pickup date until production is scheduled.
 Shared supply counts once. Held/expired stock is excluded by existing availability
 rules, and later deliveries cannot conceal an earlier shortage. Expiry treatment
 is conservative: stock must remain usable at each demand horizon.
+
+## 2026-09-25 — Reachable production work and informative order cards
+
+The owner requested a logical Production Planning navigation group exposing the
+existing worker screens to authorized users. Preserve the worker-focused entry
+and current server-side permissions; navigation visibility must not grant new
+operational privileges. Keep order planning attached to saved customer orders.
+
+Order cards must identify products and batch counts, customer notes, and the
+order/request and customer pickup dates. The current schema has an order creation
+timestamp and one customer-needed/pickup date; do not invent a distinct requested
+pickup date or relabel the creation timestamp as one. Display missing notes and
+dates explicitly. This change does not authorize production release or migrations.
