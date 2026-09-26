@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { z } from 'zod';
 import { PageHeader } from '@/components/shell';
 import CustomerOrderForm from '@/components/customer-order-form';
+import OrderCardDetails from '@/components/order-card-details';
 import OrderProduction from '@/components/order-production';
 import OrderRequirements from '@/components/order-requirements';
 import { CancelMaterialPlan } from '@/components/purchase-status-form';
@@ -12,6 +13,7 @@ import { formatPrice } from '@/domain/customer-pricing';
 import { customerOrderLabel } from '@/domain/customer-orders';
 import { formatDate, formatNumber } from '@/domain/format';
 import loadPurchasingWorkspace from '@/lib/purchasing-data';
+import orderCards from '@/services/order-cards';
 
 export default async function Orders({ searchParams }: {
   searchParams: Promise<{
@@ -56,6 +58,11 @@ export default async function Orders({ searchParams }: {
   const legacy = workspace.plans.filter(
     (plan) => !workspace.orders.some((item) => item.id === plan.id),
   );
+  const {
+    orders, customers, plans, productionPlans,
+  } = workspace;
+  const savedCards = orderCards(orders, customers, plans, productionPlans);
+  const cardsById = new Map(savedCards.map((card) => [card.order.id, card]));
   const activeOrders = workspace.orders.filter((item) => (
     workspace.plans.find((plan) => plan.id === item.id)?.status === 'Active'
   ));
@@ -205,6 +212,8 @@ export default async function Orders({ searchParams }: {
                     </h3>
                     <div className="orders-grid">
                       {customerOrders?.map((item) => {
+                        const card = cardsById.get(item.id);
+                        if (!card) throw new Error('Saved order card missing');
                         const production = workspace.productionPlans.find((plan) => plan.id === item.id && plan.status !== 'Cancelled');
                         const productionText = production?.start_on
                           ? `${productionLabel} ${formatDate(production.start_on)}`
@@ -214,7 +223,7 @@ export default async function Orders({ searchParams }: {
                             <div className="order-card-main">
                               <p className="order-card-reference">{item.reference || item.id.slice(0, 8)}</p>
                               <h4><Link href={`/app/orders?order=${item.id}`}>{formatDate(item.needed_on)}</Link></h4>
-                              <p>{item.items.map((line) => line.product_name).join(', ')}</p>
+                              <OrderCardDetails card={card} locale={locale} />
                               <div className="order-card-badges">
                                 <span className="badge">{activeLabel}</span>
                                 <span className="badge">{productionText}</span>

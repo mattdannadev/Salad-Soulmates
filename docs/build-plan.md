@@ -259,3 +259,18 @@ whole-pack rounding, supplier ambiguity, duplicate/retry protection, permission
 and facility isolation, desktop/phone browser checks and native PostgreSQL
 concurrency checks. Physical production and shipment completion remain gated.
 Verification and release evidence is recorded in `customer-dashboard.md` and PR #13.
+
+## Production navigation and order-card follow-up — implementation candidate
+
+Expose the existing worker preparations under Production Planning, with navigation
+filtered by current permissions and a usable return path. Preserve the focused
+worker experience and order-linked production planning. Enrich saved order cards
+with product names, per-product and total batch counts, customer notes, order date,
+and pickup date. A separate requested pickup date awaits a confirmed definition.
+
+Acceptance: authorized administrators can reach worker preparations from desktop
+and mobile navigation; worker access stays scoped; order-card details remain
+readable on phones, show missing-value fallbacks, and preserve existing order links.
+Implementation, automated validation, merge, deployment, and owner acceptance are
+separate gates. This release incorporates prior worker execution
+work and has been reconciled with main f66102e before release.

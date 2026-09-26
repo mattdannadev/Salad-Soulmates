@@ -12,7 +12,7 @@ import { recordOperations, recordPermissions } from '@/lib/save-record';
 import hasPermission from '@/lib/permissions';
 import { logFailure } from '@/lib/operation-error';
 import confirmSignOut from '@/lib/sign-out';
-import authCallbackUrl from '@/domain/auth-callback-url';
+import authConfirmationUrl from '@/domain/auth-callback-url';
 
 async function recordSuccessfulSignIn(db: Awaited<ReturnType<typeof supabase>>) {
   let userAgent: string | null = null;
@@ -192,7 +192,7 @@ async function sendInvitationAndAssignAccess({
     try {
       ({ data, error } = await admin.auth.admin.inviteUserByEmail(request.contact_value, {
         data: { display_name: request.display_name },
-        redirectTo: authCallbackUrl(process.env),
+        redirectTo: authConfirmationUrl(process.env),
       }));
     } catch (cause) {
       logFailure('invitation_send', cause);
@@ -361,7 +361,7 @@ export async function requestPasswordReset(
   if (!parsed.success) return { ok: false, message: 'Enter a valid email address.' };
   const db = await supabase({ readOnly: false });
   const { error } = await db.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: authCallbackUrl(process.env),
+    redirectTo: authConfirmationUrl(process.env),
   });
   if (error) {
     logFailure('password_reset_request_failed', error);

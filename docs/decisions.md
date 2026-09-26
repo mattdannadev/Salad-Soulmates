@@ -536,8 +536,25 @@ Shared supply counts once. Held/expired stock is excluded by existing availabili
 rules, and later deliveries cannot conceal an earlier shortage. Expiry treatment
 is conservative: stock must remain usable at each demand horizon.
 
+## 2026-09-25 — Reachable production work and informative order cards
+
+The owner requested a logical Production Planning navigation group exposing the
+existing worker screens to authorized users. Preserve the worker-focused entry
+and current server-side permissions; navigation visibility must not grant new
+operational privileges. Keep order planning attached to saved customer orders.
+
+Order cards must identify products and batch counts, customer notes, and the
+order/request and customer pickup dates. The current schema has an order creation
+timestamp and one customer-needed/pickup date; do not invent a distinct requested
+pickup date or relabel the creation timestamp as one. Display missing notes and
+dates explicitly. This change does not authorize production release or migrations.
+
 ## 2026-09-24 — Inventory controls and adjustment history
 
 Inventory adjustments require an ingredient, effective date, adjustment type and reason. Manual gains add stock; manual shrinks and usage for filling orders remove stock. Purchase-order receipts remain their own receiving workflow and appear in the same immutable inventory history. Ingredients may define optional base-unit reorder point, par level and default reorder quantity; a par level cannot be below its reorder point.
 
 Ingredients are retained by deactivation rather than hard deletion so their inventory, recipe, receiving and purchasing history stays valid. The normal Ingredients grid defaults to active ingredients; staff can explicitly filter for inactive or all ingredients, and filter the existing Liquid category as Wet and Dry category as Dry.
+
+## 2026-09-25 — Commit outstanding work before release
+
+The owner explicitly requested committing and deploying the outstanding changes, then clarified that all uncommitted application work must be incorporated before anything is deployed. Preserve newer main functionality, commit the reconciled source, and resolve release validation failures before production publication. This authorizes the additive worker schema changes needed by the release, not test data or unrelated operational writes.

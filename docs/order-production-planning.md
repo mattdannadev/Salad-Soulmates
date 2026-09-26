@@ -79,3 +79,42 @@ Worker/crew scheduling is the next build item. Physical production scans, actual
 ingredient consumption, packaging and shipping remain later phases. Existing
 real-Auth, independent-review and physical printer/scanner acceptance items are
 not silently marked complete by these automated checks.
+
+## Navigation and order-card follow-up
+
+The September 25 implementation candidate groups existing production entry points
+under Production Planning and adds an authorized path to worker preparations.
+Saved-order cards expose products and batch counts, customer notes, order date,
+and pickup date. Customer notes refer to the current customer record, not a new
+order-specific notes field. The schema does not yet distinguish a separately
+requested pickup date from the saved customer pickup date.
+
+Verify role-filtered navigation, worker return navigation, missing notes/dates,
+multiple product lines, and mobile readability before accepting this increment.
+No production deployment or shared-database changes are part of this follow-up.
+
+## 2026-09-25 release integration
+
+The outstanding worker implementation and navigation/card changes were captured
+in commit 129388d, then reconciled with main f66102e. The order directory retains
+main's grouping, search, product/status filters, deactivate action, and toast.
+Worker problem notes survive response validation; worker reads and writes use
+presentation, service, and data layers.
+
+Release corrections put the worker migrations after the tenant-scope hardening,
+require Confirmed plans and Assigned production lots for writes, scope lock
+lookups to organization/facility, fix receipt-facility tracing, and classify
+spice consumption as OrderUsage. A hosted read-only preflight found no existing
+worksheet executions; no operating records were created or changed by tests.
+
+The owner authorized committing all outstanding changes before deployment.
+Historical reactivation and inventory-control migration SQL was verified against
+the hosted history by normalized hash; filenames are aligned to those versions
+without replaying either migration. Release verification and deployment evidence
+are recorded in the final handoff.
+
+## 2026-09-26 release checkpoint — PR #15
+
+The owner approved publication, required migrations, and deployment of this release and necessary fixes. All outstanding application changes were reconciled with main f66102e. The purchase action now uses the concise label Create purchase order. The hosted migrations were applied successfully and repository versions match hosted history; no test operating records were written there.
+
+`npm run check` passed with 465 tests, strict lint, formatting, TypeScript, and production build. Native PostgreSQL checks passed 28 tests. Desktop and phone regression checks cover linked receipt packs, mobile navigation bounds, and purchase-button overflow. Final full CI, merge, and production deployment are recorded in PR #15; owner acceptance remains separate.

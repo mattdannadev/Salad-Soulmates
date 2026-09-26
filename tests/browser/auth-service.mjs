@@ -101,6 +101,7 @@ function isPurchasingFixtureRequest(url) {
     || endpoint === 'rpc/demand_coverage' || endpoint === 'rpc/generate_demand_purchases'
     || endpoint === 'rpc/cancel_customer_order'
     || endpoint === 'rpc/find_serialized_units' || endpoint === 'rpc/order_production_batches'
+    || endpoint === 'rpc/worker_spice_preparations'
     || mutations.has(endpoint.replace('rpc/', ''))
     || endpoint === 'test/purchasing-reset'
   );
@@ -153,6 +154,10 @@ async function executeRequest(url, method, body) {
   if (endpoint === 'rpc/order_production_batches') {
     const args = z.object({ order_id: z.uuid() }).parse(input);
     const result = await db.query('select public.order_production_batches($1) as value', [args.order_id]);
+    return z.object({ value: z.unknown() }).parse(result.rows[0]).value;
+  }
+  if (endpoint === 'rpc/worker_spice_preparations') {
+    const result = await db.query('select public.worker_spice_preparations() as value');
     return z.object({ value: z.unknown() }).parse(result.rows[0]).value;
   }
   if (endpoint === 'rpc/cancel_customer_order') {

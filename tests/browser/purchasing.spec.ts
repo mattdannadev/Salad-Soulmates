@@ -4,7 +4,7 @@ test.afterEach(async ({ page }, info) => {
   if (info.status !== info.expectedStatus) console.error('Synthetic browser failure:', await page.locator('main').ariaSnapshot());
 });
 
-test('inventory starts a purchase with its ingredient fixed', async ({ page }) => {
+test('inventory starts a purchase with its ingredient fixed', async ({ page }, info) => {
   await page.goto('/login');
   await page.getByLabel('Email or phone number').fill('admin@example.test');
   await page.getByLabel('Password', { exact: true }).fill('local-test-password');
@@ -22,10 +22,23 @@ test('inventory starts a purchase with its ingredient fixed', async ({ page }) =
   await expect(page.getByText('Preview lemon juice', { exact: true })).toHaveCount(0);
   await page.getByLabel('Expected delivery').fill('2026-10-01');
   await page.getByLabel(/Whole packs \(0 skips this ingredient\)/).fill('2');
-  await expect(
-    page.getByRole('button', { name: 'Create purchase order for Preview supplier' }),
-  ).toBeEnabled();
-  await page.getByRole('button', { name: 'Create purchase order for Preview supplier' }).click();
+  const createPurchase = page.getByRole('button', { name: 'Create purchase order', exact: true });
+  await expect(createPurchase).toBeEnabled();
+  if (info.project.name === 'phone') {
+    await createPurchase.scrollIntoViewIfNeeded();
+    expect(await createPurchase.evaluate((button) => {
+      const viewport = window.visualViewport;
+      if (!viewport) return false;
+      const bounds = button.getBoundingClientRect();
+      const centerX = bounds.left + bounds.width / 2;
+      const centerY = bounds.top + bounds.height / 2;
+      return document.documentElement.scrollWidth <= viewport.width
+        && bounds.right <= viewport.width
+        && bounds.bottom <= viewport.height
+        && document.elementFromPoint(centerX, centerY) === button;
+    })).toBe(true);
+  }
+  await createPurchase.click();
   await expect(page.getByRole('article').getByText('Confirmed', { exact: true })).toBeVisible();
 });
 
@@ -51,7 +64,7 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await addOption.getByLabel('Customer', { exact: true }).fill('Preview customer');
   await addOption.getByLabel('Option name', { exact: true }).fill('2-gallon bag');
   await addOption.getByRole('combobox', { name: /^Packaging/ }).selectOption('custom');
-  await addOption.getByLabel('Sales unit', { exact: true }).selectOption('bag');
+  await addOption.getByRole('combobox', { name: 'Sales unit', exact: true }).selectOption('bag');
   await addOption.getByLabel('Gallons per sales unit', { exact: true }).fill('2');
   await addOption.getByLabel('Price per unit (USD)', { exact: true }).fill('12.50');
   await addOption.getByRole('button', { name: 'Save customer option', exact: true }).click();
@@ -163,9 +176,15 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await page.getByText('Receive without a purchase order', { exact: true }).click();
   await page.getByLabel('Quantity received').fill('10');
   await page.getByLabel('Quantity in each physical package').fill('10');
-  await page
-    .getByLabel('Confirmed inbound order (optional)')
-    .selectOption({ label: `PO-${info.project.name} · Preview garlic powder · 60 lb` });
+  const inboundOrder = page.getByRole('combobox', { name: 'Confirmed inbound order (optional)' });
+  await inboundOrder.selectOption({ label: `PO-${info.project.name} · Preview garlic powder · 60 lb` });
+  const capturedPack = page.getByRole('combobox', { name: /^Supplier pack from confirmed order/ });
+  await expect(capturedPack.locator('option:checked')).toHaveText('pail · 30 lb');
+  await inboundOrder.selectOption('');
+  await expect(page.getByRole('combobox', { name: 'Supplier item / pack (optional)' }))
+    .toHaveValue('');
+  await inboundOrder.selectOption({ label: `PO-${info.project.name} · Preview garlic powder · 60 lb` });
+  await expect(capturedPack.locator('option:checked')).toHaveText('pail · 30 lb');
   await page.getByLabel(/^Supplier-provided lot \(if shown\)/).fill('TEST-LOT');
   await page.getByRole('button', { name: 'Post receipt & update inventory' }).click();
   await expect(page.getByRole('status')).toContainText('Receipt posted');

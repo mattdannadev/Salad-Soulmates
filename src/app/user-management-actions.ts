@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import authCallbackUrl from '@/domain/auth-callback-url';
+import authConfirmationUrl from '@/domain/auth-callback-url';
 import { requireProfile } from '@/lib/auth';
 import { logFailure } from '@/lib/operation-error';
 import hasPermission from '@/lib/permissions';
@@ -97,7 +97,7 @@ export async function generateUserPasswordResetLink(
     const generated = await configured.admin.auth.admin.generateLink({
       type: 'recovery',
       email: trustedEmail.data,
-      options: { redirectTo: authCallbackUrl(process.env) },
+      options: { redirectTo: authConfirmationUrl(process.env) },
     });
     if (generated.error) {
       logFailure('user_management_password_reset_link', generated.error);

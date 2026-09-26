@@ -3,6 +3,7 @@ import { expect, test } from './fixtures';
 test('User Management navigation organizes admin screens and preserves legacy access links', async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1200, height: 800 });
   await page.goto('/login');
   await page.getByLabel('Email or phone number').fill('admin@example.test');
   await page.getByLabel('Password', { exact: true }).fill('local-test-password');
@@ -33,7 +34,6 @@ test('User Management navigation organizes admin screens and preserves legacy ac
 
   await page.goto('/app/user-management/login-history');
   await expect(page.getByRole('heading', { name: 'Login History', exact: true })).toBeVisible();
-  await expect(page.getByRole('row').filter({ hasText: 'Test Administrator' })).toContainText(
-    'Signed in',
-  );
+  await expect(page.getByRole('row').filter({ hasText: 'Test Administrator' })
+    .filter({ hasText: 'Signed in' }).first()).toBeVisible();
 });

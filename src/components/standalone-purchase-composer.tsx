@@ -39,7 +39,7 @@ export default function StandalonePurchaseComposer({
         <PurchasingForm
           operation="create-draft"
           locale={locale}
-          label={es ? `Crear pedido para ${supplier.name}` : `Create purchase order for ${supplier.name}`}
+          label={es ? 'Crear orden de compra' : 'Create purchase order'}
           payload={(form, requestId) => {
             const submittedReason = form.get('reason');
             const reason = typeof submittedReason === 'string' ? submittedReason : '';

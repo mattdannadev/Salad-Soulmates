@@ -33,19 +33,44 @@ export default function ReceiptForm({
 }) {
   const [supplierId, setSupplierId] = useState(suppliers[0]?.id ?? '');
   const [ingredientId, setIngredientId] = useState(ingredients[0]?.id ?? '');
+  const [inboundId, setInboundId] = useState('');
+  const [supplierItemId, setSupplierItemId] = useState('');
   const unit = useMemo(
     () => ingredients.find((i) => i.id === ingredientId)?.default_uom ?? 'lb',
     [ingredients, ingredientId],
   );
   const es = locale === 'es';
   const formId = useId();
+  const selectedInbound = inbound.find((choice) => choice.id === inboundId);
+  const matchingPacks = packs.filter(
+    (pack) => pack.active
+      && pack.ingredient_id === ingredientId
+      && pack.supplier_id === supplierId
+      && pack.pack_quantity_uom === unit,
+  );
+  const selectedInboundPack = matchingPacks.find(
+    (pack) => pack.id === selectedInbound?.supplier_item_id,
+  );
+  let packOptions = matchingPacks;
+  if (selectedInbound) packOptions = selectedInboundPack ? [selectedInboundPack] : [];
+  const packLabel = selectedInbound
+    ? 'Supplier pack from confirmed order' : 'Supplier item / pack (optional)';
+  const packLabelEs = selectedInbound
+    ? 'Presentación del pedido confirmado' : 'Presentación del proveedor (opcional)';
+  const inactivePackHint = es
+    ? 'La presentación del pedido ya no está activa.'
+    : 'The order’s supplier pack is no longer active.';
   const fields: Field[] = [
     {
       name: 'supplier_id',
       label: es ? 'Proveedor' : 'Supplier',
       type: 'select',
       value: supplierId,
-      onChange: setSupplierId,
+      onChange: (value) => {
+        setSupplierId(value);
+        setInboundId('');
+        setSupplierItemId('');
+      },
       options: suppliers.map((s) => ({ value: s.id, label: s.name })),
       required: true,
     },
@@ -66,7 +91,11 @@ export default function ReceiptForm({
       label: es ? 'Ingrediente' : 'Ingredient',
       type: 'select',
       value: ingredientId,
-      onChange: setIngredientId,
+      onChange: (value) => {
+        setIngredientId(value);
+        setInboundId('');
+        setSupplierItemId('');
+      },
       options: ingredients.map((i) => ({ value: i.id, label: i.name })),
       required: true,
     },
@@ -74,6 +103,8 @@ export default function ReceiptForm({
       name: 'purchase_draft_line_id',
       label: es ? 'Pedido confirmado (opcional)' : 'Confirmed inbound order (optional)',
       type: 'select',
+      value: inboundId,
+      onChange: setInboundId,
       options: [
         { value: '', label: es ? 'Sin pedido vinculado' : 'No linked order' },
         ...inbound
@@ -120,22 +151,20 @@ export default function ReceiptForm({
     },
     {
       name: 'supplier_item_id',
-      label: es ? 'Presentación del proveedor (opcional)' : 'Supplier item / pack (optional)',
+      label: es ? packLabelEs : packLabel,
       type: 'select',
+      value: selectedInbound ? selectedInboundPack?.id ?? '' : supplierItemId,
+      onChange: setSupplierItemId,
+      required: Boolean(selectedInbound),
       options: [
         { value: '', label: es ? 'Sin presentación' : 'No configured pack' },
-        ...packs
-          .filter(
-            (pack) => pack.active
-              && pack.ingredient_id === ingredientId
-              && pack.supplier_id === supplierId
-              && pack.pack_quantity_uom === unit,
-          )
+        ...packOptions
           .map((pack) => ({
             value: pack.id,
             label: `${pack.supplier_sku || pack.purchase_uom} · ${pack.pack_quantity} ${unit}`,
           })),
       ],
+      hint: selectedInbound && !selectedInboundPack ? inactivePackHint : undefined,
     },
     {
       name: 'package_lines',

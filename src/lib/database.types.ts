@@ -1772,6 +1772,9 @@ export type Database = {
       assign_production_lot: { Args: { payload: Json }; Returns: string };
       open_batch_worksheet: { Args: { batch_id: string }; Returns: string };
       record_batch_worksheet_usage: { Args: { payload: Json }; Returns: string };
+      correct_batch_worksheet_usage: { Args: { payload: Json }; Returns: string };
+      report_spice_preparation_issue: { Args: { payload: Json }; Returns: string };
+      worker_spice_preparations: { Args: Record<PropertyKey, never>; Returns: Json };
       complete_batch_worksheet: { Args: { execution_id: string }; Returns: string };
       order_production_batches: { Args: { order_id: string }; Returns: Json };
       receive_serialized_delivery: { Args: { payload: Json }; Returns: string };

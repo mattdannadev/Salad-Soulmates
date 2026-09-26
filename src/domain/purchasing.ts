@@ -167,6 +167,7 @@ export interface InboundChoice {
   id: string;
   ingredient_id: string;
   supplier_id: string;
+  supplier_item_id: string;
   label: string;
   remaining: number;
 }
@@ -230,6 +231,7 @@ export function outstandingInbound(
           id: line.id,
           ingredient_id: line.ingredient_id,
           supplier_id: draft.supplier_id,
+          supplier_item_id: line.supplier_item_id,
           label: `${draft.reference} · ${line.ingredient_name} · ${remaining} ${line.uom}`,
           remaining,
         },
