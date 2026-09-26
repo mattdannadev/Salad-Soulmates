@@ -4,7 +4,7 @@ test.afterEach(async ({ page }, info) => {
   if (info.status !== info.expectedStatus) console.error('Synthetic browser failure:', await page.locator('main').ariaSnapshot());
 });
 
-test('inventory starts a purchase with its ingredient fixed', async ({ page }) => {
+test('inventory starts a purchase with its ingredient fixed', async ({ page }, info) => {
   await page.goto('/login');
   await page.getByLabel('Email or phone number').fill('admin@example.test');
   await page.getByLabel('Password', { exact: true }).fill('local-test-password');
@@ -22,10 +22,23 @@ test('inventory starts a purchase with its ingredient fixed', async ({ page }) =
   await expect(page.getByText('Preview lemon juice', { exact: true })).toHaveCount(0);
   await page.getByLabel('Expected delivery').fill('2026-10-01');
   await page.getByLabel(/Whole packs \(0 skips this ingredient\)/).fill('2');
-  await expect(
-    page.getByRole('button', { name: 'Create purchase order for Preview supplier' }),
-  ).toBeEnabled();
-  await page.getByRole('button', { name: 'Create purchase order for Preview supplier' }).click();
+  const createPurchase = page.getByRole('button', { name: 'Create purchase order', exact: true });
+  await expect(createPurchase).toBeEnabled();
+  if (info.project.name === 'phone') {
+    await createPurchase.scrollIntoViewIfNeeded();
+    expect(await createPurchase.evaluate((button) => {
+      const viewport = window.visualViewport;
+      if (!viewport) return false;
+      const bounds = button.getBoundingClientRect();
+      const centerX = bounds.left + bounds.width / 2;
+      const centerY = bounds.top + bounds.height / 2;
+      return document.documentElement.scrollWidth <= viewport.width
+        && bounds.right <= viewport.width
+        && bounds.bottom <= viewport.height
+        && document.elementFromPoint(centerX, centerY) === button;
+    })).toBe(true);
+  }
+  await createPurchase.click();
   await expect(page.getByRole('article').getByText('Confirmed', { exact: true })).toBeVisible();
 });
 

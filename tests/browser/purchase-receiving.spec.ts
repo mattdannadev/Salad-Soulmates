@@ -8,7 +8,7 @@ async function createConfirmedPurchase(page: import('@playwright/test').Page) {
   await page.getByLabel(/Whole packs \(0 skips this ingredient\)/).fill('1');
   const references = page.getByRole('article').filter({ hasText: 'Confirmed' }).locator('strong');
   const previousReferences = await references.allTextContents();
-  await page.getByRole('button', { name: 'Create purchase order for Preview supplier' }).click();
+  await page.getByRole('button', { name: 'Create purchase order', exact: true }).click();
   await expect(references).toHaveCount(previousReferences.length + 1);
   const createdReference = (await references.allTextContents())
     .find((reference) => !previousReferences.includes(reference));
