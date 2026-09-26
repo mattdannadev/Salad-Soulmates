@@ -51,8 +51,8 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
     .locator('.nav-group').filter({ hasText: 'Production Planning' })
     .locator('summary')).toBeVisible();
   await page.goto('/app/products');
-  await expect(page.getByRole('cell', { name: /Preview Italian dressing TEST/ })
-    .getByText('Preview Italian dressing', { exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: /^Preview Italian dressing Active$/ }))
+    .toBeVisible();
   const recipeDetails = page.locator('details.product-recipe-details');
   await expect(recipeDetails).not.toHaveAttribute('open', '');
   await recipeDetails.locator('summary').click();
@@ -107,10 +107,14 @@ test('a lost inventory response preserves the request ID and entered values on r
   await expect(page).toHaveURL(/\/app$/);
   await page.goto('/app/inventory');
   await page.getByRole('button', { name: 'Record inventory adjustment' }).click();
+  const adjustmentDialog = page.locator('dialog[open]');
+  await expect(adjustmentDialog.getByRole('heading', { name: 'Record inventory adjustment' }))
+    .toBeVisible();
   const reason = `Retry fixture ${info.project.name}`;
-  await page.getByRole('combobox', { name: /^Ingredient\s*\*/ }).selectOption({ label: 'Preview garlic powder' });
-  await page.getByLabel(/^Quantity/).fill('2');
-  await page.getByLabel('Reason *', { exact: true }).fill(reason);
+  await adjustmentDialog.getByRole('combobox', { name: /^Ingredient\s*\*/ })
+    .selectOption({ label: 'Preview garlic powder' });
+  await adjustmentDialog.getByRole('spinbutton', { name: /^Quantity/ }).fill('2');
+  await adjustmentDialog.getByLabel('Reason *', { exact: true }).fill(reason);
   let interrupted = false;
   await page.route('**/app/inventory', async (route) => {
     if (!interrupted && route.request().method() === 'POST') {
@@ -121,12 +125,14 @@ test('a lost inventory response preserves the request ID and entered values on r
     }
     await route.continue();
   });
-  await page.getByRole('button', { name: 'Record adjustment', exact: true }).click();
-  await expect(page.getByRole('alert').filter({ hasText: 'Connection interrupted' })).toBeVisible();
-  await expect(page.getByLabel(/^Quantity/)).toHaveValue('2');
-  await expect(page.getByLabel('Reason *', { exact: true })).toHaveValue(reason);
-  await page.getByRole('button', { name: 'Record adjustment', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Record adjustment', exact: true })).toBeEnabled();
+  await adjustmentDialog.getByRole('button', { name: 'Record adjustment', exact: true }).click();
+  await expect(adjustmentDialog.getByRole('alert').filter({ hasText: 'Connection interrupted' }))
+    .toBeVisible();
+  await expect(adjustmentDialog.getByRole('spinbutton', { name: /^Quantity/ })).toHaveValue('2');
+  await expect(adjustmentDialog.getByLabel('Reason *', { exact: true })).toHaveValue(reason);
+  await adjustmentDialog.getByRole('button', { name: 'Record adjustment', exact: true }).click();
+  await expect(adjustmentDialog.getByRole('button', { name: 'Record adjustment', exact: true }))
+    .toBeEnabled();
   const response = await page.request.get('http://127.0.0.1:4010/test/inventory-attempts');
   const body: unknown = await response.json();
   const attempts = z.array(z.object({ request_id: z.uuid(), reason_note: z.string() })).parse(body)
