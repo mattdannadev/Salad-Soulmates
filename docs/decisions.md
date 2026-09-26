@@ -558,3 +558,27 @@ Ingredients are retained by deactivation rather than hard deletion so their inve
 ## 2026-09-25 — Commit outstanding work before release
 
 The owner explicitly requested committing and deploying the outstanding changes, then clarified that all uncommitted application work must be incorporated before anything is deployed. Preserve newer main functionality, commit the reconciled source, and resolve release validation failures before production publication. This authorizes the additive worker schema changes needed by the release, not test data or unrelated operational writes.
+
+## 2026-09-26 — Platform tenant administration control plane
+
+The owner authorized a platform administration capability to create, inspect and
+suspend tenant organizations, and to view per-organization user counts. It is a
+protected administration route initially, with a separate privileged site and
+deployment as the next hosting step; it is not a separate repository or database
+at this stage. Keep the product and administration application in the same
+repository with centrally owned migrations and shared domain contracts; use the
+existing hosted Supabase project for each environment.
+
+Platform operators are distinct from tenant administrators. Authorize platform
+operations on the server from a platform-admin mapping, not user-editable Auth
+metadata or tenant roles. Keep secret/service credentials server-only. Tenant
+suspension is reversible and must preserve records and an audit trail while
+denying tenant access and tenant mutations. A reported active-user count means
+enabled organization profiles; future engagement and online metrics must be
+labeled separately.
+
+Do not create a database per tenant unless customer contractual isolation,
+regional-residency, independent restore/lifecycle, or demonstrated workload
+isolation requirements justify its operational cost. This decision does not
+authorize applying migrations to the shared hosted project, merging, or
+deploying without the separate release authorization and verification gates.

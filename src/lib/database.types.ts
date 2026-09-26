@@ -1092,22 +1092,34 @@ export type Database = {
           id: string;
           name: string;
           signup_enabled: boolean;
+          signup_enabled_before_suspension: boolean | null;
           slug: string;
+          status: 'active' | 'suspended';
         };
         Insert: {
           created_at?: string;
           id?: string;
           name: string;
           signup_enabled?: boolean;
+          signup_enabled_before_suspension?: boolean | null;
           slug: string;
+          status?: 'active' | 'suspended';
         };
         Update: {
           created_at?: string;
           id?: string;
           name?: string;
           signup_enabled?: boolean;
+          signup_enabled_before_suspension?: boolean | null;
           slug?: string;
+          status?: 'active' | 'suspended';
         };
+        Relationships: [];
+      };
+      platform_admins: {
+        Row: { user_id: string; created_at: string };
+        Insert: { user_id: string; created_at?: string };
+        Update: never;
         Relationships: [];
       };
       permissions: {
@@ -1765,6 +1777,37 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      list_platform_organizations: {
+        Args: { actor_user_id: string };
+        Returns: {
+          id: string;
+          name: string;
+          slug: string;
+          status: 'active' | 'suspended';
+          signup_enabled: boolean;
+          enabled_user_count: number;
+          created_at: string;
+        }[];
+      };
+      provision_platform_organization: {
+        Args: {
+          actor_user_id: string;
+          organization_name: string;
+          organization_slug: string;
+          facility_name: string;
+          facility_timezone: string;
+        };
+        Returns: string;
+      };
+      set_platform_organization_suspended: {
+        Args: {
+          actor_user_id: string;
+          target_organization_id: string;
+          should_suspend: boolean;
+          reason: string;
+        };
+        Returns: undefined;
+      };
       save_customer_master: { Args: { payload: Json }; Returns: string };
       save_packaging_profile: { Args: { payload: Json }; Returns: string };
       save_shipping_draft: { Args: { payload: Json }; Returns: string };

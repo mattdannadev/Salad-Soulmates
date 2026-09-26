@@ -41,6 +41,7 @@ const migrations = [
   '20260926040616_rate_limit_tenant_signup_requests.sql',
   '20260926040625_spice_preparation_consumption.sql',
   '20260926040633_spice_preparation_issues.sql',
+  '20260926202013_platform_control_plane.sql',
 ];
 
 /** Apply migrations and synthetic identity data only inside the newly created test database. */
@@ -49,6 +50,7 @@ export async function initializeGateDatabase(execute: (sql: string) => Promise<u
     do $$ begin
       if not exists(select 1 from pg_roles where rolname='authenticated') then create role authenticated; end if;
       if not exists(select 1 from pg_roles where rolname='anon') then create role anon; end if;
+      if not exists(select 1 from pg_roles where rolname='service_role') then create role service_role; end if;
     end $$;
     create schema auth;
     create table auth.users(id uuid primary key, email text);

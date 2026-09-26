@@ -46,6 +46,7 @@ const mocks = vi.hoisted(() => {
     revalidate: vi.fn(),
     profile: vi.fn(),
     headers: vi.fn(() => new Headers({ 'user-agent': 'Test browser' })),
+    postSignInDestination: vi.fn(),
   };
 });
 vi.mock('server-only', () => ({}));
@@ -57,6 +58,7 @@ vi.mock('next/navigation', () => ({
   },
 }));
 vi.mock('../src/lib/auth', () => ({ requireProfile: mocks.profile }));
+vi.mock('../src/services/platform-admin', () => ({ postSignInDestination: mocks.postSignInDestination }));
 vi.mock('../src/lib/supabase', () => ({
   supabase: () => Promise.resolve(mocks.db),
   supabaseAdmin: mocks.admin,
@@ -87,6 +89,7 @@ beforeEach(() => {
   mocks.rpc.mockResolvedValue({ data: true, error: null });
   mocks.profile.mockResolvedValue({ db: mocks.db, profile: { id: inventory.ingredient_id } });
   mocks.auth.signInWithPassword.mockResolvedValue({ error: null });
+  mocks.postSignInDestination.mockResolvedValue('/app');
   mocks.auth.getUser.mockResolvedValue({ data: { user: { id: savedId } }, error: null });
   mocks.auth.updateUser.mockResolvedValue({ error: null });
   mocks.auth.signOut.mockResolvedValue({ error: null });
@@ -210,6 +213,13 @@ describe('server action behavior before restructuring', () => {
     form.set('identifier', 'user@example.test');
     form.set('password', 'example-password');
     await expect(signIn(initial, form)).rejects.toThrow('REDIRECT:/app');
+  });
+  it('routes a platform operator to the administration portal', async () => {
+    mocks.postSignInDestination.mockResolvedValue('/admin');
+    const form = new FormData();
+    form.set('identifier', 'operator@example.test');
+    form.set('password', 'example-password');
+    await expect(signIn(initial, form)).rejects.toThrow('REDIRECT:/admin');
   });
   it('keeps the successful sign-out destination', async () => {
     await expect(signOut()).rejects.toThrow('REDIRECT:/login');
