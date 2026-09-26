@@ -112,3 +112,9 @@ Historical reactivation and inventory-control migration SQL was verified against
 the hosted history by normalized hash; filenames are aligned to those versions
 without replaying either migration. Release verification and deployment evidence
 are recorded in the final handoff.
+
+## 2026-09-26 release checkpoint — PR #15
+
+The owner approved publication, required migrations, and deployment of this release and necessary fixes. All outstanding application changes were reconciled with main f66102e. The purchase action now uses the concise label Create purchase order. The hosted migrations were applied successfully and repository versions match hosted history; no test operating records were written there.
+
+`npm run check` passed with 465 tests, strict lint, formatting, TypeScript, and production build. Native PostgreSQL checks passed 28 tests. Desktop and phone regression checks cover linked receipt packs, mobile navigation bounds, and purchase-button overflow. Final full CI, merge, and production deployment are recorded in PR #15; owner acceptance remains separate.

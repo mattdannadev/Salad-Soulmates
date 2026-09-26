@@ -77,7 +77,7 @@ beforeAll(async () => {
     readFileSync('supabase/migrations/20260921190200_preserve_access_manager.sql', 'utf8'),
   );
   const tenantSignupMigration = readFileSync(
-    'supabase/migrations/20260925202120_tenant_specific_signup_links.sql',
+    'supabase/migrations/20260926040556_tenant_specific_signup_links.sql',
     'utf8',
   );
   const slugValidationSql = tenantSignupMigration.slice(
@@ -107,7 +107,7 @@ beforeAll(async () => {
   await db.exec(tenantSignupMigration);
   await db.exec(
     readFileSync(
-      'supabase/migrations/20260925213118_rate_limit_tenant_signup_requests.sql',
+      'supabase/migrations/20260926040616_rate_limit_tenant_signup_requests.sql',
       'utf8',
     ),
   );

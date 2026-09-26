@@ -36,11 +36,11 @@ const migrations = [
   '20260921190200_preserve_access_manager.sql',
   '20260925021742_reactivate_user_access.sql',
   '20260925021812_inventory_management_controls.sql',
-  '20260925202120_tenant_specific_signup_links.sql',
-  '20260925211750_secure_production_rpc_tenant_scope.sql',
-  '20260925213118_rate_limit_tenant_signup_requests.sql',
-  '20260925220000_spice_preparation_consumption.sql',
-  '20260925221000_spice_preparation_issues.sql',
+  '20260926040556_tenant_specific_signup_links.sql',
+  '20260926040607_secure_production_rpc_tenant_scope.sql',
+  '20260926040616_rate_limit_tenant_signup_requests.sql',
+  '20260926040625_spice_preparation_consumption.sql',
+  '20260926040633_spice_preparation_issues.sql',
 ];
 
 /** Apply migrations and synthetic identity data only inside the newly created test database. */
