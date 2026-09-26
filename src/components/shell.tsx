@@ -16,7 +16,6 @@ import {
   Search,
   Users,
   ShieldCheck,
-  PackageCheck,
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
@@ -121,24 +120,10 @@ const navigationGroups = [
         permission: 'master_data.read',
       },
       {
-        href: '/app/receiving',
-        en: 'Receive Inventory',
-        es: 'Recibir inventario',
-        icon: PackageCheck,
-        permission: 'inventory.read',
-      },
-      {
         href: '/app/inventory',
         en: 'Inventory',
         es: 'Inventario',
         icon: Package,
-        permission: 'inventory.read',
-      },
-      {
-        href: '/app/traceability',
-        en: 'Traceability',
-        es: 'Trazabilidad',
-        icon: Search,
         permission: 'inventory.read',
       },
     ],
@@ -215,12 +200,14 @@ export function Shell({
   role,
   locale,
   permissions,
+  feedbackTypes,
 }: {
   children: React.ReactNode;
   name: string;
   role: string;
   locale: 'en' | 'es';
   permissions: string[];
+  feedbackTypes?: { code: string; label_en: string; label_es: string }[];
 }) {
   const path = usePathname();
   const [collapsed, setCollapsed] = useState(false);
@@ -278,6 +265,15 @@ export function Shell({
             <br />
             {isSpanish ? 'NOS UNE' : 'PEOPLE TOGETHER'}
           </small>
+        </Link>
+        <Link
+          href="/app/traceability"
+          className="sidebar-action"
+          aria-current={isCurrentPath('/app/traceability') ? 'page' : undefined}
+          onClick={() => setMobileNavigationOpen(false)}
+        >
+          <Search size={20} aria-hidden />
+          <span className="nav-label">{isSpanish ? 'Trazabilidad' : 'Traceability'}</span>
         </Link>
         <nav
           id="main-navigation"
@@ -470,7 +466,7 @@ export function Shell({
           <span>{isSpanish ? 'Más' : 'More'}</span>
         </button>
       </nav>
-      <FeedbackDrawer locale={locale} />
+      <FeedbackDrawer locale={locale} feedbackTypes={feedbackTypes} />
     </div>
   );
 }

@@ -1,11 +1,13 @@
 import { z } from 'zod';
 
+// Unit codes come from the tenant's canonical UOM catalog. They remain strings
+// here so new active catalog entries work without a client deployment.
 export const units = ['lb', 'oz', 'gal', 'each'] as const;
 export const ingredientSchema = z.object({
   id: z.uuid().optional(),
   name: z.string().trim().min(1).max(120),
   category: z.string().trim().min(1).max(50),
-  default_uom: z.enum(units),
+  default_uom: z.string().trim().min(1).max(50),
   spanish_name: z.string().trim().max(120),
   description: z.string().trim().max(1000),
   storage_notes: z.string().trim().max(1000),
@@ -36,9 +38,9 @@ export const packSchema = z.object({
   ingredient_id: z.uuid(),
   supplier_id: z.uuid(),
   supplier_sku: z.string().trim().max(100),
-  purchase_uom: z.enum(['pail', 'bag', 'case', 'each']),
+  purchase_uom: z.string().trim().min(1).max(50),
   pack_quantity: z.number().positive().max(1000000).multipleOf(0.0001),
-  pack_quantity_uom: z.enum(units),
+  pack_quantity_uom: z.string().trim().min(1).max(50),
   is_preferred: z.boolean(),
   active: z.boolean(),
   notes: z.string().trim().max(1000),
@@ -54,7 +56,7 @@ export const inventorySchema = z
       .max(1000000)
       .multipleOf(0.0001)
       .refine((n) => n !== 0, 'Enter a non-zero quantity.'),
-    uom: z.enum(units),
+    uom: z.string().trim().min(1).max(50),
     reason_note: z.string().trim().min(3).max(1000),
     effective_on: z.iso.date(),
     request_id: z.uuid(),
@@ -69,7 +71,7 @@ export const feedbackSchema = z.object({
     .regex(/^\/(app|worker|receiving)(\/|$)/)
     .max(500),
   comment: z.string().trim().min(1).max(2000),
-  feedback_type: z.enum(['Suggestion', 'Issue', 'Positive', 'Question']),
+  feedback_type: z.string().trim().min(1).max(50),
 });
 export const receiptSchema = z.object({
   purchase_draft_line_id: z.preprocess(
@@ -79,7 +81,7 @@ export const receiptSchema = z.object({
   supplier_id: z.uuid(),
   ingredient_id: z.uuid(),
   quantity: z.number().positive().max(1000000).multipleOf(0.0001),
-  uom: z.enum(units),
+  uom: z.string().trim().min(1).max(50),
   received_on: z.iso.date(),
   supplier_reference: z.string().trim().max(120),
   supplier_lot: z.string().max(120),
@@ -214,6 +216,11 @@ export const referenceOptionRowSchema = z.object({
   active: z.boolean(),
 });
 export type ReferenceOption = z.infer<typeof referenceOptionRowSchema>;
+export const uomRowSchema = z.object({
+  id: z.uuid(), family_code: z.string(), code: z.string(), label_en: z.string(), label_es: z.string(),
+  measurement_system: z.enum(['metric', 'imperial', 'universal']), is_inventory_unit: z.boolean(),
+  is_purchase_unit: z.boolean(), sort_order: z.number().finite(), active: z.boolean(),
+});
 export interface Permission {
   code: string;
   area: string;
@@ -247,6 +254,7 @@ export const rowSchemas = {
   inventory_receipt_lines: receiptLineRowSchema,
   reference_lists: referenceListRowSchema,
   reference_options: referenceOptionRowSchema,
+  uoms: uomRowSchema,
   permissions: z.object({
     code: z.string(),
     area: z.string(),

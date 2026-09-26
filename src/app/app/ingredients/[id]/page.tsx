@@ -33,11 +33,13 @@ export default async function IngredientDetail({ params }: { params: Promise<{ i
       .eq('list_code', 'ingredient_category')
       .eq('active', true)
       .order('sort_order'),
+    db.from('uoms').select('code,label_en,label_es,family_code,measurement_system,is_inventory_unit,is_purchase_unit')
+      .eq('active', true).order('sort_order'),
     hasPermission(db, 'master_data.write'),
     loadIngredientStock(db),
   ]);
   const [
-    allergens, translations, links, suppliers, allPacks, categoryResult, canWrite, stock,
+    allergens, translations, links, suppliers, allPacks, categoryResult, unitsResult, canWrite, stock,
   ] = details;
   const translation = readResult(
     translations,
@@ -55,6 +57,11 @@ export default async function IngredientDetail({ params }: { params: Promise<{ i
     'ingredient_categories',
   );
   const packs = allPacks.filter((p) => p.ingredient_id === id);
+  const units = readResult(
+    unitsResult,
+    rowSchemas.uoms.pick({ code: true, label_en: true, label_es: true, family_code: true, measurement_system: true, is_inventory_unit: true, is_purchase_unit: true }).array(),
+    'uoms',
+  );
   return (
     <>
       <Link href="/app/ingredients" className="back-link">
@@ -84,6 +91,7 @@ export default async function IngredientDetail({ params }: { params: Promise<{ i
             allergens={allergens}
             selected={selected}
             categories={categories}
+            baseUnits={units.filter((unit) => unit.is_inventory_unit)}
             locale={profile.preferred_locale}
           />
         ) : (
@@ -133,6 +141,8 @@ export default async function IngredientDetail({ params }: { params: Promise<{ i
                 ingredientId={id}
                 unit={ingredient.default_uom}
                 suppliers={suppliers}
+                purchaseUnits={units.filter((unit) => unit.is_purchase_unit)}
+                contentUnits={units.filter((unit) => unit.is_inventory_unit)}
               />
             ) : (
               <p>{pack.notes || 'No notes'}</p>
@@ -143,7 +153,7 @@ export default async function IngredientDetail({ params }: { params: Promise<{ i
           && (suppliers.length ? (
             <details>
               <summary>+ Add supplier pack</summary>
-              <PackForm ingredientId={id} unit={ingredient.default_uom} suppliers={suppliers} />
+              <PackForm ingredientId={id} unit={ingredient.default_uom} suppliers={suppliers} purchaseUnits={units.filter((unit) => unit.is_purchase_unit)} contentUnits={units.filter((unit) => unit.is_inventory_unit)} />
             </details>
           ) : (
             <Link href="/app/suppliers">Add a supplier to define purchasing packs →</Link>

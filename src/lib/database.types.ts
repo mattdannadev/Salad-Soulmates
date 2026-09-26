@@ -1659,6 +1659,75 @@ export type Database = {
           },
         ];
       };
+      uom_families: {
+        Row: {
+          organization_id: string;
+          code: string;
+          label_en: string;
+          label_es: string;
+          sort_order: number;
+          active: boolean;
+        };
+        Insert: {
+          organization_id?: string;
+          code: string;
+          label_en: string;
+          label_es: string;
+          sort_order?: number;
+          active?: boolean;
+        };
+        Update: {
+          organization_id?: string;
+          code?: string;
+          label_en?: string;
+          label_es?: string;
+          sort_order?: number;
+          active?: boolean;
+        };
+        Relationships: [];
+      };
+      uoms: {
+        Row: {
+          id: string;
+          organization_id: string;
+          family_code: string;
+          code: string;
+          label_en: string;
+          label_es: string;
+          measurement_system: 'metric' | 'imperial' | 'universal';
+          is_inventory_unit: boolean;
+          is_purchase_unit: boolean;
+          sort_order: number;
+          active: boolean;
+        };
+        Insert: {
+          id?: string;
+          organization_id?: string;
+          family_code: string;
+          code: string;
+          label_en: string;
+          label_es: string;
+          measurement_system: 'metric' | 'imperial' | 'universal';
+          is_inventory_unit?: boolean;
+          is_purchase_unit?: boolean;
+          sort_order?: number;
+          active?: boolean;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          family_code?: string;
+          code?: string;
+          label_en?: string;
+          label_es?: string;
+          measurement_system?: 'metric' | 'imperial' | 'universal';
+          is_inventory_unit?: boolean;
+          is_purchase_unit?: boolean;
+          sort_order?: number;
+          active?: boolean;
+        };
+        Relationships: [];
+      };
       supplier_items: {
         Row: {
           active: boolean;
