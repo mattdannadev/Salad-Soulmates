@@ -213,6 +213,8 @@ describe('purchasing input and display calculations', () => {
         [{ purchase_draft_line_id: id, quantity: 10 }],
       )[0]?.remaining,
     ).toBe(80);
+    expect(outstandingInbound([draft], [line], [])[0]?.supplier_item_id)
+      .toBe(line.supplier_item_id);
     expect(
       outstandingInbound([draft], [line], [{ purchase_draft_line_id: id, quantity: 90 }]),
     ).toEqual([]);

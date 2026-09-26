@@ -163,9 +163,15 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await page.getByText('Receive without a purchase order', { exact: true }).click();
   await page.getByLabel('Quantity received').fill('10');
   await page.getByLabel('Quantity in each physical package').fill('10');
-  await page
-    .getByLabel('Confirmed inbound order (optional)')
-    .selectOption({ label: `PO-${info.project.name} · Preview garlic powder · 60 lb` });
+  const inboundOrder = page.getByRole('combobox', { name: 'Confirmed inbound order (optional)' });
+  await inboundOrder.selectOption({ label: `PO-${info.project.name} · Preview garlic powder · 60 lb` });
+  const capturedPack = page.getByRole('combobox', { name: /^Supplier pack from confirmed order/ });
+  await expect(capturedPack.locator('option:checked')).toHaveText('pail · 30 lb');
+  await inboundOrder.selectOption('');
+  await expect(page.getByRole('combobox', { name: 'Supplier item / pack (optional)' }))
+    .toHaveValue('');
+  await inboundOrder.selectOption({ label: `PO-${info.project.name} · Preview garlic powder · 60 lb` });
+  await expect(capturedPack.locator('option:checked')).toHaveText('pail · 30 lb');
   await page.getByLabel(/^Supplier-provided lot \(if shown\)/).fill('TEST-LOT');
   await page.getByRole('button', { name: 'Post receipt & update inventory' }).click();
   await expect(page.getByRole('status')).toContainText('Receipt posted');
