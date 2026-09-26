@@ -66,3 +66,28 @@ test('expanded navigation stays readable after a collapsed desktop rail becomes 
   await page.locator('.navigation-scrim').click({ position: { x: 580, y: 100 } });
   await expect(navigation).not.toBeInViewport();
 });
+
+test('Production Planning opens worker preparations and returns to the dashboard', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 457, height: 900 });
+  await page.goto('/login');
+  await page.getByLabel('Email or phone number').fill('admin@example.test');
+  await page.getByLabel('Password', { exact: true }).fill('local-test-password');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page).toHaveURL(/\/app$/);
+
+  await page.getByRole('navigation', { name: 'Mobile navigation' })
+    .getByRole('button', { name: 'More sections' }).click();
+  const navigation = page.getByRole('navigation', { name: 'Main navigation' });
+  const planning = navigation.locator('.nav-group').filter({ hasText: 'Production Planning' });
+  await planning.locator('summary').click();
+  await expect(planning.getByRole('link', { name: 'Orders' })).toBeVisible();
+  await planning.getByRole('link', { name: 'Spice preparations' }).click();
+
+  await expect(page).toHaveURL(/\/worker$/);
+  await expect(page.getByRole('heading', { name: 'Spice preparations' })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('worker-preparations.png'), fullPage: true });
+  await page.getByRole('link', { name: 'Back to dashboard' }).click();
+  await expect(page).toHaveURL(/\/app$/);
+});

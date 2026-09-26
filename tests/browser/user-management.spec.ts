@@ -27,7 +27,7 @@ test('access managers can search the responsive user directory and inspect a pro
   await expect(page).toHaveURL(/q=local(?:\+|%20)test(?:\+|%20)facility&sort=first_name/);
   await expect(page.getByText('1 of 1 users match “local test facility”.')).toBeVisible();
 
-  await page.getByRole('link', { name: 'View user profile' }).click();
+  await page.getByRole('link', { name: 'View profile' }).click();
   await expect(page.getByRole('heading', { name: 'Test Administrator' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'User profile' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Delete user', exact: true })).toBeDisabled();

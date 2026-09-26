@@ -22,8 +22,8 @@ const migrations = [
   '20260920121000_standalone_purchasing.sql',
   '20260920124904_dashboard_demand_purchasing.sql',
   '20260920190000_production_lots.sql',
-  '20260920194000_receipt_source_lots.sql',
   '20260920193000_batch_worksheet_execution.sql',
+  '20260920194000_receipt_source_lots.sql',
   '20260920195000_traceability_lookup.sql',
   '20260920210000_customer_order_units.sql',
   '20260921132435_receive_purchase_delivery.sql',
@@ -34,9 +34,13 @@ const migrations = [
   '20260921180100_change_user_access_profile.sql',
   '20260921190000_resync_profile_work_emails.sql',
   '20260921190200_preserve_access_manager.sql',
-  '20260925202120_tenant_specific_signup_links.sql',
-  '20260925211750_secure_production_rpc_tenant_scope.sql',
-  '20260925213118_rate_limit_tenant_signup_requests.sql',
+  '20260925021742_reactivate_user_access.sql',
+  '20260925021812_inventory_management_controls.sql',
+  '20260926040556_tenant_specific_signup_links.sql',
+  '20260926040607_secure_production_rpc_tenant_scope.sql',
+  '20260926040616_rate_limit_tenant_signup_requests.sql',
+  '20260926040625_spice_preparation_consumption.sql',
+  '20260926040633_spice_preparation_issues.sql',
 ];
 
 /** Apply migrations and synthetic identity data only inside the newly created test database. */
