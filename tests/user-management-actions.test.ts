@@ -4,6 +4,7 @@ import {
 import {
   changeManagedUserAccessProfile,
   deactivateManagedUser,
+  reactivateManagedUser,
   generateUserPasswordResetLink,
 } from '@/app/user-management-actions';
 
@@ -160,6 +161,18 @@ it('deactivates through the audited RPC and revalidates directory and detail', a
   expect(mocks.revalidate).toHaveBeenCalledWith('/app/user-management/users');
   expect(mocks.revalidate).toHaveBeenCalledWith(`/app/user-management/users/${targetId}`);
   expect(mocks.admin).not.toHaveBeenCalled();
+});
+
+it('reactivates an inactive user through the audited RPC', async () => {
+  mocks.maybeSingle.mockResolvedValueOnce({ data: { id: targetId, active: false }, error: null });
+  const result = await reactivateManagedUser(initial, form({ user_id: targetId }));
+  expect(result).toEqual({
+    ok: true,
+    message: 'User access reactivated. Their existing account and history were retained.',
+  });
+  expect(mocks.rpc).toHaveBeenCalledWith('reactivate_user_access', { target_user_id: targetId });
+  expect(mocks.revalidate).toHaveBeenCalledWith('/app/user-management/users');
+  expect(mocks.revalidate).toHaveBeenCalledWith(`/app/user-management/users/${targetId}`);
 });
 
 it('changes access profile through the audited RPC and refreshes both user views', async () => {

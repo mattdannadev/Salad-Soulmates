@@ -1,14 +1,20 @@
-import { describe, expect, it } from 'vitest';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import {
-  buildPurchaseReceivingOrders,
-  purchaseDeliverySchema,
-} from '@/domain/purchase-receiving';
+  describe, expect, it, vi,
+} from 'vitest';
+import { buildPurchaseReceivingOrders, purchaseDeliverySchema } from '@/domain/purchase-receiving';
+import PurchaseReceiving from '@/components/purchase-receiving';
 import type { ReceiptLine, Supplier } from '@/domain/master-data';
 import type { PurchaseDraft, PurchaseLine } from '@/domain/purchasing';
+import type { PurchaseReceivingOrder } from '@/domain/purchase-receiving';
 
-const id = (value: number) => (
-  `00000000-0000-4000-8000-${String(value).padStart(12, '0')}`
-);
+vi.mock('server-only', () => ({}));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
+const id = (value: number) => `00000000-0000-4000-8000-${String(value).padStart(12, '0')}`;
 
 function delivery() {
   return {
@@ -17,14 +23,16 @@ function delivery() {
     received_on: '2026-09-21',
     supplier_reference: 'DELIVERY-1',
     note: '',
-    lines: [{
-      id: id(10),
-      purchase_draft_line_id: id(20),
-      quantity: 5,
-      supplier_lot: '  LOT 42  ',
-      expiration_date: null,
-      packages: [{ quantity: 5, supplier_barcode: 'PACKAGE-1' }],
-    }],
+    lines: [
+      {
+        id: id(10),
+        purchase_draft_line_id: id(20),
+        quantity: 5,
+        supplier_lot: '  LOT 42  ',
+        expiration_date: null,
+        packages: [{ quantity: 5, supplier_barcode: 'PACKAGE-1' }],
+      },
+    ],
   };
 }
 
@@ -47,29 +55,39 @@ describe('purchase delivery contract', () => {
 
   it('rejects duplicate line identities, incorrect package totals, and delivery limits', () => {
     const input = delivery();
-    expect(purchaseDeliverySchema.safeParse({
-      ...input,
-      lines: [input.lines[0], { ...input.lines[0] }],
-    }).success).toBe(false);
-    expect(purchaseDeliverySchema.safeParse({
-      ...input,
-      lines: [{ ...input.lines[0], packages: [{ quantity: 4, supplier_barcode: '' }] }],
-    }).success).toBe(false);
-    expect(purchaseDeliverySchema.safeParse({
-      ...input,
-      lines: Array.from({ length: 101 }, (_, index) => ({
-        ...input.lines[0],
-        id: id(1000 + index),
-      })),
-    }).success).toBe(false);
-    expect(purchaseDeliverySchema.safeParse({
-      ...input,
-      lines: [{
-        ...input.lines[0],
-        quantity: 201,
-        packages: Array.from({ length: 201 }, () => ({ quantity: 1, supplier_barcode: '' })),
-      }],
-    }).success).toBe(false);
+    expect(
+      purchaseDeliverySchema.safeParse({
+        ...input,
+        lines: [input.lines[0], { ...input.lines[0] }],
+      }).success,
+    ).toBe(false);
+    expect(
+      purchaseDeliverySchema.safeParse({
+        ...input,
+        lines: [{ ...input.lines[0], packages: [{ quantity: 4, supplier_barcode: '' }] }],
+      }).success,
+    ).toBe(false);
+    expect(
+      purchaseDeliverySchema.safeParse({
+        ...input,
+        lines: Array.from({ length: 101 }, (_, index) => ({
+          ...input.lines[0],
+          id: id(1000 + index),
+        })),
+      }).success,
+    ).toBe(false);
+    expect(
+      purchaseDeliverySchema.safeParse({
+        ...input,
+        lines: [
+          {
+            ...input.lines[0],
+            quantity: 201,
+            packages: Array.from({ length: 201 }, () => ({ quantity: 1, supplier_barcode: '' })),
+          },
+        ],
+      }).success,
+    ).toBe(false);
   });
 });
 
@@ -142,12 +160,69 @@ describe('open PO receiving read model', () => {
       [supplier],
     );
     expect(orders).toHaveLength(1);
-    expect(orders[0]).toMatchObject({ id: open.id, supplierName: supplier.name });
+    expect(orders[0]).toMatchObject({
+      id: open.id,
+      supplierName: supplier.name,
+      createdAt: open.created_at,
+      expectedOn: open.expected_on,
+    });
     expect(orders[0]?.lines).toEqual([
       expect.objectContaining({
-        id: openLine.id, ordered: 50, received: 20, outstanding: 30,
+        id: openLine.id,
+        ordered: 50,
+        received: 20,
+        outstanding: 30,
       }),
       expect.objectContaining({ id: completedLineOnOpen.id, outstanding: 0 }),
     ]);
   });
+});
+
+it('shows placed and expected dates plus only remaining PO contents in the selector', () => {
+  const order: PurchaseReceivingOrder = {
+    id: id(700),
+    supplierId: id(2),
+    supplierName: 'Supplier A',
+    reference: 'PO-700',
+    createdAt: '2026-09-21T12:00:00Z',
+    expectedOn: '2026-09-24',
+    lines: [
+      {
+        id: id(701),
+        ingredientId: id(100),
+        ingredientName: 'Completed garlic',
+        supplierSku: 'G-1',
+        purchaseUom: 'bag',
+        packQuantity: 1,
+        uom: 'lb',
+        ordered: 10,
+        received: 10,
+        outstanding: 0,
+      },
+      {
+        id: id(702),
+        ingredientId: id(101),
+        ingredientName: 'Remaining basil',
+        supplierSku: 'B-1',
+        purchaseUom: 'bag',
+        packQuantity: 1,
+        uom: 'lb',
+        ordered: 12,
+        received: 4,
+        outstanding: 8,
+      },
+    ],
+  };
+  const html = renderToStaticMarkup(
+    createElement(PurchaseReceiving, {
+      orders: [order],
+      canReceive: true,
+      locale: 'en',
+      recoveryScope: 'test',
+    }),
+  );
+  expect(html).toContain('placed Sep 21, 2026');
+  expect(html).toContain('expected Sep 24, 2026');
+  expect(html).toContain('Remaining: Remaining basil 8 lb');
+  expect(html).not.toContain('Remaining: Completed garlic');
 });

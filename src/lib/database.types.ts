@@ -528,6 +528,7 @@ export type Database = {
           created_at: string;
           display_name: string;
           id: string;
+          organization_id: string;
           preferred_locale: string;
           requested_role: string;
           review_note: string;
@@ -542,6 +543,7 @@ export type Database = {
           created_at?: string;
           display_name: string;
           id?: string;
+          organization_id?: string;
           preferred_locale?: string;
           requested_role?: string;
           review_note?: string;
@@ -556,6 +558,7 @@ export type Database = {
           created_at?: string;
           display_name?: string;
           id?: string;
+          organization_id?: string;
           preferred_locale?: string;
           requested_role?: string;
           review_note?: string;
@@ -563,7 +566,15 @@ export type Database = {
           reviewed_by?: string | null;
           status?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'access_requests_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       allergens: {
         Row: {
@@ -799,6 +810,9 @@ export type Database = {
           internal_code: string | null;
           name: string;
           organization_id: string;
+          par_level: number | null;
+          reorder_point: number | null;
+          reorder_quantity: number | null;
           storage_notes: string;
           traceability_mode: string;
           updated_at: string;
@@ -813,6 +827,9 @@ export type Database = {
           internal_code?: string | null;
           name: string;
           organization_id?: string;
+          par_level?: number | null;
+          reorder_point?: number | null;
+          reorder_quantity?: number | null;
           storage_notes?: string;
           traceability_mode?: string;
           updated_at?: string;
@@ -827,6 +844,9 @@ export type Database = {
           internal_code?: string | null;
           name?: string;
           organization_id?: string;
+          par_level?: number | null;
+          reorder_point?: number | null;
+          reorder_quantity?: number | null;
           storage_notes?: string;
           traceability_mode?: string;
           updated_at?: string;
@@ -845,6 +865,7 @@ export type Database = {
         Row: {
           created_at: string;
           created_by: string;
+          effective_on: string;
           event_type: string;
           facility_id: string;
           id: string;
@@ -859,6 +880,7 @@ export type Database = {
         Insert: {
           created_at?: string;
           created_by?: string;
+          effective_on?: string;
           event_type: string;
           facility_id?: string;
           id?: string;
@@ -873,6 +895,7 @@ export type Database = {
         Update: {
           created_at?: string;
           created_by?: string;
+          effective_on?: string;
           event_type?: string;
           facility_id?: string;
           id?: string;
@@ -1068,18 +1091,21 @@ export type Database = {
           created_at: string;
           id: string;
           name: string;
+          signup_enabled: boolean;
           slug: string;
         };
         Insert: {
           created_at?: string;
           id?: string;
           name: string;
+          signup_enabled?: boolean;
           slug: string;
         };
         Update: {
           created_at?: string;
           id?: string;
           name?: string;
+          signup_enabled?: boolean;
           slug?: string;
         };
         Relationships: [];
@@ -1790,8 +1816,27 @@ export type Database = {
         };
         Returns: string;
       };
+      resolve_signup_organization: {
+        Args: { tenant_slug: string };
+        Returns: { name: string; slug: string }[];
+      };
+      submit_access_request: {
+        Args: {
+          contact_kind: string;
+          contact_value: string;
+          display_name: string;
+          preferred_locale: string;
+          requested_role: string;
+          tenant_slug: string;
+        };
+        Returns: string;
+      };
       deactivate_user_access: {
         Args: { reason: string; target_user_id: string };
+        Returns: undefined;
+      };
+      reactivate_user_access: {
+        Args: { target_user_id: string };
         Returns: undefined;
       };
       change_user_access_profile: {

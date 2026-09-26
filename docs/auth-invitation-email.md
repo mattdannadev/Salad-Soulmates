@@ -2,7 +2,7 @@
 
 Use this as the **Invite user** template in Supabase Auth after the sender and
 redirect allow-list are configured. The application passes the recipient's name in
-`{{ .Data.display_name }}` and a callback URL through `{{ .ConfirmationURL }}`.
+`{{ .Data.display_name }}` and a callback URL through `{{ .RedirectTo }}`.
 
 ```html
 <!doctype html>
@@ -22,7 +22,7 @@ redirect allow-list are configured. The application passes the recipient's name 
       </p>
       <p style="margin:28px 0;">
         <a
-          href="{{ .ConfirmationURL }}"
+          href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=invite"
           style="display:inline-block;padding:12px 18px;background:#1f563d;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:700;"
           >Set up your account</a
         >
@@ -35,6 +35,11 @@ redirect allow-list are configured. The application passes the recipient's name 
 </html>
 ```
 
-Do not replace `{{ .ConfirmationURL }}` with a handcrafted URL. Verify the exact
-Vercel callback URL is present in Supabase Auth's redirect allow-list, then test
-the email in a disposable account before sending a real invitation.
+This template deliberately verifies `{{ .TokenHash }}` at the app's `/auth/confirm`
+route. This is required for invitations created by the server-side Admin API: a
+default `{{ .ConfirmationURL }}` returns a PKCE code whose verifier is not in
+the recipient's browser, so the recipient would be sent back to the login page.
+
+Verify the exact Vercel `/auth/confirm?next=/reset-password` URL is present in
+Supabase Auth's redirect allow-list, then test the email with a disposable
+account before sending a real invitation.

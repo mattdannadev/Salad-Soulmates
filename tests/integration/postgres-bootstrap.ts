@@ -22,16 +22,25 @@ const migrations = [
   '20260920121000_standalone_purchasing.sql',
   '20260920124904_dashboard_demand_purchasing.sql',
   '20260920190000_production_lots.sql',
-  '20260920194000_receipt_source_lots.sql',
   '20260920193000_batch_worksheet_execution.sql',
+  '20260920194000_receipt_source_lots.sql',
   '20260920195000_traceability_lookup.sql',
   '20260920210000_customer_order_units.sql',
   '20260921132435_receive_purchase_delivery.sql',
   '20260921150000_standalone_purchase_orders.sql',
   '20260921160000_allow_optional_standalone_purchase_reason.sql',
   '20260921170000_user_management_foundation.sql',
-  '20260925120000_spice_preparation_consumption.sql',
-  '20260925130000_spice_preparation_issues.sql',
+  '20260921180000_backfill_profile_work_emails.sql',
+  '20260921180100_change_user_access_profile.sql',
+  '20260921190000_resync_profile_work_emails.sql',
+  '20260921190200_preserve_access_manager.sql',
+  '20260925021742_reactivate_user_access.sql',
+  '20260925021812_inventory_management_controls.sql',
+  '20260925202120_tenant_specific_signup_links.sql',
+  '20260925211750_secure_production_rpc_tenant_scope.sql',
+  '20260925213118_rate_limit_tenant_signup_requests.sql',
+  '20260925220000_spice_preparation_consumption.sql',
+  '20260925221000_spice_preparation_issues.sql',
 ];
 
 /** Apply migrations and synthetic identity data only inside the newly created test database. */
@@ -42,7 +51,7 @@ export async function initializeGateDatabase(execute: (sql: string) => Promise<u
       if not exists(select 1 from pg_roles where rolname='anon') then create role anon; end if;
     end $$;
     create schema auth;
-    create table auth.users(id uuid primary key);
+    create table auth.users(id uuid primary key, email text);
     create function auth.uid() returns uuid language sql stable as
       $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
     grant usage on schema auth to authenticated, anon;
@@ -53,7 +62,7 @@ export async function initializeGateDatabase(execute: (sql: string) => Promise<u
     await execute(await readFile(`supabase/migrations/${migration}`, 'utf8'));
     if (migration === '202609180001_foundation.sql') {
       await execute(`
-        insert into auth.users values('${actor}');
+        insert into auth.users(id,email) values('${actor}','fixture-admin@example.test');
         insert into public.organizations(id,name,slug)
           values('00000000-0000-4000-8000-000000000010','Concurrency fixture','concurrency-fixture');
         insert into public.facilities(id,organization_id,name)

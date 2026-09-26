@@ -39,6 +39,37 @@ create trigger spice_consumption_audit after insert on public.spice_preparation_
   for each row execute function public.audit_change();
 alter table public.serialized_unit_events add column spice_consumption_id uuid unique references public.spice_preparation_consumptions(id);
 
+-- Physical spice consumption is an order usage; other package adjustments retain
+-- their existing ledger classification.
+create or replace function public.post_serialized_unit_delta() returns trigger
+language plpgsql security invoker set search_path='' as $$
+declare unit public.serialized_unit_balances%rowtype;
+begin
+  if new.quantity_delta<>0 then
+    select * into unit from public.serialized_unit_balances where id=new.unit_id;
+    insert into public.inventory_events(ingredient_id,event_type,quantity_delta,uom,reason_note,request_id,serialized_unit_event_id)
+      values(unit.ingredient_id,case when new.spice_consumption_id is null then 'Adjustment' else 'OrderUsage' end,
+        new.quantity_delta,unit.uom,new.reason,new.id,new.id);
+  end if;
+  return new;
+end $$;
+
+create or replace function public.guard_serialized_ledger() returns trigger
+language plpgsql security invoker set search_path='' as $$
+declare event public.serialized_unit_events%rowtype; unit public.serialized_unit_balances%rowtype;
+begin
+  if new.serialized_unit_event_id is null then return new; end if;
+  select * into event from public.serialized_unit_events where id=new.serialized_unit_event_id;
+  select * into unit from public.serialized_unit_balances where id=event.unit_id;
+  if event.id is null or event.created_by is distinct from auth.uid()
+    or new.event_type is distinct from (case when event.spice_consumption_id is null then 'Adjustment' else 'OrderUsage' end)
+    or new.receipt_line_id is not null or new.quantity_delta is distinct from event.quantity_delta
+    or new.ingredient_id is distinct from unit.ingredient_id or new.uom is distinct from unit.uom
+    or new.reason_note is distinct from event.reason
+    or new.request_id is distinct from event.id then raise exception 'Ledger entry must match its package event'; end if;
+  return new;
+end $$;
+
 create or replace function public.guard_serialized_unit_event() returns trigger
 language plpgsql security invoker set search_path='' as $$
 declare unit public.serialized_units%rowtype; current_balance public.serialized_unit_balances%rowtype;
@@ -84,28 +115,40 @@ begin
  select * into prior from public.batch_worksheet_source_usages where id=request_id
    and organization_id=public.current_org() and facility_id=public.current_facility();
  if prior.id is not null then if prior.worksheet_line_id=line_id and prior.serialized_unit_id=unit_id and prior.quantity=amount and prior.operator_id=auth.uid() then return prior.id; end if; raise exception 'Usage request is already in use with different values'; end if;
- select * into line from public.batch_worksheet_lines where id=line_id;
- select * into execution from public.batch_worksheet_executions where id=line.execution_id for update;
+ select * into line from public.batch_worksheet_lines where id=line_id
+   and organization_id=public.current_org() and facility_id=public.current_facility();
+ select * into execution from public.batch_worksheet_executions where id=line.execution_id
+   and organization_id=public.current_org() and facility_id=public.current_facility() for update;
  if line.id is null or execution.id is null or execution.status<>'Open'
    or execution.organization_id<>public.current_org() or execution.facility_id<>public.current_facility()
    then raise exception 'Choose an open worksheet line'; end if;
- perform 1 from public.serialized_units where id=unit_id for update;
- select * into unit from public.serialized_unit_balances where id=unit_id;
+ perform 1 from public.serialized_units where id=unit_id
+   and organization_id=public.current_org() and facility_id=public.current_facility() for update;
+ select * into unit from public.serialized_unit_balances where id=unit_id
+   and organization_id=public.current_org() and facility_id=public.current_facility();
  if unit.id is null or unit.facility_id<>execution.facility_id then raise exception 'Package is not available in this facility'; end if;
  if unit.ingredient_id<>line.ingredient_id or unit.uom<>line.uom then raise exception 'Package does not match this ingredient line'; end if;
  if unit.availability<>'Available' or unit.source_lot='' then raise exception 'Package is held, expired, exhausted, or missing source-lot evidence'; end if;
  if not exists(select 1 from public.planned_mixer_batches batch
    join public.order_production_plans plan on plan.id=batch.order_id
-   where batch.id=execution.planned_mixer_batch_id and plan.status<>'Cancelled' for share of plan) then
-   raise exception 'Production preparation is cancelled'; end if;
+   join public.production_lots lot on lot.id=batch.production_lot_id
+   where batch.id=execution.planned_mixer_batch_id
+     and batch.organization_id=public.current_org() and batch.facility_id=public.current_facility()
+     and plan.organization_id=public.current_org() and plan.facility_id=public.current_facility()
+     and lot.organization_id=public.current_org() and lot.facility_id=public.current_facility()
+     and plan.status='Confirmed' and lot.status='Assigned' for share of plan,lot) then
+   raise exception 'Production preparation is not confirmed and assigned'; end if;
  select coalesce(sum(usage.quantity-coalesce((select sum(c.restored_quantity) from public.batch_worksheet_usage_corrections c where c.usage_id=usage.id),0)),0)
-   into allocated from public.batch_worksheet_source_usages usage where usage.worksheet_line_id=line.id;
+   into allocated from public.batch_worksheet_source_usages usage where usage.worksheet_line_id=line.id
+     and usage.organization_id=public.current_org() and usage.facility_id=public.current_facility();
  select coalesce(sum(usage.quantity-coalesce((select sum(c.restored_quantity) from public.batch_worksheet_usage_corrections c where c.usage_id=usage.id),0)),0) into reserved from public.batch_worksheet_source_usages usage
    join public.batch_worksheet_lines other_line on other_line.id=usage.worksheet_line_id
    join public.batch_worksheet_executions other_execution on other_execution.id=other_line.execution_id
    join public.planned_mixer_batches other_batch on other_batch.id=other_execution.planned_mixer_batch_id
    join public.order_production_plans other_plan on other_plan.id=other_batch.order_id
-   where usage.serialized_unit_id=unit.id and other_execution.status='Open' and other_plan.status<>'Cancelled';
+   where usage.serialized_unit_id=unit.id and usage.organization_id=public.current_org()
+     and usage.facility_id=public.current_facility() and other_execution.status='Open'
+     and other_plan.status='Confirmed';
  if allocated+amount>line.required_quantity then raise exception 'Quantity exceeds the recipe line requirement'; end if;
  if amount>unit.remaining_quantity-reserved then raise exception 'Quantity exceeds the available package balance'; end if;
  insert into public.batch_worksheet_source_usages(id,organization_id,facility_id,worksheet_line_id,serialized_unit_id,source_lot,quantity) values(request_id,execution.organization_id,execution.facility_id,line.id,unit.id,unit.source_lot,amount);
@@ -116,20 +159,29 @@ create or replace function public.open_batch_worksheet(batch_id uuid) returns uu
 declare batch public.planned_mixer_batches%rowtype; spice public.planned_spice_preparations%rowtype; result uuid;
 begin
  if not public.has_permission('production.mobile') then raise exception 'Production worksheet permission required'; end if;
- select * into batch from public.planned_mixer_batches where id=batch_id for update;
+ select * into batch from public.planned_mixer_batches where id=batch_id
+   and organization_id=public.current_org() and facility_id=public.current_facility() for update;
  if batch.id is null or batch.production_lot_id is null
    or batch.organization_id<>public.current_org() or batch.facility_id<>public.current_facility()
    then raise exception 'Choose an assigned production batch'; end if;
- if not exists(select 1 from public.order_production_plans plan where plan.id=batch.order_id and plan.status<>'Cancelled' for share)
-   then raise exception 'Production preparation is cancelled'; end if;
- select * into spice from public.planned_spice_preparations where planned_mixer_batch_id=batch.id;
+ if not exists(select 1 from public.order_production_plans plan
+   join public.production_lots lot on lot.id=batch.production_lot_id
+   where plan.id=batch.order_id and plan.organization_id=public.current_org()
+     and plan.facility_id=public.current_facility() and lot.organization_id=public.current_org()
+     and lot.facility_id=public.current_facility() and plan.status='Confirmed'
+     and lot.status='Assigned' for share of plan,lot)
+   then raise exception 'Production preparation is not confirmed and assigned'; end if;
+ select * into spice from public.planned_spice_preparations where planned_mixer_batch_id=batch.id
+   and organization_id=public.current_org() and facility_id=public.current_facility();
  if spice.id is null then raise exception 'Choose the paired spice preparation'; end if;
- select id into result from public.batch_worksheet_executions where planned_mixer_batch_id=batch.id;
+ select id into result from public.batch_worksheet_executions where planned_mixer_batch_id=batch.id
+   and organization_id=public.current_org() and facility_id=public.current_facility();
  if result is not null then return result; end if;
  insert into public.batch_worksheet_executions(organization_id,facility_id,planned_mixer_batch_id,planned_spice_preparation_id,production_lot_id)
    values(batch.organization_id,batch.facility_id,batch.id,spice.id,batch.production_lot_id) returning id into result;
  insert into public.batch_worksheet_lines(organization_id,facility_id,execution_id,recipe_line_id,ingredient_id,required_quantity,uom,sequence)
-   select batch.organization_id,batch.facility_id,result,line.id,line.ingredient_id,line.normalized_quantity,line.normalized_uom,line.sequence from public.recipe_lines line where line.recipe_version_id=batch.recipe_version_id order by line.sequence;
+   select batch.organization_id,batch.facility_id,result,line.id,line.ingredient_id,line.normalized_quantity,line.normalized_uom,line.sequence from public.recipe_lines line where line.recipe_version_id=batch.recipe_version_id
+     and line.organization_id=public.current_org() order by line.sequence;
  if not found then raise exception 'Released recipe has no ingredient lines'; end if;
  return result;
 end $$;
@@ -152,19 +204,29 @@ begin
      and prior.corrected_by=auth.uid() then return prior.id; end if;
    raise exception 'Correction request is already in use with different values';
  end if;
- select * into usage from public.batch_worksheet_source_usages where id=usage_id;
+ select * into usage from public.batch_worksheet_source_usages where id=usage_id
+   and organization_id=public.current_org() and facility_id=public.current_facility();
  select e.* into execution from public.batch_worksheet_executions e
-   join public.batch_worksheet_lines l on l.execution_id=e.id where l.id=usage.worksheet_line_id for update of e;
+   join public.batch_worksheet_lines l on l.execution_id=e.id where l.id=usage.worksheet_line_id
+     and e.organization_id=public.current_org() and e.facility_id=public.current_facility()
+     and l.organization_id=public.current_org() and l.facility_id=public.current_facility() for update of e;
  if usage.id is null or execution.id is null or execution.status<>'Open'
    or execution.organization_id<>public.current_org() or execution.facility_id<>public.current_facility()
    then raise exception 'Choose an open worksheet usage'; end if;
  if not exists(select 1 from public.planned_mixer_batches batch
    join public.order_production_plans plan on plan.id=batch.order_id
-   where batch.id=execution.planned_mixer_batch_id and plan.status<>'Cancelled' for share of plan)
-   then raise exception 'Production preparation is cancelled'; end if;
- perform 1 from public.serialized_units where id=usage.serialized_unit_id for update;
+   join public.production_lots lot on lot.id=batch.production_lot_id
+   where batch.id=execution.planned_mixer_batch_id and batch.organization_id=public.current_org()
+     and batch.facility_id=public.current_facility() and plan.organization_id=public.current_org()
+     and plan.facility_id=public.current_facility() and lot.organization_id=public.current_org()
+     and lot.facility_id=public.current_facility() and plan.status='Confirmed'
+     and lot.status='Assigned' for share of plan,lot)
+   then raise exception 'Production preparation is not confirmed and assigned'; end if;
+ perform 1 from public.serialized_units where id=usage.serialized_unit_id
+   and organization_id=public.current_org() and facility_id=public.current_facility() for update;
  select coalesce(sum(restored_quantity),0) into already_restored
-   from public.batch_worksheet_usage_corrections where batch_worksheet_usage_corrections.usage_id=usage.id;
+   from public.batch_worksheet_usage_corrections where batch_worksheet_usage_corrections.usage_id=usage.id
+     and organization_id=public.current_org() and facility_id=public.current_facility();
  if amount>usage.quantity-already_restored then raise exception 'Correction exceeds the recorded quantity'; end if;
  insert into public.batch_worksheet_usage_corrections(id,organization_id,facility_id,usage_id,restored_quantity,reason)
    values(request_id,execution.organization_id,execution.facility_id,usage.id,amount,explanation);
@@ -174,41 +236,53 @@ revoke all on function public.correct_batch_worksheet_usage(jsonb) from public,a
 grant execute on function public.correct_batch_worksheet_usage(jsonb) to authenticated;
 
 create or replace function public.complete_batch_worksheet(execution_id uuid) returns uuid language plpgsql security definer set search_path='' as $$
-declare execution public.batch_worksheet_executions%rowtype; usage record; balance public.serialized_unit_balances%rowtype; consumption_id uuid;
+declare execution public.batch_worksheet_executions%rowtype; consumed_usage record; balance public.serialized_unit_balances%rowtype; consumption_id uuid;
 begin
  if not public.has_permission('production.mobile') then raise exception 'Production worksheet permission required'; end if;
- select * into execution from public.batch_worksheet_executions where id=execution_id for update;
+ select * into execution from public.batch_worksheet_executions where id=execution_id
+   and organization_id=public.current_org() and facility_id=public.current_facility() for update;
  if execution.id is null or execution.organization_id<>public.current_org()
    or execution.facility_id<>public.current_facility() then raise exception 'Choose an open worksheet'; end if;
  if execution.status='Complete' then return execution.id; end if;
  if not exists(select 1 from public.planned_mixer_batches batch
    join public.order_production_plans plan on plan.id=batch.order_id
-   where batch.id=execution.planned_mixer_batch_id and plan.status<>'Cancelled' for share of plan) then
-   raise exception 'Production preparation is cancelled'; end if;
+   join public.production_lots lot on lot.id=batch.production_lot_id
+   where batch.id=execution.planned_mixer_batch_id and batch.organization_id=public.current_org()
+     and batch.facility_id=public.current_facility() and plan.organization_id=public.current_org()
+     and plan.facility_id=public.current_facility() and lot.organization_id=public.current_org()
+     and lot.facility_id=public.current_facility() and plan.status='Confirmed'
+     and lot.status='Assigned' for share of plan,lot) then
+   raise exception 'Production preparation is not confirmed and assigned'; end if;
  if exists(select 1 from public.batch_worksheet_lines line left join lateral(
    select coalesce(sum(usage.quantity-coalesce((select sum(c.restored_quantity) from public.batch_worksheet_usage_corrections c where c.usage_id=usage.id),0)),0) quantity
    from public.batch_worksheet_source_usages usage where usage.worksheet_line_id=line.id) used on true
-   where line.execution_id=execution.id and used.quantity<>line.required_quantity) then
+   where line.execution_id=execution.id and line.organization_id=public.current_org()
+     and line.facility_id=public.current_facility() and used.quantity<>line.required_quantity) then
    raise exception 'Record the required quantity for every ingredient line before completing'; end if;
- for usage in select u.*, l.ingredient_id,
+ for consumed_usage in select u.*, l.ingredient_id,
    u.quantity-coalesce((select sum(c.restored_quantity) from public.batch_worksheet_usage_corrections c where c.usage_id=u.id),0) net_quantity
    from public.batch_worksheet_source_usages u
    join public.batch_worksheet_lines l on l.id=u.worksheet_line_id
-   where l.execution_id=execution.id order by u.serialized_unit_id,u.id loop
-   if usage.net_quantity<0 then raise exception 'Corrected quantity exceeds recorded usage'; end if;
-   if usage.net_quantity=0 then continue; end if;
-   perform 1 from public.serialized_units where id=usage.serialized_unit_id for update;
-   select * into balance from public.serialized_unit_balances where id=usage.serialized_unit_id;
-   if balance.availability<>'Available' or balance.ingredient_id<>usage.ingredient_id
-     or balance.source_lot is distinct from usage.source_lot or balance.remaining_quantity<usage.net_quantity then
+   where l.execution_id=execution.id and l.organization_id=public.current_org()
+     and l.facility_id=public.current_facility() and u.organization_id=public.current_org()
+     and u.facility_id=public.current_facility() order by u.serialized_unit_id,u.id loop
+   if consumed_usage.net_quantity<0 then raise exception 'Corrected quantity exceeds recorded usage'; end if;
+   if consumed_usage.net_quantity=0 then continue; end if;
+   perform 1 from public.serialized_units where id=consumed_usage.serialized_unit_id
+     and organization_id=public.current_org() and facility_id=public.current_facility() for update;
+   select * into balance from public.serialized_unit_balances where id=consumed_usage.serialized_unit_id
+     and organization_id=public.current_org() and facility_id=public.current_facility();
+   if balance.availability<>'Available' or balance.ingredient_id<>consumed_usage.ingredient_id
+     or balance.source_lot is distinct from consumed_usage.source_lot or balance.remaining_quantity<consumed_usage.net_quantity then
      raise exception 'Package balance or source lot changed; review spice preparation';
    end if;
    insert into public.spice_preparation_consumptions(organization_id,facility_id,execution_id,usage_id,serialized_unit_id,ingredient_id,source_lot,quantity)
-     values(execution.organization_id,execution.facility_id,execution.id,usage.id,usage.serialized_unit_id,usage.ingredient_id,usage.source_lot,usage.net_quantity) returning id into consumption_id;
+     values(execution.organization_id,execution.facility_id,execution.id,consumed_usage.id,consumed_usage.serialized_unit_id,consumed_usage.ingredient_id,consumed_usage.source_lot,consumed_usage.net_quantity) returning id into consumption_id;
    insert into public.serialized_unit_events(id,organization_id,facility_id,unit_id,expected_revision,remaining_quantity,status,reason,spice_consumption_id)
-     values(gen_random_uuid(),execution.organization_id,execution.facility_id,usage.serialized_unit_id,balance.revision,balance.remaining_quantity-usage.net_quantity,'Available','Spice preparation consumption',consumption_id);
+     values(gen_random_uuid(),execution.organization_id,execution.facility_id,consumed_usage.serialized_unit_id,balance.revision,balance.remaining_quantity-consumed_usage.net_quantity,'Available','Spice preparation consumption',consumption_id);
  end loop;
- update public.batch_worksheet_executions set status='Complete',completed_at=now() where id=execution.id;
+ update public.batch_worksheet_executions set status='Complete',completed_at=now() where id=execution.id
+   and organization_id=public.current_org() and facility_id=public.current_facility();
  return execution.id;
 end $$;
 
@@ -364,8 +438,10 @@ begin
      join public.serialized_units unit on unit.id=usage.serialized_unit_id
      join public.receipt_serializations serialization on serialization.id=unit.serialization_id
      join public.inventory_receipt_lines receipt_line on receipt_line.id=serialization.receipt_line_id
+     join public.inventory_receipts receipt on receipt.id=receipt_line.receipt_id
      where usage.organization_id=public.current_org() and usage.facility_id=public.current_facility()
-       and receipt_line.facility_id=public.current_facility()
+       and receipt_line.organization_id=public.current_org()
+       and receipt.organization_id=public.current_org() and receipt.facility_id=public.current_facility()
        and ((serialized_unit_filter is not null and usage.serialized_unit_id=serialized_unit_filter)
          or (serialized_unit_filter is null and usage.source_lot=trim(source_lot_filter)))
      order by production_lot.assigned_on desc,batch.sequence,usage.used_at,usage.id

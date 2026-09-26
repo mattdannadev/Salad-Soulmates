@@ -14,6 +14,7 @@ export async function saveWorksheetRecord(
   if (operation === 'use') return db.rpc('record_batch_worksheet_usage', { payload: input });
   if (operation === 'correct') return db.rpc('correct_batch_worksheet_usage', { payload: input });
   if (operation === 'issue') return db.rpc('report_spice_preparation_issue', { payload: input });
-  if (operation === 'open') return db.rpc('open_batch_worksheet', { batch_id: input as string });
-  return db.rpc('complete_batch_worksheet', { execution_id: input as string });
+  if (typeof input !== 'string') throw new TypeError('Worksheet batch identity must be a string.');
+  if (operation === 'open') return db.rpc('open_batch_worksheet', { batch_id: input });
+  return db.rpc('complete_batch_worksheet', { execution_id: input });
 }

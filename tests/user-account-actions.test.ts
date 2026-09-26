@@ -11,6 +11,7 @@ vi.mock('@/app/user-management-actions', () => ({
   changeManagedUserAccessProfile: vi.fn(),
   generateUserPasswordResetLink: vi.fn(),
   deactivateManagedUser: vi.fn(),
+  reactivateManagedUser: vi.fn(),
 }));
 
 const userId = '00000000-0000-4000-8000-000000000002';
@@ -57,7 +58,8 @@ it('disables self-deactivation and all inactive-account security actions', () =>
     isCurrentUser: false,
     ...accessProfileProps,
   }));
-  expect(inactive).toContain('This user is inactive.');
+  expect(inactive).toContain('Reactivate user');
+  expect(inactive).toContain('existing Salad Soulmates access');
   expect(inactive).not.toContain('Create password-reset link');
   expect(inactive).not.toContain('Delete user');
 });

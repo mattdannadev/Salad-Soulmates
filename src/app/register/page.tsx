@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { Leaf } from 'lucide-react';
-import RequestAccessForm from './request-access-form';
 
 export default function Register() {
   return (
@@ -8,12 +7,11 @@ export default function Register() {
       <section className="login-card auth-wide">
         <Leaf size={44} />
         <p className="eyebrow">SALAD SOULMATES</p>
-        <h1>Request an account</h1>
+        <h1>Organization link required</h1>
         <p>
-          Use your work email or mobile phone number. An administrator will review your request and
-          assign the right access.
+          Ask your organization administrator for its account-request link. Each link sends your
+          request only to that organization.
         </p>
-        <RequestAccessForm />
         <div className="auth-links">
           <Link href="/login">Back to sign in</Link>
         </div>

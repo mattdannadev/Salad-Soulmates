@@ -1,9 +1,10 @@
 'use client';
 
 import { useActionState } from 'react';
-import { requestAccess } from '../actions';
+import requestTenantAccess from './actions';
 
-export default function RequestAccessForm() {
+export default function RequestAccessForm({ organizationSlug }: { organizationSlug: string }) {
+  const requestAccess = requestTenantAccess.bind(null, organizationSlug);
   const [state, action, pending] = useActionState(requestAccess, { ok: false, message: '' });
   return (
     <form action={action} className="record-form">

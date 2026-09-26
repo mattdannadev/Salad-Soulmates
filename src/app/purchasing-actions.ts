@@ -137,7 +137,11 @@ export default async function savePurchasing(
     revalidatePath('/app/suppliers');
     revalidatePath('/app/receiving');
     revalidatePath('/receiving');
-    return { ok: true, id: saved.data, message: 'Saved successfully.' };
+    return {
+      ok: true,
+      id: saved.data,
+      message: kind.data === 'cancel-order' ? 'Order deactivated.' : 'Saved successfully.',
+    };
   } catch (error) {
     logFailure(`purchasing_${kind.data}`, error);
     return { ok: false, message: 'Connection interrupted. Retry with the same entries.' };

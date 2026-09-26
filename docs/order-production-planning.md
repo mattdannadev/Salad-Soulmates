@@ -92,3 +92,23 @@ requested pickup date from the saved customer pickup date.
 Verify role-filtered navigation, worker return navigation, missing notes/dates,
 multiple product lines, and mobile readability before accepting this increment.
 No production deployment or shared-database changes are part of this follow-up.
+
+## 2026-09-25 release integration
+
+The outstanding worker implementation and navigation/card changes were captured
+in commit 129388d, then reconciled with main f66102e. The order directory retains
+main's grouping, search, product/status filters, deactivate action, and toast.
+Worker problem notes survive response validation; worker reads and writes use
+presentation, service, and data layers.
+
+Release corrections put the worker migrations after the tenant-scope hardening,
+require Confirmed plans and Assigned production lots for writes, scope lock
+lookups to organization/facility, fix receipt-facility tracing, and classify
+spice consumption as OrderUsage. A hosted read-only preflight found no existing
+worksheet executions; no operating records were created or changed by tests.
+
+The owner authorized committing all outstanding changes before deployment.
+Historical reactivation and inventory-control migration SQL was verified against
+the hosted history by normalized hash; filenames are aligned to those versions
+without replaying either migration. Release verification and deployment evidence
+are recorded in the final handoff.

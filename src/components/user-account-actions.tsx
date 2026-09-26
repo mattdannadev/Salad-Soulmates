@@ -5,6 +5,7 @@ import {
 } from 'react';
 import {
   deactivateManagedUser,
+  reactivateManagedUser,
   changeManagedUserAccessProfile,
   generateUserPasswordResetLink,
   type UserManagementActionResult,
@@ -43,11 +44,21 @@ export default function UserAccountActions({
     deactivateManagedUser,
     initialState,
   );
+  const [reactivationState, reactivateAction, reactivating] = useActionState(
+    reactivateManagedUser,
+    initialState,
+  );
   const [accessProfileState, changeAccessProfile, changingAccessProfile] = useActionState(
     changeManagedUserAccessProfile,
     initialState,
   );
   const [copyMessage, setCopyMessage] = useState('');
+
+  useEffect(() => {
+    if (reactivationState.ok) {
+      router.refresh();
+    }
+  }, [reactivationState.ok, router]);
 
   useEffect(() => {
     if (deactivationState.ok) {
@@ -114,7 +125,7 @@ export default function UserAccountActions({
             <input type="hidden" name="user_id" value={userId} />
             <div>
               <h3>Password reset</h3>
-              <p>Create a one-time Supabase recovery link for this user.</p>
+              <p>Create a one-time password-reset link for this user.</p>
             </div>
             <button type="submit" className="secondary" disabled={resetting}>
               {resetting ? 'Creating link…' : 'Create password-reset link'}
@@ -167,7 +178,24 @@ export default function UserAccountActions({
           </div>
         </>
       ) : (
-        <p className="notice">This user is inactive. Password reset and deactivation are unavailable.</p>
+        <form action={reactivateAction} className={styles.actionBlock}>
+          <input type="hidden" name="user_id" value={userId} />
+          <div>
+            <h3>Reactivate user</h3>
+            <p>
+              Restore this user&apos;s existing Salad Soulmates access and retain their account
+              history.
+            </p>
+          </div>
+          <button type="submit" className="secondary" disabled={reactivating}>
+            {reactivating ? 'Reactivating…' : 'Reactivate user'}
+          </button>
+          {reactivationState.message ? (
+            <p className={reactivationState.ok ? 'notice' : 'error-notice'} role={reactivationState.ok ? 'status' : 'alert'}>
+              {reactivationState.message}
+            </p>
+          ) : null}
+        </form>
       )}
       {deactivationState.ok && deactivationState.message ? (
         <p

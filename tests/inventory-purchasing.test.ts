@@ -45,6 +45,11 @@ it('starts a purchase from an active inventory ingredient when purchase access i
   const html = renderToStaticMarkup(await Inventory());
   expect(html).toContain(`href="/app/purchasing?ingredient=${fixtureId(100)}"`);
   expect(html).toContain('aria-label="Purchase Preview garlic powder"');
+  expect(html).toContain('<th>Reorder point</th>');
+  expect(html).toContain('<th>Par level</th>');
+  expect(html).not.toContain('<th>Status</th>');
+  expect(html).toContain('aria-label="Clear inventory filters"');
+  expect(html).toContain('class="button"');
 });
 
 it('does not offer purchase initiation when any required permission is missing', async () => {

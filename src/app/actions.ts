@@ -12,7 +12,7 @@ import { recordOperations, recordPermissions } from '@/lib/save-record';
 import hasPermission from '@/lib/permissions';
 import { logFailure } from '@/lib/operation-error';
 import confirmSignOut from '@/lib/sign-out';
-import authCallbackUrl from '@/domain/auth-callback-url';
+import authConfirmationUrl from '@/domain/auth-callback-url';
 
 async function recordSuccessfulSignIn(db: Awaited<ReturnType<typeof supabase>>) {
   let userAgent: string | null = null;
@@ -48,45 +48,6 @@ export async function signIn(_previous: ActionResult, form: FormData): Promise<A
   if (error) return { ok: false, message: 'Unable to sign in. Check your details and try again.' };
   await recordSuccessfulSignIn(db);
   return redirect('/app');
-}
-
-export async function requestAccess(
-  _previous: ActionResult,
-  form: FormData,
-): Promise<ActionResult> {
-  if (form.get('website')) return { ok: true, message: 'Request received.' };
-  const parsed = z
-    .object({
-      display_name: z.string().trim().min(2).max(120),
-      contact: z.string().trim().min(5).max(254),
-      preferred_locale: z.enum(['en', 'es']),
-      requested_role: z.enum(['reviewer', 'worker', 'receiver']),
-    })
-    .safeParse(Object.fromEntries(form));
-  if (!parsed.success) return { ok: false, message: 'Enter your name and a valid email or phone number.' };
-  const isEmail = z.email().safeParse(parsed.data.contact).success;
-  const phone = parsed.data.contact.replace(/[\s().-]/g, '');
-  const isPhone = /^\+[1-9]\d{7,14}$/.test(phone);
-  if (!isEmail && !isPhone) {
-    return {
-      ok: false,
-      message: 'Use a valid email or a phone number with country code, such as +13125551234.',
-    };
-  }
-  const db = await supabase({ readOnly: false });
-  const { error } = await db.from('access_requests').insert({
-    display_name: parsed.data.display_name,
-    contact_kind: isEmail ? 'email' : 'phone',
-    contact_value: isEmail ? parsed.data.contact.toLowerCase() : phone,
-    preferred_locale: parsed.data.preferred_locale,
-    requested_role: parsed.data.requested_role,
-  });
-  if (error?.code === '23505') return { ok: true, message: 'A request for this email or phone number is already pending.' };
-  if (error) return { ok: false, message: 'We could not submit your request. Please try again.' };
-  return {
-    ok: true,
-    message: 'Request submitted. An administrator will contact you after reviewing access.',
-  };
 }
 
 export async function setPreferredLocale(form: FormData): Promise<ActionResult> {
@@ -166,6 +127,36 @@ interface InvitationAssignment {
   accessProfileId: string;
 }
 
+interface InvitationAuthFailure {
+  code?: unknown;
+  message?: unknown;
+  status?: unknown;
+}
+
+/**
+ * Supabase deliberately uses similar responses for several Auth failures. Keep
+ * duplicate-account guidance precise so a delivery or credential problem is not
+ * presented to an administrator as an existing account.
+ */
+function invitationFailureMessage(error: InvitationAuthFailure | null | undefined) {
+  const code = typeof error?.code === 'string' ? error.code.toLowerCase() : '';
+  const message = typeof error?.message === 'string' ? error.message.toLowerCase() : '';
+  if (['email_exists', 'user_already_exists', 'email_already_exists'].includes(code)
+    || /already (been )?(registered|exists)|user already exists/.test(message)) {
+    return 'This email already has an authentication account. Use that account or choose a different email.';
+  }
+  if (code === 'over_email_send_rate_limit' || /rate limit|too many.*email/.test(message)) {
+    return 'Supabase has temporarily limited invitation emails. Wait a few minutes, then try again.';
+  }
+  if (/email|smtp|mail/.test(message)) {
+    return 'Supabase could not deliver the invitation email. Check its Auth email/SMTP settings, then try again.';
+  }
+  if (error?.status === 401 || error?.status === 403) {
+    return 'The server’s Supabase invitation credential was rejected. Update SUPABASE_SECRET_KEY and try again.';
+  }
+  return 'Supabase could not send the invitation. Check the Auth email and redirect settings, then try again.';
+}
+
 /**
  * Sends the Auth invitation only after there is a recoverable access-request record,
  * then uses the database function to assign the approved facility and profile.
@@ -196,14 +187,25 @@ async function sendInvitationAndAssignAccess({
         message: 'Invitations need the Supabase secret configured on the server.',
       };
     }
-    const { data, error } = await admin.auth.admin.inviteUserByEmail(request.contact_value, {
-      data: { display_name: request.display_name },
-      redirectTo: authCallbackUrl(process.env),
-    });
-    if (error || !data.user) {
+    let data;
+    let error;
+    try {
+      ({ data, error } = await admin.auth.admin.inviteUserByEmail(request.contact_value, {
+        data: { display_name: request.display_name },
+        redirectTo: authConfirmationUrl(process.env),
+      }));
+    } catch (cause) {
+      logFailure('invitation_send', cause);
       return {
         ok: false,
-        message: 'The invitation could not be sent. The email may already have an account.',
+        message: 'Supabase could not send the invitation. Check the Auth email and redirect settings, then try again.',
+      };
+    }
+    if (error || !data.user) {
+      logFailure('invitation_send', error ?? { code: 'EMPTY_RESPONSE' });
+      return {
+        ok: false,
+        message: invitationFailureMessage(error),
       };
     }
     invitedUserId = data.user.id;
@@ -295,12 +297,31 @@ export async function inviteUserFromSettings(
   if (!(await hasPermission(db, 'access.manage'))) {
     return { ok: false, message: 'Access management permission required.' };
   }
+  const email = parsed.data.email.toLowerCase();
+  const { data: existingUser, error: existingUserError } = await db
+    .from('profiles')
+    .select('id,active')
+    .eq('organization_id', profile.organization_id)
+    .eq('work_email', email)
+    .maybeSingle();
+  if (existingUserError) {
+    logFailure('direct_invitation_existing_user_lookup', existingUserError);
+    return { ok: false, message: 'Could not check whether this email already has a user. Please try again.' };
+  }
+  if (existingUser) {
+    return {
+      ok: false,
+      message: existingUser.active
+        ? 'This email already belongs to an active user. Each teammate signs in with one email address.'
+        : 'This email belongs to a deactivated user. Do not delete their Supabase Auth account; reactivate their existing user record to restore access.',
+    };
+  }
   const { data, error } = await db
     .from('access_requests')
     .insert({
       display_name: parsed.data.display_name,
       contact_kind: 'email',
-      contact_value: parsed.data.email.toLowerCase(),
+      contact_value: email,
       preferred_locale: parsed.data.preferred_locale,
       requested_role: 'reviewer',
     })
@@ -340,7 +361,7 @@ export async function requestPasswordReset(
   if (!parsed.success) return { ok: false, message: 'Enter a valid email address.' };
   const db = await supabase({ readOnly: false });
   const { error } = await db.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: authCallbackUrl(process.env),
+    redirectTo: authConfirmationUrl(process.env),
   });
   if (error) {
     logFailure('password_reset_request_failed', error);
@@ -391,6 +412,37 @@ export async function signOut() {
   const db = await supabase({ readOnly: false });
   await confirmSignOut(db);
   redirect('/login');
+}
+
+/** Changes an ingredient's availability without altering its historical records. */
+export async function setIngredientActivity(
+  _previous: ActionResult,
+  form: FormData,
+): Promise<ActionResult> {
+  const parsed = z.object({
+    id: z.uuid(),
+    active: z.enum(['true', 'false']).transform((value) => value === 'true'),
+  }).safeParse(Object.fromEntries(form));
+  if (!parsed.success) return { ok: false, message: 'Invalid ingredient.' };
+  const { db } = await requireProfile({ readOnly: false });
+  if (!(await hasPermission(db, 'master_data.write'))) {
+    return { ok: false, message: 'Ingredient management permission required.' };
+  }
+  const { data, error } = await db
+    .from('ingredients')
+    .update({ active: parsed.data.active })
+    .eq('id', parsed.data.id)
+    .select('id,active')
+    .single();
+  if (error || !data || data.active !== parsed.data.active) {
+    logFailure('ingredient_activity_update', error ?? { code: 'INVALID_RESPONSE' });
+    return { ok: false, message: 'Could not update the ingredient. Please try again.' };
+  }
+  revalidatePath('/app', 'layout');
+  return {
+    ok: true,
+    message: parsed.data.active ? 'Ingredient reactivated.' : 'Ingredient deactivated.',
+  };
 }
 
 /** Public server-action contract; authorization precedes each focused operation. */

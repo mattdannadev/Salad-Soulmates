@@ -64,6 +64,15 @@ describe('operating rules', () => {
   });
   it('rejects incomplete and invalid inventory and supplier pack input', () => {
     expect(inventorySchema.safeParse({ quantity_delta: NaN }).success).toBe(false);
+    expect(inventorySchema.safeParse({
+      ingredient_id: '00000000-0000-4000-8000-000000000001',
+      event_type: 'ManualShrink',
+      quantity_delta: -2,
+      uom: 'lb',
+      reason_note: 'Order fill',
+      effective_on: '2026-09-24',
+      request_id: '00000000-0000-4000-8000-000000000002',
+    }).success).toBe(true);
     expect(packSchema.safeParse({ pack_quantity: 0 }).success).toBe(false);
   });
 });

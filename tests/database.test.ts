@@ -7,6 +7,8 @@ import {
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 let db: PGlite;
+let normalizedSlugCollisionError: unknown;
+let invalidLegacySlugError: unknown;
 async function asUser(user: number, sql: string, params: unknown[] = []) {
   await db.exec('reset role');
   await db.query("select set_config('request.jwt.claim.sub',$1,false)", [id(user)]);
@@ -16,7 +18,7 @@ async function asUser(user: number, sql: string, params: unknown[] = []) {
 beforeAll(async () => {
   db = new PGlite();
   await db.exec(`create role authenticated; create role anon; create schema auth;
- create table auth.users(id uuid primary key);
+ create table auth.users(id uuid primary key, email text);
  create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
  grant usage on schema auth to authenticated,anon;
  grant execute on function auth.uid() to authenticated,anon;`);
@@ -32,7 +34,10 @@ beforeAll(async () => {
     readFileSync('supabase/migrations/20260919154002_access_approval_workflow.sql', 'utf8'),
   );
   await db.exec(readFileSync('supabase/migrations/20260919154004_receiving_workflow.sql', 'utf8'));
-  await db.exec(`insert into auth.users values('${id(1)}'),('${id(2)}'),('${id(3)}'),('${id(4)}'),('${id(5)}'),('${id(6)}'),('${id(7)}'),('${id(8)}'),('${id(9)}'),('${id(30)}');
+  await db.exec(`insert into auth.users(id,email) values
+ ('${id(1)}','admin@example.com'),('${id(2)}','admin-b@example.com'),
+ ('${id(3)}',null),('${id(4)}',null),('${id(5)}',null),('${id(6)}',null),
+ ('${id(7)}',null),('${id(8)}',null),('${id(9)}',null),('${id(30)}',null);
  insert into public.organizations(id,name,slug) values('${id(10)}','A','a'),('${id(20)}','B','b');
  insert into public.facilities(id,organization_id,name) values('${id(11)}','${id(10)}','A'),('${id(21)}','${id(20)}','B'),('${id(12)}','${id(10)}','A2');
  insert into public.profiles(id,organization_id,facility_id,display_name,role) values
@@ -59,16 +64,97 @@ beforeAll(async () => {
   await db.exec(
     readFileSync('supabase/migrations/20260921170000_user_management_foundation.sql', 'utf8'),
   );
+  await db.exec(
+    readFileSync('supabase/migrations/20260921180000_backfill_profile_work_emails.sql', 'utf8'),
+  );
+  await db.exec(
+    readFileSync('supabase/migrations/20260921180100_change_user_access_profile.sql', 'utf8'),
+  );
+  await db.exec(
+    readFileSync('supabase/migrations/20260921190000_resync_profile_work_emails.sql', 'utf8'),
+  );
+  await db.exec(
+    readFileSync('supabase/migrations/20260921190200_preserve_access_manager.sql', 'utf8'),
+  );
+  const tenantSignupMigration = readFileSync(
+    'supabase/migrations/20260925202120_tenant_specific_signup_links.sql',
+    'utf8',
+  );
+  const slugValidationSql = tenantSignupMigration.slice(
+    0,
+    tenantSignupMigration.indexOf('update public.organizations'),
+  );
+  await db.query(
+    'insert into public.organizations(id,name,slug) values($1,$2,$3)',
+    [id(99), 'Normalized collision', ' A '],
+  );
+  try {
+    await db.exec(slugValidationSql);
+  } catch (cause) {
+    normalizedSlugCollisionError = cause;
+  }
+  await db.query('delete from public.organizations where id=$1', [id(99)]);
+  await db.query(
+    'insert into public.organizations(id,name,slug) values($1,$2,$3)',
+    [id(99), 'Too long', `a${'b'.repeat(63)}`],
+  );
+  try {
+    await db.exec(slugValidationSql);
+  } catch (cause) {
+    invalidLegacySlugError = cause;
+  }
+  await db.query('delete from public.organizations where id=$1', [id(99)]);
+  await db.exec(tenantSignupMigration);
+  await db.exec(
+    readFileSync(
+      'supabase/migrations/20260925213118_rate_limit_tenant_signup_requests.sql',
+      'utf8',
+    ),
+  );
 });
 afterAll(async () => {
   await db?.close();
 });
 describe('foundation migration against PostgreSQL (PGlite)', () => {
-  it('has RLS on all twenty-eight application tables', async () => {
+  it('rejects normalized legacy slug collisions and non-canonical future slugs', async () => {
+    expect(normalizedSlugCollisionError).toMatchObject({ code: '23505' });
+    expect(invalidLegacySlugError).toMatchObject({ code: '23514' });
+    await expect(
+      db.query(
+        'insert into public.organizations(id,name,slug) values($1,$2,$3)',
+        [id(99), 'Non-canonical', ' A '],
+      ),
+    ).rejects.toMatchObject({ code: '23514' });
+    await expect(
+      db.query(
+        'insert into public.organizations(id,name,slug) values($1,$2,$3)',
+        [id(99), 'Too long', `a${'b'.repeat(63)}`],
+      ),
+    ).rejects.toMatchObject({ code: '23514' });
+  });
+  it('copies authentication emails into profiles and resynchronizes a changed address', async () => {
+    expect(
+      (await db.query('select work_email from public.profiles where id=$1', [id(1)])).rows,
+    ).toEqual([{ work_email: 'admin@example.com' }]);
+
+    await db.query('update auth.users set email=$1 where id=$2', [
+      'admin-renamed@example.com',
+      id(1),
+    ]);
+    await db.exec(
+      readFileSync('supabase/migrations/20260921190000_resync_profile_work_emails.sql', 'utf8'),
+    );
+
+    expect(
+      (await db.query('select work_email from public.profiles where id=$1', [id(1)])).rows,
+    ).toEqual([{ work_email: 'admin-renamed@example.com' }]);
+  });
+
+  it('has RLS on all twenty-nine application tables', async () => {
     const result = await db.query<{ relrowsecurity: boolean }>(
       "select relrowsecurity from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and relkind='r'",
     );
-    expect(result.rows).toHaveLength(28);
+    expect(result.rows).toHaveLength(29);
     expect(result.rows.every((r) => r.relrowsecurity)).toBe(true);
   });
   it('does not expose security-definer trigger helpers for direct execution', async () => {
@@ -213,13 +299,71 @@ describe('foundation migration against PostgreSQL (PGlite)', () => {
     await expect(db.query('select * from public.ingredients')).rejects.toThrow();
     await expect(db.query("select public.save_ingredient('{}'::jsonb)")).rejects.toThrow();
   });
-  it('accepts a pending access request without exposing requests publicly', async () => {
+  it('submits tenant-specific access requests without exposing requests publicly', async () => {
     await db.exec('reset role; set role anon');
-    await db.query(
-      "insert into public.access_requests(display_name,contact_kind,contact_value,preferred_locale) values('New Person','email','new@example.com','en')",
+    await expect(
+      db.query(
+        "insert into public.access_requests(organization_id,display_name,contact_kind,contact_value,preferred_locale) values($1,'Forged','email','forged@example.com','en')",
+        [id(20)],
+      ),
+    ).rejects.toThrow();
+    const resolved = await db.query(
+      'select * from public.resolve_signup_organization($1)',
+      [' A '],
     );
+    expect(resolved.rows).toEqual([{ name: 'A', slug: 'a' }]);
+    expect(
+      (await db.query('select * from public.resolve_signup_organization($1)', ['missing'])).rows,
+    ).toHaveLength(0);
+    await db.exec('reset role');
+    await db.query('update public.organizations set signup_enabled=false where id=$1', [id(20)]);
+    await db.exec('set role anon');
+    await expect(
+      db.query(
+        'select public.submit_access_request($1,$2,$3,$4,$5,$6)',
+        ['a', 'Malformed Contact', 'email', 'not-an-email', 'en', 'worker'],
+      ),
+    ).rejects.toMatchObject({ code: '22023' });
+    expect(
+      (await db.query('select * from public.resolve_signup_organization($1)', ['b'])).rows,
+    ).toHaveLength(0);
+    await expect(
+      db.query(
+        'select public.submit_access_request($1,$2,$3,$4,$5,$6)',
+        ['b', 'Disabled Tenant', 'email', 'disabled@example.com', 'en', 'worker'],
+      ),
+    ).rejects.toMatchObject({ code: 'P0002' });
+    await db.exec('reset role');
+    await db.query('update public.organizations set signup_enabled=true where id=$1', [id(20)]);
+    await db.exec('set role anon');
+    await db.query(
+      'select public.submit_access_request($1,$2,$3,$4,$5,$6)',
+      ['a', 'New Person', 'email', 'new@example.com', 'en', 'worker'],
+    );
+    await db.query(
+      'select public.submit_access_request($1,$2,$3,$4,$5,$6)',
+      ['b', 'Other Person', 'email', 'new@example.com', 'en', 'worker'],
+    );
+    await expect(
+      db.query(
+        'select public.submit_access_request($1,$2,$3,$4,$5,$6)',
+        ['missing', 'Unknown', 'email', 'unknown@example.com', 'en', 'worker'],
+      ),
+    ).rejects.toThrow('Signup link is invalid or unavailable');
     await expect(db.query('select * from public.access_requests')).rejects.toThrow();
     await db.exec('reset role');
+    const administratorRequest = await asUser(
+      1,
+      "insert into public.access_requests(display_name,contact_kind,contact_value,preferred_locale) values('Admin Created','email','admin-created@example.com','en') returning organization_id",
+    );
+    expect(administratorRequest.rows).toEqual([{ organization_id: id(10) }]);
+    await expect(
+      asUser(
+        1,
+        "insert into public.access_requests(organization_id,display_name,contact_kind,contact_value,preferred_locale) values($1,'Cross Tenant','email','cross-tenant@example.com','en')",
+        [id(20)],
+      ),
+    ).rejects.toThrow();
     expect(
       (
         await asUser(
@@ -228,6 +372,14 @@ describe('foundation migration against PostgreSQL (PGlite)', () => {
         )
       ).rows,
     ).toEqual([{ status: 'New' }]);
+    expect(
+      (
+        await asUser(
+          2,
+          "select display_name from public.access_requests where contact_value='new@example.com'",
+        )
+      ).rows,
+    ).toEqual([{ display_name: 'Other Person' }]);
     await asUser(
       1,
       "update public.access_requests set status='Contacted',reviewed_at=now(),reviewed_by=$1 where contact_value='new@example.com'",
@@ -241,22 +393,108 @@ describe('foundation migration against PostgreSQL (PGlite)', () => {
         )
       ).rows,
     ).toEqual([{ status: 'Contacted' }]);
+    expect(
+      (
+        await asUser(
+          2,
+          "select status from public.access_requests where contact_value='new@example.com'",
+        )
+      ).rows,
+    ).toEqual([{ status: 'New' }]);
     expect((await asUser(4, 'select * from public.access_requests')).rows).toHaveLength(0);
+  });
+  it('limits successful public signup requests per tenant without charging duplicates', async () => {
+    await db.exec('reset role');
+    await db.query(
+      'insert into public.organizations(id,name,slug) values($1,$2,$3),($4,$5,$6)',
+      [id(97), 'Rate limited tenant', 'rate-limited', id(98), 'Independent tenant', 'independent'],
+    );
+    await db.exec('set role anon');
+    await db.query(
+      'select public.submit_access_request($1,$2,$3,$4,$5,$6)',
+      ['rate-limited', 'Person 1', 'email', 'person-1@example.com', 'en', 'worker'],
+    );
+    await expect(
+      db.query(
+        'select public.submit_access_request($1,$2,$3,$4,$5,$6)',
+        ['rate-limited', 'Person 1 retry', 'email', 'person-1@example.com', 'en', 'worker'],
+      ),
+    ).rejects.toMatchObject({ code: '23505' });
+    await db.query(
+      `select public.submit_access_request(
+         'rate-limited',
+         'Person ' || request_number,
+         'email',
+         'person-' || request_number || '@example.com',
+         'en',
+         'worker'
+       )
+       from generate_series(2,10) request_number`,
+    );
+    await expect(
+      db.query(
+        'select public.submit_access_request($1,$2,$3,$4,$5,$6)',
+        ['rate-limited', 'Person 11', 'email', 'person-11@example.com', 'en', 'worker'],
+      ),
+    ).rejects.toMatchObject({
+      code: 'P0001',
+      message: 'Signup request limit reached; try again later',
+    });
+    await db.query(
+      'select public.submit_access_request($1,$2,$3,$4,$5,$6)',
+      ['independent', 'Other tenant', 'email', 'other-tenant@example.com', 'en', 'worker'],
+    );
+    await expect(db.query('select * from public.signup_request_events')).rejects.toThrow();
+    await db.exec('reset role');
+    expect(
+      (
+        await db.query(
+          'select count(*)::integer as count from public.signup_request_events where organization_id=$1',
+          [id(97)],
+        )
+      ).rows,
+    ).toEqual([{ count: 10 }]);
+    expect(
+      (
+        await db.query(
+          'select count(*)::integer as count from public.signup_request_events where organization_id=$1',
+          [id(98)],
+        )
+      ).rows,
+    ).toEqual([{ count: 1 }]);
+    await db.query(
+      `update public.signup_request_events
+       set created_at=clock_timestamp() - interval '61 minutes'
+       where access_request_id=(
+         select id from public.access_requests
+         where organization_id=$1 and contact_value='person-1@example.com'
+       )`,
+      [id(97)],
+    );
+    await db.exec('set role anon');
+    await db.query(
+      'select public.submit_access_request($1,$2,$3,$4,$5,$6)',
+      ['rate-limited', 'Person 11', 'email', 'person-11@example.com', 'en', 'worker'],
+    );
   });
   it('lets an administrator approve a request into a non-admin role and facility', async () => {
     await db.exec('reset role; set role anon');
-    const requestId = id(800);
     await db.query(
-      "insert into public.access_requests(id,display_name,contact_kind,contact_value,preferred_locale,requested_role) values($1,'Invited Worker','email','worker@example.com','es','worker')",
-      [requestId],
+      'select public.submit_access_request($1,$2,$3,$4,$5,$6)',
+      ['a', 'Invited Worker', 'email', 'worker@example.com', 'es', 'worker'],
     );
     await db.exec('reset role');
+    const submittedRequest = await asUser(
+      1,
+      "select id from public.access_requests where contact_value='worker@example.com'",
+    );
+    const submittedRequestId = z.object({ id: z.uuid() }).parse(submittedRequest.rows[0]).id;
     const workerProfile = await asUser(
       1,
       "select id from public.access_profiles where name='Production Worker'",
     );
     await asUser(1, 'select public.approve_access_request($1,$2,$3,$4)', [
-      requestId,
+      submittedRequestId,
       id(7),
       id(11),
       z.object({ id: z.uuid() }).parse(workerProfile.rows[0]).id,
@@ -272,12 +510,49 @@ describe('foundation migration against PostgreSQL (PGlite)', () => {
     }]);
     await expect(
       asUser(1, 'select public.approve_access_request($1,$2,$3,$4)', [
-        requestId,
+        submittedRequestId,
         id(7),
         id(11),
         id(999),
       ]),
     ).rejects.toThrow();
+  });
+  it('rejects cross-organization access-request review and approval', async () => {
+    await db.exec('reset role; set role anon');
+    const submitted = await db.query<{ submit_access_request: string }>(
+      'select public.submit_access_request($1,$2,$3,$4,$5,$6)',
+      ['b', 'Tenant B Worker', 'email', 'tenant-b-worker@example.com', 'en', 'worker'],
+    );
+    const requestId = z
+      .object({ submit_access_request: z.uuid() })
+      .parse(submitted.rows[0]).submit_access_request;
+    await db.exec('reset role');
+
+    expect(
+      (await asUser(1, 'select id from public.access_requests where id=$1', [requestId])).rows,
+    ).toHaveLength(0);
+    expect(
+      (
+        await asUser(
+          1,
+          "update public.access_requests set status='Declined',reviewed_at=now(),reviewed_by=$1 where id=$2 returning id",
+          [id(1), requestId],
+        )
+      ).rows,
+    ).toHaveLength(0);
+
+    const tenantAWorkerProfile = await asUser(
+      1,
+      "select id from public.access_profiles where name='Production Worker'",
+    );
+    await expect(
+      asUser(1, 'select public.approve_access_request($1,$2,$3,$4)', [
+        requestId,
+        id(9),
+        id(11),
+        z.object({ id: z.uuid() }).parse(tenantAWorkerProfile.rows[0]).id,
+      ]),
+    ).rejects.toThrow('Request cannot be approved');
   });
   it('posts a supplier receipt and one linked immutable inventory entry', async () => {
     const supplier = await asUser(
@@ -589,5 +864,52 @@ describe('user management database foundation', () => {
         )
       ).rows,
     ).toEqual([{ count: 1 }]);
+  });
+
+  it('changes an organization user from reviewer to administrator through the audited RPC', async () => {
+    const administrator = z.object({ id: z.string() }).parse((
+      await asUser(
+        1,
+        "select id from public.access_profiles where organization_id=$1 and name='Administrator'",
+        [id(10)],
+      )
+    ).rows[0]);
+
+    await asUser(1, 'select public.change_user_access_profile($1,$2)', [id(4), administrator.id]);
+
+    await db.exec('reset role');
+    expect((await db.query('select role,access_profile_id from public.profiles where id=$1', [id(4)])).rows)
+      .toEqual([{ role: 'admin', access_profile_id: administrator.id }]);
+    expect(
+      (await db.query(
+        "select actor_user_id,event_type from public.audit_events where entity_id=$1 and event_type='USER_ACCESS_PROFILE_CHANGED'",
+        [id(4)],
+      )).rows,
+    ).toEqual([{ actor_user_id: id(1), event_type: 'USER_ACCESS_PROFILE_CHANGED' }]);
+  });
+
+  it('does not remove access.manage from the last active access-manager profile', async () => {
+    const administrator = z.object({ id: z.string() }).parse((
+      await asUser(
+        1,
+        "select id from public.access_profiles where organization_id=$1 and name='Administrator'",
+        [id(10)],
+      )
+    ).rows[0]);
+
+    await expect(asUser(1, 'select public.save_access_profile($1::jsonb)', [JSON.stringify({
+      id: administrator.id,
+      name: 'Administrator',
+      description: 'Full system administration',
+      base_role: 'admin',
+      active: true,
+      permission_codes: ['settings.manage'],
+    })])).rejects.toThrow('last active access manager cannot lose access management permission');
+
+    await db.exec('reset role');
+    expect((await db.query(
+      "select permission_code from public.access_profile_permissions where access_profile_id=$1 and permission_code='access.manage'",
+      [administrator.id],
+    )).rows).toEqual([{ permission_code: 'access.manage' }]);
   });
 });

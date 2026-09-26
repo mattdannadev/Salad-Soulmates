@@ -3,10 +3,10 @@ import Link from 'next/link';
 import { z } from 'zod';
 import { requireAdminShell } from '@/lib/auth';
 import {
-  rows, number, date, readResult,
+  rows, number, readResult,
 } from '@/lib/data';
 import inventoryBalances, { inventoryUnits } from '@/domain/inventory';
-import InventoryForm from '@/components/inventory-form';
+import InventoryAdjustmentControls from '@/components/inventory-adjustment-controls';
 import { PageHeader } from '@/components/shell';
 import hasPermission from '@/lib/permissions';
 
@@ -19,25 +19,50 @@ const purchasePermissions = [
   'master_data.read',
 ];
 
-export default async function Inventory() {
+export default async function Inventory({
+  searchParams = Promise.resolve({}),
+}: {
+  searchParams?: Promise<{ q?: string; category?: string; status?: string }>;
+} = {}) {
   const { db, profile } = await requireAdminShell();
-  const [ingredients, events, facility, purchaseAccess] = await Promise.all([
+  const query = await searchParams;
+  const q = z
+    .string().trim().max(120).catch('')
+    .parse(query.q)
+    .toLowerCase();
+  const status = z.enum(['active', 'inactive', 'all']).catch('active').parse(query.status);
+  const [ingredients, events, facility, purchasePermissionsResult, canAdjust] = await Promise.all([
     rows(db, 'ingredients', rowSchemas.ingredients),
     rows(db, 'inventory_events', rowSchemas.inventory_events),
     db.from('facilities').select('name').eq('id', profile.facility_id).single(),
     Promise.all(purchasePermissions.map((permission) => hasPermission(db, permission))),
+    hasPermission(db, 'inventory.adjust'),
   ]);
   const facilityData = readResult(facility, z.object({ name: z.string() }), 'inventory_facility');
-  const canPurchase = purchaseAccess.every(Boolean);
+  const canPurchase = purchasePermissionsResult.every(Boolean);
+  const categories = [...new Set(ingredients.map((ingredient) => ingredient.category))].sort();
+  const category = z
+    .string().trim().max(120).catch('all')
+    .parse(query.category);
+  const filteredIngredients = ingredients
+    .filter((ingredient) => ingredient.name.toLowerCase().includes(q))
+    .filter((ingredient) => status === 'all' || ingredient.active === (status === 'active'))
+    .filter((ingredient) => category === 'all' || ingredient.category === category);
+  const activeIngredients = ingredients.filter((ingredient) => ingredient.active);
   const balances = inventoryBalances(events);
   const receivedUnits = inventoryUnits(events);
-  const recent = [...events].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 50);
+  const recent = [...events].sort((a, b) => (
+    b.effective_on.localeCompare(a.effective_on) || b.created_at.localeCompare(a.created_at)
+  )).slice(0, 50);
   return (
     <>
       <PageHeader
         eyebrow={facilityData.name}
         title="Ingredient inventory"
         description="Reviewed opening balances and adjustments for your facility. Every change keeps its history."
+        action={
+          canAdjust ? <InventoryAdjustmentControls ingredients={activeIngredients} /> : undefined
+        }
       />
       <section className="panel">
         <h2>On hand</h2>
@@ -45,49 +70,106 @@ export default async function Inventory() {
           Owned stock includes held and expired material. Planning excludes unavailable packages.
         </p>
         <Link href="/receiving/packages">View package balances, holds, and supplier lots →</Link>
-        {ingredients.length ? (
+        <Link href="/app/ingredients">Manage ingredient details and availability →</Link>
+        <form className="search inventory-filters">
+          <label className="inventory-filter-search" htmlFor="inventory-search">
+            <span className="sr-only">Search ingredients</span>
+            <input id="inventory-search" name="q" placeholder="Search ingredients…" defaultValue={query.q} />
+          </label>
+          <label className="inventory-filter-field" htmlFor="inventory-category">
+            <span>Ingredient type</span>
+            <select id="inventory-category" name="category" defaultValue={category}>
+              <option value="all">All types</option>
+              {categories.map((value) => <option key={value} value={value}>{value}</option>)}
+            </select>
+          </label>
+          <label className="inventory-filter-field" htmlFor="inventory-status">
+            <span>Availability</span>
+            <select id="inventory-status" name="status" defaultValue={status}>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="all">Active and inactive</option>
+            </select>
+          </label>
+          <button type="submit" className="secondary">Filter</button>
+          <Link
+            className="inventory-clear-filters"
+            href="/app/inventory"
+            aria-label="Clear inventory filters"
+            title="Clear filters"
+          >
+            <span aria-hidden="true">×</span>
+            <span>Clear</span>
+          </Link>
+        </form>
+        {filteredIngredients.length ? (
           <div className="table-wrap">
-            <table>
+            <table className="inventory-table">
               <thead>
                 <tr>
                   <th>Ingredient</th>
                   <th>On hand</th>
-                  <th>Status</th>
+                  <th>Reorder point</th>
+                  <th>Par level</th>
                   {canPurchase && <th>Purchase</th>}
+                  {canAdjust && <th>Adjust</th>}
                 </tr>
               </thead>
               <tbody>
-                {ingredients.map((i) => (
+                {filteredIngredients.map((i) => (
                   <tr key={i.id}>
                     <td>
                       <Link href={`/app/ingredients/${i.id}`}>{i.name}</Link>
                     </td>
-                    <td>
-                      {number(balances[i.id] ?? 0)}
-                      {' '}
-                      {receivedUnits[i.id] ?? i.default_uom}
+                    <td className="inventory-on-hand">
+                      <span>
+                        {number(balances[i.id] ?? 0)}
+                        {' '}
+                        {receivedUnits[i.id] ?? i.default_uom}
+                      </span>
+                      {i.reorder_point !== null && i.reorder_point !== undefined
+                        && (balances[i.id] ?? 0) <= i.reorder_point && (
+                        <small className="inventory-stock-alert">At or below reorder point</small>
+                      )}
                     </td>
                     <td>
-                      {(balances[i.id] ?? 0) < 0 ? (
-                        <span className="badge warning">Review negative balance</span>
-                      ) : (
-                        <span>
-                          {events.some((e) => e.ingredient_id === i.id)
-                            ? 'Recorded'
-                            : 'Not entered'}
-                        </span>
+                      {i.reorder_point === null || i.reorder_point === undefined ? 'Not set' : (
+                        <>
+                          {number(i.reorder_point)}
+                          {' '}
+                          {receivedUnits[i.id] ?? i.default_uom}
+                        </>
+                      )}
+                    </td>
+                    <td>
+                      {i.par_level === null || i.par_level === undefined ? 'Not set' : (
+                        <>
+                          {number(i.par_level)}
+                          {' '}
+                          {receivedUnits[i.id] ?? i.default_uom}
+                        </>
                       )}
                     </td>
                     {canPurchase && (
                       <td>
                         {i.active ? (
                           <Link
-                            className="button secondary"
+                            className="button"
                             href={`/app/purchasing?ingredient=${i.id}`}
                             aria-label={`Purchase ${i.name}`}
                           >
                             Purchase
                           </Link>
+                        ) : 'Unavailable'}
+                      </td>
+                    )}
+                    {canAdjust && (
+                      <td>
+                        {i.active ? (
+                          <InventoryAdjustmentControls
+                            ingredients={[i]}
+                            ingredientToAdjustId={i.id}
+                          />
                         ) : 'Unavailable'}
                       </td>
                     )}
@@ -98,16 +180,11 @@ export default async function Inventory() {
           </div>
         ) : (
           <div className="empty">
-            <h3>No ingredients yet</h3>
-            <Link href="/app/ingredients">Build your ingredient library →</Link>
+            <h3>No matching ingredients</h3>
+            <Link href="/app/inventory">Clear filters →</Link>
           </div>
         )}
       </section>
-      {profile.role === 'admin' && ingredients.some((i) => i.active) && (
-        <section className="panel">
-          <InventoryForm ingredients={ingredients.filter((i) => i.active)} />
-        </section>
-      )}
       <section className="panel">
         <h2>Recent history</h2>
         <p>
@@ -126,7 +203,7 @@ export default async function Inventory() {
             <table>
               <thead>
                 <tr>
-                  <th>When</th>
+                  <th>Effective date</th>
                   <th>Ingredient</th>
                   <th>Type</th>
                   <th>Change</th>
@@ -136,11 +213,19 @@ export default async function Inventory() {
               <tbody>
                 {recent.map((e) => (
                   <tr key={e.id}>
-                    <td>{date(e.created_at)}</td>
+                    <td>{e.effective_on}</td>
                     <td>
                       {ingredients.find((i) => i.id === e.ingredient_id)?.name ?? 'Unavailable'}
                     </td>
-                    <td>{e.event_type === 'OpeningBalance' ? 'Opening balance' : e.event_type}</td>
+                    <td>
+                      {({
+                        OpeningBalance: 'Opening balance',
+                        Receipt: 'Purchase order receipt',
+                        ManualGain: 'Manual gain',
+                        ManualShrink: 'Manual shrink',
+                        OrderUsage: 'Usage for filling orders',
+                      }[e.event_type] ?? e.event_type)}
+                    </td>
                     <td>
                       {Number(e.quantity_delta) > 0 ? '+' : ''}
                       {number(Number(e.quantity_delta))}

@@ -79,6 +79,16 @@ function orderLabel(order: PurchaseReceivingOrder, es: boolean) {
   return order.reference || `${es ? 'Pedido' : 'PO'} ${order.id.slice(0, 8)}`;
 }
 
+function orderContentsSummary(order: PurchaseReceivingOrder, es: boolean) {
+  const remainingLines = order.lines.filter((line) => line.outstanding > 0);
+  const visibleLines = remainingLines.slice(0, 3).map((line) => (
+    `${line.ingredientName} ${formatNumber(line.outstanding)} ${line.uom}`
+  ));
+  const remaining = remainingLines.length - visibleLines.length;
+  const more = remaining > 0 ? ` +${remaining} ${es ? 'más' : 'more'}` : '';
+  return `${es ? 'Pendiente' : 'Remaining'}: ${visibleLines.join(', ')}${more}`;
+}
+
 function caughtMessage(error: unknown, es: boolean) {
   if (error instanceof z.ZodError) {
     return error.issues[0]?.message
@@ -569,7 +579,8 @@ export default function PurchaseReceiving({
                     />
                     <span>
                       <strong>{orderLabel(order, es)}</strong>
-                      {` · ${order.supplierName} · ${es ? 'previsto' : 'expected'} ${formatDate(order.expectedOn)}`}
+                      {` · ${order.supplierName} · ${es ? 'realizado' : 'placed'} ${formatDate(order.createdAt)} · ${es ? 'previsto' : 'expected'} ${formatDate(order.expectedOn)}`}
+                      <small>{orderContentsSummary(order, es)}</small>
                     </span>
                   </label>
                 );

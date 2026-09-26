@@ -74,7 +74,8 @@ begin
     end if;
     raise exception 'Issue request is already in use with different values';
   end if;
-  select * into execution from public.batch_worksheet_executions where id=target_execution_id for update;
+  select * into execution from public.batch_worksheet_executions where id=target_execution_id
+    and organization_id=public.current_org() and facility_id=public.current_facility() for update;
   if execution.id is null or execution.status<>'Open'
     or execution.organization_id<>public.current_org() or execution.facility_id<>public.current_facility() then
     raise exception 'Choose an open spice preparation';
@@ -82,10 +83,16 @@ begin
   if not exists (
     select 1 from public.planned_mixer_batches batch
     join public.order_production_plans plan on plan.id=batch.order_id
-    where batch.id=execution.planned_mixer_batch_id and plan.status='Confirmed' for share of plan
-  ) then raise exception 'Production preparation is cancelled'; end if;
+    join public.production_lots lot on lot.id=batch.production_lot_id
+    where batch.id=execution.planned_mixer_batch_id
+      and batch.organization_id=public.current_org() and batch.facility_id=public.current_facility()
+      and plan.organization_id=public.current_org() and plan.facility_id=public.current_facility()
+      and lot.organization_id=public.current_org() and lot.facility_id=public.current_facility()
+      and plan.status='Confirmed' and lot.status='Assigned' for share of plan,lot
+  ) then raise exception 'Production preparation is not confirmed and assigned'; end if;
   if target_line_id is not null then
-    select * into line from public.batch_worksheet_lines where id=target_line_id;
+    select * into line from public.batch_worksheet_lines where id=target_line_id
+      and organization_id=public.current_org() and facility_id=public.current_facility();
     if line.id is null or line.execution_id<>execution.id then
       raise exception 'Ingredient does not belong to this spice preparation';
     end if;
@@ -94,7 +101,8 @@ begin
     if line.id is null or not exists (
       select 1 from public.serialized_unit_balances unit
       where unit.id=target_unit_id and unit.ingredient_id=line.ingredient_id
-        and unit.facility_id=execution.facility_id and unit.uom=line.uom
+        and unit.organization_id=public.current_org()
+        and unit.facility_id=public.current_facility() and unit.uom=line.uom
     ) then raise exception 'Bucket does not match this ingredient'; end if;
   end if;
   insert into public.spice_preparation_issues

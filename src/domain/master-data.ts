@@ -9,9 +9,19 @@ export const ingredientSchema = z.object({
   spanish_name: z.string().trim().max(120),
   description: z.string().trim().max(1000),
   storage_notes: z.string().trim().max(1000),
+  reorder_point: z.number().min(0).max(1000000).multipleOf(0.0001)
+    .nullable(),
+  par_level: z.number().min(0).max(1000000).multipleOf(0.0001)
+    .nullable(),
+  reorder_quantity: z.number().positive().max(1000000).multipleOf(0.0001)
+    .nullable(),
   active: z.boolean(),
   allergen_ids: z.array(z.uuid()).max(30),
-});
+}).refine(
+  (value) => value.par_level === null || value.reorder_point === null
+    || value.par_level >= value.reorder_point,
+  'Par level must be at least the reorder point.',
+);
 export const supplierSchema = z.object({
   id: z.uuid().optional(),
   name: z.string().trim().min(1).max(120),
@@ -36,7 +46,7 @@ export const packSchema = z.object({
 export const inventorySchema = z
   .object({
     ingredient_id: z.uuid(),
-    event_type: z.enum(['OpeningBalance', 'Adjustment']),
+    event_type: z.enum(['OpeningBalance', 'ManualGain', 'ManualShrink', 'OrderUsage']),
     quantity_delta: z
       .number()
       .finite()
@@ -46,6 +56,7 @@ export const inventorySchema = z
       .refine((n) => n !== 0, 'Enter a non-zero quantity.'),
     uom: z.enum(units),
     reason_note: z.string().trim().min(3).max(1000),
+    effective_on: z.iso.date(),
     request_id: z.uuid(),
   })
   .refine(
@@ -86,6 +97,9 @@ export const ingredientRowSchema = z.object({
   active: z.boolean(),
   description: z.string(),
   storage_notes: z.string(),
+  reorder_point: z.number().finite().nullable().default(null),
+  par_level: z.number().finite().nullable().default(null),
+  reorder_quantity: z.number().finite().nullable().default(null),
 });
 export type Ingredient = z.infer<typeof ingredientRowSchema>;
 export const supplierRowSchema = z.object({
@@ -119,6 +133,7 @@ export const inventoryEventRowSchema = z.object({
   uom: z.string(),
   reason_note: z.string(),
   created_at: z.string(),
+  effective_on: z.string(),
 });
 export type InventoryEvent = z.infer<typeof inventoryEventRowSchema>;
 export const feedbackRowSchema = z.object({

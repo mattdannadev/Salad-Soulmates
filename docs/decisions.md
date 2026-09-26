@@ -1,5 +1,16 @@
 # Implementation decisions
 
+## 2026-09-25 — Active customer-order directory and soft deactivation
+
+The owner requested an orders grid grouped by customer and ordered by newest pickup
+date first. The directory shows active orders only and provides customer, pickup
+date, product and production-status filtering. Each card offers the relevant
+order actions: review, ingredient purchasing and pickup preparation. Deleting an
+order is a confirmed soft deactivation: it uses the existing cancellation workflow
+to retain the order and its history while releasing active commitments, removes it
+from the active directory, confirms the result with a toast and returns from the
+detail page to the prior directory.
+
 ## 2026-09-21 — Manual replenishment creates a purchase order
 
 The owner clarified that contextual manual replenishment is the actual purchase
@@ -537,3 +548,13 @@ order/request and customer pickup dates. The current schema has an order creatio
 timestamp and one customer-needed/pickup date; do not invent a distinct requested
 pickup date or relabel the creation timestamp as one. Display missing notes and
 dates explicitly. This change does not authorize production release or migrations.
+
+## 2026-09-24 — Inventory controls and adjustment history
+
+Inventory adjustments require an ingredient, effective date, adjustment type and reason. Manual gains add stock; manual shrinks and usage for filling orders remove stock. Purchase-order receipts remain their own receiving workflow and appear in the same immutable inventory history. Ingredients may define optional base-unit reorder point, par level and default reorder quantity; a par level cannot be below its reorder point.
+
+Ingredients are retained by deactivation rather than hard deletion so their inventory, recipe, receiving and purchasing history stays valid. The normal Ingredients grid defaults to active ingredients; staff can explicitly filter for inactive or all ingredients, and filter the existing Liquid category as Wet and Dry category as Dry.
+
+## 2026-09-25 — Commit outstanding work before release
+
+The owner explicitly requested committing and deploying the outstanding changes, then clarified that all uncommitted application work must be incorporated before anything is deployed. Preserve newer main functionality, commit the reconciled source, and resolve release validation failures before production publication. This authorizes the additive worker schema changes needed by the release, not test data or unrelated operational writes.
