@@ -1881,7 +1881,16 @@ dialog::backdrop {
     border-radius: 50%;
   }
   .breadcrumb {
-    font-size: 11px;
+    display: none;
+  }
+  .identity {
+    min-width: 0;
+  }
+  .identity > span:not(.avatar) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .staging-banner {
     padding: 9px 18px;

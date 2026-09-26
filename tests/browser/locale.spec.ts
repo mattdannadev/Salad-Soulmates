@@ -25,6 +25,16 @@ test('language changes update navigation and dashboard and survive reload', asyn
   await expect(page.getByRole('heading', { name: 'Preparaciones de especias', exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Volver al panel', exact: true }).click();
   if (info.project.name === 'phone') {
+    await expect(navigation('es')).toBeVisible();
+    await expect.poll(() => page.evaluate(() => {
+      const nav = document.querySelector('.mobile-navigation');
+      const viewport = window.visualViewport;
+      if (!nav || !viewport) return false;
+      const bounds = nav.getBoundingClientRect();
+      return document.documentElement.scrollWidth <= viewport.width
+        && bounds.right <= viewport.width
+        && bounds.bottom <= viewport.height;
+    })).toBe(true);
     await navigation('es').getByRole('link', { name: 'Pedidos', exact: true }).click();
   } else {
     await navigation('es').getByText('Planificación de producción', { exact: true }).click();
