@@ -8,6 +8,53 @@ export type Database = {
   };
   public: {
     Tables: {
+      application_error_logs: {
+        Row: {
+          error_code: string;
+          error_name: string;
+          id: string;
+          occurred_at: string;
+          operation: string;
+          organization_id: string;
+          release_id: string | null;
+          reported_by: string | null;
+          request_id: string | null;
+          route: string | null;
+          safe_message: string;
+          severity: 'warning' | 'error' | 'critical';
+        };
+        Insert: {
+          error_code: string;
+          error_name: string;
+          id?: string;
+          occurred_at?: string;
+          operation: string;
+          organization_id?: string;
+          release_id?: string | null;
+          reported_by?: string | null;
+          request_id?: string | null;
+          route?: string | null;
+          safe_message: string;
+          severity?: 'warning' | 'error' | 'critical';
+        };
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: 'application_error_logs_organization_id_fkey';
+            columns: ['organization_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'application_error_logs_reported_by_fkey';
+            columns: ['reported_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       packaging_profile_versions: {
         Row: {
           id: string;
