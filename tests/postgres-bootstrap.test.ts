@@ -60,7 +60,7 @@ it('initializes the native gate fixture with real migration permissions and RLS'
       'select code from public.uoms where organization_id=$1 order by family_code,sort_order',
       [newId],
     )).rows).toEqual(
-      ['each', 'g', 'kg', 'lb', 'oz', 'bag', 'case', 'pail', 'fl_oz', 'gal', 'l', 'ml']
+      ['each', 'lb', 'oz', 'kg', 'g', 'bag', 'case', 'pail', 'gal', 'fl_oz', 'l', 'ml']
         .map((code) => ({ code })),
     );
     await db.query(
