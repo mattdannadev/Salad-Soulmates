@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { ArrowUpRight, Building2, Leaf } from 'lucide-react';
+import { ArrowUpRight, Leaf } from 'lucide-react';
+import ListGrid from '@/components/list-grid';
 import { listOrganizations, requirePlatformAdmin } from '@/services/platform-admin';
 import {
   CreateOrganizationControl,
@@ -97,50 +98,47 @@ export function AdminPortal({
           {organizations.length === 0 ? (
             <EmptyOrganizations />
           ) : (
-            <div className={styles.tableScroll}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th scope="col">Organization</th>
-                    <th scope="col">Slug</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Enabled users</th>
-                    <th scope="col">Created</th>
-                    <th scope="col"><span className="sr-only">Actions</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {organizations.map((organization) => (
-                    <tr key={organization.id}>
-                      <td>
-                        <span className={styles.organizationName}>
-                          <span className={styles.organizationIcon}>
-                            <Building2 size={17} aria-hidden="true" />
-                          </span>
-                          {organization.name}
-                        </span>
-                      </td>
-                      <td><span className={styles.slug}>{organization.slug}</span></td>
-                      <td>
-                        <span
-                          className={`${styles.status} ${organization.status === 'suspended' ? styles.suspended : ''}`}
-                        >
-                          {organization.status === 'suspended' ? 'Suspended' : 'Active'}
-                        </span>
-                      </td>
-                      <td>{organization.enabledUserCount.toLocaleString('en-US')}</td>
-                      <td>{formatCreatedAt(organization.createdAt)}</td>
-                      <td>
-                        <OrganizationStatusControl
-                          action={statusAction}
-                          organization={organization}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ListGrid
+              label="Organizations"
+              columns={[
+                { key: 'organization', label: 'Organization' },
+                { key: 'slug', label: 'Slug' },
+                { key: 'status', label: 'Status' },
+                { key: 'users', label: 'Enabled users' },
+                { key: 'created', label: 'Created' },
+                {
+                  key: 'actions', label: 'Actions', sortable: false, filterable: false,
+                },
+              ]}
+              rows={organizations.map((organization) => ({
+                id: organization.id,
+                cells: {
+                  organization: { text: organization.name },
+                  slug: { text: organization.slug },
+                  status: {
+                    text: organization.status === 'suspended' ? 'Suspended' : 'Active',
+                    badge: organization.status === 'suspended' ? 'muted' as const : 'default' as const,
+                  },
+                  users: {
+                    text: organization.enabledUserCount.toLocaleString('en-US'),
+                    sortValue: organization.enabledUserCount,
+                  },
+                  created: {
+                    text: formatCreatedAt(organization.createdAt),
+                    sortValue: organization.createdAt,
+                  },
+                  actions: { text: 'Status actions', slot: organization.id },
+                },
+              }))}
+              cellSlots={Object.fromEntries(organizations.map((organization) => [
+                organization.id,
+                <OrganizationStatusControl
+                  key={organization.id}
+                  action={statusAction}
+                  organization={organization}
+                />,
+              ]))}
+            />
           )}
         </section>
       </main>

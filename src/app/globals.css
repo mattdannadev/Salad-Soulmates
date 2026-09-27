@@ -2530,12 +2530,12 @@ dialog::backdrop {
 }
 .order-deactivate-action {
   display: flex;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
 }
 .order-deactivate-action .button {
-  width: 100%;
-  min-height: 2.6rem;
-  padding: 0.55rem 0.75rem;
+  width: auto;
+  min-height: 2.25rem;
+  padding: 0.4rem 0.7rem;
 }
 .danger-button {
   background: #9f3f35;
@@ -2597,8 +2597,29 @@ dialog::backdrop {
     width: 100%;
   }
   .order-deactivate-action .button {
+    width: auto;
     min-height: 44px;
   }
+}
+.production-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  margin: 1rem 0;
+}
+.production-dates div {
+  display: grid;
+  gap: 0.15rem;
+}
+.production-dates dt {
+  color: #657366;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.production-dates dd {
+  margin: 0;
 }
 .purchase-group {
   margin-top: 1.5rem;

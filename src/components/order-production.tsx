@@ -50,7 +50,28 @@ export default function OrderProduction({
           <span>{es ? 'Galones previstos' : 'Planned gallons'}</span>
         </div>
       </div>
-      {plan && <p>{`${formatDate(plan.start_on)} – ${formatDate(plan.finish_on)}`}</p>}
+      <dl className="production-dates">
+        <div>
+          <dt>{es ? 'Recibido el' : 'Order received'}</dt>
+          <dd>{formatDate(order.created_at)}</dd>
+        </div>
+        <div>
+          <dt>{es ? 'Recogida del cliente' : 'Customer pickup'}</dt>
+          <dd>{formatDate(order.needed_on)}</dd>
+        </div>
+        {plan && (
+          <>
+            <div>
+              <dt>{es ? 'Inicio de producción' : 'Production start'}</dt>
+              <dd>{formatDate(plan.start_on)}</dd>
+            </div>
+            <div>
+              <dt>{es ? 'Finalización prevista' : 'Planned completion'}</dt>
+              <dd>{formatDate(plan.finish_on)}</dd>
+            </div>
+          </>
+        )}
+      </dl>
       {plan && plan.status !== 'Cancelled' && (
         <p className={shortageCount ? 'notice' : ''}>
           {shortageCount

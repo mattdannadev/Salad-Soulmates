@@ -1,5 +1,17 @@
 # Implementation decisions
 
+## 2026-09-26 — Clear order deletion, production dates, and recipe totals
+
+Order deletion remains the existing confirmed soft-deactivation workflow, but its
+customer-facing action and confirmation use **Delete**. It retains the order and
+history while releasing active commitments. Production preparation shows the
+non-editable order-received and customer-pickup dates alongside production start
+and planned completion when set. “Production start” is also the ingredient-ready
+cutoff; it is not a separate date field. Production completion must be before the
+customer pickup date, because pickup occurs after production is complete. Ingredient requirements remain calculated
+from the released recipes across every batch in the order, and the order keeps its
+existing direct route from shortages to purchase review.
+
 ## 2026-09-25 — Active customer-order directory and soft deactivation
 
 The owner requested an orders grid grouped by customer and ordered by newest pickup

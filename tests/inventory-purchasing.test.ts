@@ -44,12 +44,14 @@ beforeEach(() => {
 it('starts a purchase from an active inventory ingredient when purchase access is complete', async () => {
   const html = renderToStaticMarkup(await Inventory());
   expect(html).toContain(`href="/app/purchasing?ingredient=${fixtureId(100)}"`);
-  expect(html).toContain('aria-label="Purchase Preview garlic powder"');
-  expect(html).toContain('<th>Reorder point</th>');
-  expect(html).toContain('<th>Par level</th>');
-  expect(html).not.toContain('<th>Status</th>');
+  expect(html).toContain(`href="/app/purchasing?ingredient=${fixtureId(100)}">Purchase</a>`);
+  expect(html).toContain('<th scope="col">Reorder point</th>');
+  expect(html).toContain('<th scope="col">Par level</th>');
+  expect(html).toContain('Not set');
+  expect(html).not.toContain('At or below reorder point');
+  expect(html).not.toContain('<th scope="col">Status</th>');
   expect(html).toContain('aria-label="Clear inventory filters"');
-  expect(html).toContain('class="button"');
+  expect(html).toContain('<button type="button">Record inventory adjustment</button>');
 });
 
 it('does not offer purchase initiation when any required permission is missing', async () => {
@@ -58,5 +60,20 @@ it('does not offer purchase initiation when any required permission is missing',
   ));
   const html = renderToStaticMarkup(await Inventory());
   expect(html).not.toContain('/app/purchasing?ingredient=');
-  expect(html).not.toContain('<th>Purchase</th>');
+  expect(html).not.toContain('<th scope="col">Purchase</th>');
+});
+
+it('shows a zero reorder point while treating missing legacy thresholds as unset', async () => {
+  const [garlic, lemon] = fixtureRecords.ingredients ?? [];
+  if (!garlic || !lemon) throw new Error('Ingredient fixtures are required');
+  mocks.rows.mockImplementation((_db: unknown, table: string) => Promise.resolve(
+    table === 'ingredients'
+      ? [{ ...garlic, reorder_point: 0, par_level: 5 }, lemon]
+      : [],
+  ));
+  const html = renderToStaticMarkup(await Inventory());
+  expect(html).toContain('0 lb');
+  expect(html).toContain('5 lb');
+  expect(html).toContain('At or below reorder point');
+  expect(html).toContain('Not set');
 });

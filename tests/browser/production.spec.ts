@@ -17,14 +17,14 @@ test('prepares customer production with paired batches, shortage review, revisio
   await expect(page).toHaveURL(/\/app\/orders\?order=/);
   const preparation = page.getByRole('region', { name: 'Production preparation', exact: true });
   await expect(preparation).toContainText('Not planned');
-  await preparation.getByLabel('Start / ingredients ready by').fill('2026-09-28');
-  await preparation.getByLabel('Planned completion').fill('2026-09-30');
+  await preparation.getByLabel('Production start (ingredients ready)').fill('2026-09-28');
+  await preparation.getByLabel('Planned production completion (before customer pickup)').fill('2026-09-30');
   await preparation.getByRole('button', { name: 'Save production draft' }).click();
   await expect(preparation.locator('.badge')).toHaveText('Draft');
   await preparation.getByText('View mixer batches & spice preparations', { exact: true }).click();
   await expect(preparation.locator('.production-batch')).toHaveCount(4);
   await expect(preparation.locator('.production-batch').first()).toContainText('SP-');
-  await expect(page.getByText('Availability checked for production start:', { exact: false })).toBeVisible();
+  await expect(preparation.getByText(/ingredients have shortages by the start date|Ingredients are covered by usable stock/)).toBeVisible();
   await preparation.getByRole('button', { name: 'Confirm production preparation', exact: true }).click();
   await expect(preparation.getByRole('status')).toContainText('Explain how ingredient shortages');
   await preparation.getByLabel('How shortages will be resolved (if any)')
@@ -32,7 +32,7 @@ test('prepares customer production with paired batches, shortage review, revisio
   await preparation.getByRole('button', { name: 'Confirm production preparation', exact: true }).click();
   await expect(preparation.locator('.badge')).toHaveText('Confirmed');
   await page.screenshot({ path: info.outputPath('order-production-confirmed.png'), fullPage: true });
-  await preparation.getByLabel('Start / ingredients ready by').fill('2026-09-29');
+  await preparation.getByLabel('Production start (ingredients ready)').fill('2026-09-29');
   await preparation.getByRole('button', { name: 'Save production draft' }).click();
   await expect(preparation.getByRole('status')).toContainText('Enter a reason');
   await preparation.getByLabel('Notes / reason for change').fill('Supplier delivery moved one day');

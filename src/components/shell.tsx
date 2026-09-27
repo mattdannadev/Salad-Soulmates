@@ -216,7 +216,7 @@ export function Shell({
   role,
   locale,
   permissions,
-  feedbackTypes,
+  feedbackTypes = [],
 }: {
   children: React.ReactNode;
   name: string;

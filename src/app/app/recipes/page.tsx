@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/shell';
 import { loadRecipeCatalog } from '@/lib/recipe-catalog';
 import { selectRecipeVersion } from '@/domain/recipes';
 import { formatNumber } from '@/domain/format';
+import ListGrid from '@/components/list-grid';
 
 export default async function Recipes() {
   const {
@@ -19,34 +20,31 @@ export default async function Recipes() {
       />
       <section className="panel">
         {recipes.length ? (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>{recipeText(locale, 'Recipe')}</th>
-                  <th>{recipeText(locale, 'Product')}</th>
-                  <th>{recipeText(locale, 'Version')}</th>
-                  <th>{recipeText(locale, 'Batch yield')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...recipes].sort((left, right) => left.name.localeCompare(right.name))
-                  .map((recipe) => {
-                    const product = products.find((item) => item.id === recipe.product_id);
-                    if (!product) throw new Error('A recipe references an unavailable product.');
-                    const version = selectRecipeVersion(recipe, versions);
-                    return (
-                      <tr key={recipe.id}>
-                        <td><Link href={`/app/recipes/${recipe.id}`}>{recipe.name}</Link></td>
-                        <td>{product.name}</td>
-                        <td>{version ? `v${version.version_number} · ${recipeText(locale, version.status)}` : recipeText(locale, 'No versions')}</td>
-                        <td>{version ? `${formatNumber(version.target_yield_gallons)} gal` : '—'}</td>
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
-          </div>
+          <ListGrid
+            label={recipeText(locale, 'Recipes')}
+            locale={locale}
+            columns={[
+              { key: 'recipe', label: recipeText(locale, 'Recipe') },
+              { key: 'product', label: recipeText(locale, 'Product') },
+              { key: 'version', label: recipeText(locale, 'Version') },
+              { key: 'yield', label: recipeText(locale, 'Batch yield') },
+            ]}
+            rows={[...recipes].sort((left, right) => left.name.localeCompare(right.name))
+              .map((recipe) => {
+                const product = products.find((item) => item.id === recipe.product_id);
+                if (!product) throw new Error('A recipe references an unavailable product.');
+                const version = selectRecipeVersion(recipe, versions);
+                return {
+                  id: recipe.id,
+                  cells: {
+                    recipe: { text: recipe.name, href: `/app/recipes/${recipe.id}` },
+                    product: { text: product.name },
+                    version: { text: version ? `v${version.version_number} · ${recipeText(locale, version.status)}` : recipeText(locale, 'No versions') },
+                    yield: { text: version ? `${formatNumber(version.target_yield_gallons)} gal` : '—', sortValue: version?.target_yield_gallons ?? -1 },
+                  },
+                };
+              })}
+          />
         ) : (
           <div className="empty">
             <h2>{recipeText(locale, 'No recipes yet')}</h2>

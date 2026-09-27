@@ -7,6 +7,21 @@ function openDetails(targetId: string) {
   if (target instanceof HTMLDetailsElement) target.open = true;
 }
 
+export function SupplierHashDetails() {
+  useEffect(() => {
+    const openLinkedDetails = () => {
+      const targetId = window.location.hash.slice(1);
+      if (targetId.startsWith('supplier-')) openDetails(targetId);
+    };
+
+    openLinkedDetails();
+    window.addEventListener('hashchange', openLinkedDetails);
+    return () => window.removeEventListener('hashchange', openLinkedDetails);
+  }, []);
+
+  return null;
+}
+
 export default function SupplierDetailLink({
   supplierId,
   supplierName,

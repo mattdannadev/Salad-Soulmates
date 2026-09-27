@@ -64,7 +64,7 @@ export default function OrderDeactivateAction({
         className="button danger-button"
         onClick={() => confirmation.current?.showModal()}
       >
-        Deactivate
+        Delete
       </button>
       {message && !returnToDirectory ? (
         <p className={failed ? 'error-notice' : 'order-toast'} role={failed ? 'alert' : 'status'}>{message}</p>
@@ -76,7 +76,7 @@ export default function OrderDeactivateAction({
             deactivateOrder();
           }}
         >
-          <h2 id={`deactivate-${orderId}`}>Deactivate this order?</h2>
+          <h2 id={`deactivate-${orderId}`}>Delete this order?</h2>
           <p>
             {`${orderLabel} will be removed from active orders. Its saved quantities and history remain available.`}
           </p>
@@ -86,7 +86,7 @@ export default function OrderDeactivateAction({
               Keep order
             </button>
             <button type="submit" className="danger-button" disabled={pending}>
-              {pending ? 'Deactivating…' : 'Deactivate order'}
+              {pending ? 'Deleting…' : 'Delete order'}
             </button>
           </div>
         </form>

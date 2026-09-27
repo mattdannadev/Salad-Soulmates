@@ -7,6 +7,7 @@ import PurchaseComposer from '@/components/purchase-composer';
 import PurchaseOrderCard from '@/components/purchase-order-card';
 import StandalonePurchaseComposer from '@/components/standalone-purchase-composer';
 import { formatDate, formatNumber } from '@/domain/format';
+import ListGrid from '@/components/list-grid';
 import { customerOrderLabel } from '@/domain/customer-orders';
 
 export default async function Purchasing({
@@ -173,23 +174,27 @@ export default async function Purchasing({
               ? 'Solo los pedidos confirmados cuentan como entrada. Los borradores no cambian el inventario.'
               : 'Only confirmed orders count as inbound supply. Drafts do not change inventory.'}
           </p>
-          <div className="table-wrap">
-            <table>
-              <caption className="sr-only">{es ? 'Demanda y brecha de compra' : 'Demand and purchase gap'}</caption>
-              <thead><tr>{(es ? ['Ingrediente', 'Demanda', 'Existencias', 'Entradas confirmadas', 'Brecha de compra'] : ['Ingredient', 'Order demand', 'Stock on hand', 'Confirmed inbound', 'Purchase gap']).map((heading) => <th key={heading} scope="col">{heading}</th>)}</tr></thead>
-              <tbody>
-                {requirements.map((requirement) => (
-                  <tr key={requirement.ingredient_id}>
-                    <th scope="row">{requirement.ingredient_name}</th>
-                    <td>{`${formatNumber(requirement.required)} ${requirement.uom}`}</td>
-                    <td>{`${formatNumber(requirement.on_hand)} ${requirement.uom}`}</td>
-                    <td>{`${formatNumber(requirement.confirmed_inbound)} ${requirement.uom}`}</td>
-                    <td><strong>{`${formatNumber(requirement.shortage)} ${requirement.uom}`}</strong></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ListGrid
+            label={es ? 'Demanda y brecha de compra' : 'Demand and purchase gap'}
+            locale={locale}
+            columns={[
+              { key: 'ingredient', label: es ? 'Ingrediente' : 'Ingredient' },
+              { key: 'required', label: es ? 'Demanda' : 'Order demand' },
+              { key: 'onHand', label: es ? 'Existencias' : 'Stock on hand' },
+              { key: 'inbound', label: es ? 'Entradas confirmadas' : 'Confirmed inbound' },
+              { key: 'shortage', label: es ? 'Brecha de compra' : 'Purchase gap' },
+            ]}
+            rows={requirements.map((requirement) => ({
+              id: requirement.ingredient_id,
+              cells: {
+                ingredient: { text: requirement.ingredient_name },
+                required: { text: `${formatNumber(requirement.required)} ${requirement.uom}`, sortValue: requirement.required },
+                onHand: { text: `${formatNumber(requirement.on_hand)} ${requirement.uom}`, sortValue: requirement.on_hand },
+                inbound: { text: `${formatNumber(requirement.confirmed_inbound)} ${requirement.uom}`, sortValue: requirement.confirmed_inbound },
+                shortage: { text: `${formatNumber(requirement.shortage)} ${requirement.uom}`, sortValue: requirement.shortage },
+              },
+            }))}
+          />
           {inactiveSupplier && (
             <p className="notice">{es ? 'Proveedor inactivo: solo historial.' : 'Inactive supplier: order history only.'}</p>
           )}

@@ -1,4 +1,5 @@
 import { formatDate } from '@/domain/format';
+import ListGrid from '@/components/list-grid';
 
 export interface LoginHistoryEntry {
   id: string;
@@ -34,31 +35,24 @@ export default function LoginHistoryTable({
     );
   }
   return (
-    <div className="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>{isSpanish ? 'Usuario' : 'User'}</th>
-            <th>{isSpanish ? 'Fecha y hora' : 'Timestamp'}</th>
-            <th>{isSpanish ? 'Resultado' : 'Outcome'}</th>
-            <th>{isSpanish ? 'Origen' : 'Source'}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((entry) => (
-            <tr key={entry.id}>
-              <td>{entry.userName}</td>
-              <td>{formatDate(entry.occurredAt)}</td>
-              <td>
-                <span className={`badge${entry.eventType === 'signed_out' ? ' muted' : ''}`}>
-                  {outcomeLabel(entry.eventType, isSpanish)}
-                </span>
-              </td>
-              <td className="login-event-source" title={entry.source}>{entry.source}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <ListGrid
+      label={isSpanish ? 'Historial de acceso' : 'Login history'}
+      locale={locale}
+      columns={[
+        { key: 'user', label: isSpanish ? 'Usuario' : 'User' },
+        { key: 'timestamp', label: isSpanish ? 'Fecha y hora' : 'Timestamp' },
+        { key: 'outcome', label: isSpanish ? 'Resultado' : 'Outcome' },
+        { key: 'source', label: isSpanish ? 'Origen' : 'Source' },
+      ]}
+      rows={entries.map((entry) => ({
+        id: entry.id,
+        cells: {
+          user: { text: entry.userName },
+          timestamp: { text: formatDate(entry.occurredAt), sortValue: entry.occurredAt },
+          outcome: { text: outcomeLabel(entry.eventType, isSpanish), badge: entry.eventType === 'signed_out' ? 'muted' as const : 'default' as const },
+          source: { text: entry.source },
+        },
+      }))}
+    />
   );
 }

@@ -33,7 +33,8 @@ it('makes purchase history primary and keeps contact editing collapsed', async (
   expect(html).toContain('aria-label="Supplier directory"');
   expect(html).toContain('href="/app/suppliers/new"');
   expect(html).toContain('aria-controls="supplier-');
-  expect(html).toContain('<th>Open purchase orders</th>');
+  expect(html).toMatch(/<table\b[^>]*aria-label="Supplier directory"/);
+  expect(html).toContain('<th scope="col">Open purchase orders</th>');
   expect(html).toContain('<details class="supplier-profile">');
   expect(html).toContain('No purchase orders for this supplier yet.');
   expect(html).toContain('Outstanding orders by customer');

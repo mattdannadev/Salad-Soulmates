@@ -19,7 +19,13 @@ export default function IngredientForm({
   allergens?: { id: string; name: string }[];
   selected?: string[];
   categories?: { code: string; label_en: string; label_es: string }[];
-  baseUnits?: { code: string; label_en: string; label_es: string; family_code: string; measurement_system: string }[];
+  baseUnits?: {
+    code: string;
+    label_en: string;
+    label_es: string;
+    family_code: string;
+    measurement_system: string;
+  }[];
   locale?: 'en' | 'es';
 }) {
   const [pending, start] = useTransition();
@@ -120,7 +126,9 @@ export default function IngredientForm({
               </option>
             ))}
           </select>
-          <small>Available units come from the shared UOM catalog. Mass and volume are never guessed.</small>
+          <small>
+            Available units come from the shared UOM catalog. Mass and volume are never guessed.
+          </small>
         </label>
         <fieldset className="wide">
           <legend>

@@ -6,6 +6,7 @@ import { rows } from '@/lib/data';
 import { PageHeader } from '@/components/shell';
 import inventoryBalances, { inventoryUnits } from '@/domain/inventory';
 import IngredientActivityAction from '@/components/ingredient-activity-action';
+import ListGrid from '@/components/list-grid';
 
 export default async function Ingredients({
   searchParams,
@@ -73,62 +74,62 @@ export default async function Ingredients({
           <Link href="/app/allergens">Manage allergens →</Link>
         </div>
         {ingredients.length ? (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Ingredient</th>
-                  <th>Category</th>
-                  <th>Base unit</th>
-                  <th>On hand</th>
-                  <th>Reorder point</th>
-                  <th>Par level</th>
-                  <th>Reorder quantity</th>
-                  <th>Stock status</th>
-                  <th>
-                    <span className="sr-only">Open ingredient</span>
-                  </th>
-                  {profile.role === 'admin' && <th>Availability</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {ingredients.map((i) => (
-                  <tr key={i.id}>
-                    <td>
-                      <Link href={`/app/ingredients/${i.id}`}>{i.name}</Link>
-                    </td>
-                    <td>{i.category}</td>
-                    <td>{i.default_uom}</td>
-                    <td>
-                      {balances[i.id] ?? 0}
-                      {' '}
-                      {inventoryUnitsByIngredient[i.id] ?? i.default_uom}
-                    </td>
-                    <td>{i.reorder_point ?? 'Not set'}</td>
-                    <td>{i.par_level ?? 'Not set'}</td>
-                    <td>{i.reorder_quantity ?? 'Not set'}</td>
-                    <td>
-                      {i.reorder_point !== null && (balances[i.id] ?? 0) <= i.reorder_point ? (
-                        <span className="badge warning">Reorder</span>
-                      ) : <span>OK</span>}
-                    </td>
-                    <td>
-                      <Link href={`/app/ingredients/${i.id}`}>View details →</Link>
-                    </td>
-                    {profile.role === 'admin' && (
-                      <td>
-                        <IngredientActivityAction
-                          ingredientId={i.id}
-                          ingredientName={i.name}
-                          active={i.active}
-                        />
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ListGrid
+            label="Ingredients library"
+            columns={[
+              { key: 'ingredient', label: 'Ingredient' },
+              { key: 'category', label: 'Category' },
+              { key: 'unit', label: 'Base unit' },
+              { key: 'onHand', label: 'On hand' },
+              { key: 'reorderPoint', label: 'Reorder point' },
+              { key: 'par', label: 'Par level' },
+              { key: 'reorderQuantity', label: 'Reorder quantity' },
+              { key: 'stock', label: 'Stock status' },
+              {
+                key: 'details', label: 'Open ingredient', sortable: false, filterable: false,
+              },
+              ...(profile.role === 'admin'
+                ? [{
+                  key: 'availability', label: 'Availability', sortable: false, filterable: false,
+                }]
+                : []),
+            ]}
+            rows={ingredients.map((ingredient) => ({
+              id: ingredient.id,
+              cells: {
+                ingredient: { text: ingredient.name, href: `/app/ingredients/${ingredient.id}` },
+                category: { text: ingredient.category },
+                unit: { text: ingredient.default_uom },
+                onHand: {
+                  text: `${balances[ingredient.id] ?? 0} ${inventoryUnitsByIngredient[ingredient.id] ?? ingredient.default_uom}`,
+                  sortValue: balances[ingredient.id] ?? 0,
+                },
+                reorderPoint: { text: String(ingredient.reorder_point ?? 'Not set'), sortValue: ingredient.reorder_point ?? -1 },
+                par: { text: String(ingredient.par_level ?? 'Not set'), sortValue: ingredient.par_level ?? -1 },
+                reorderQuantity: { text: String(ingredient.reorder_quantity ?? 'Not set'), sortValue: ingredient.reorder_quantity ?? -1 },
+                stock: ingredient.reorder_point !== null
+                  && (balances[ingredient.id] ?? 0) <= ingredient.reorder_point
+                  ? { text: 'Reorder', badge: 'warning' as const }
+                  : { text: 'OK' },
+                details: { text: 'View details →', href: `/app/ingredients/${ingredient.id}` },
+                ...(profile.role === 'admin' ? {
+                  availability: {
+                    text: ingredient.active ? 'Deactivate' : 'Reactivate',
+                    slot: ingredient.id,
+                  },
+                } : {}),
+              },
+            }))}
+            cellSlots={profile.role === 'admin' ? Object.fromEntries(ingredients.map((ingredient) => [
+              ingredient.id,
+              <IngredientActivityAction
+                key={ingredient.id}
+                ingredientId={ingredient.id}
+                ingredientName={ingredient.name}
+                active={ingredient.active}
+              />,
+            ])) : undefined}
+          />
         ) : (
           <div className="empty">
             <h2>{q || status !== 'active' || type !== 'all' ? 'No matching ingredients' : 'Your ingredient library starts here'}</h2>

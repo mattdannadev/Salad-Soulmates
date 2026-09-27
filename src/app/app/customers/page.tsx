@@ -6,6 +6,7 @@ import CustomerForm from '@/components/customer-form';
 import loadCustomerWorkspace from '@/lib/customer-data';
 import { formatDate } from '@/domain/format';
 import { formatPrice } from '@/domain/customer-pricing';
+import ListGrid from '@/components/list-grid';
 
 export default async function Customers({
   searchParams,
@@ -41,56 +42,37 @@ export default async function Customers({
         }
       />
       <section className="panel">
-        <div className="table-wrap">
-          <table aria-label={es ? 'Directorio de clientes' : 'Customer directory'}>
-            <thead>
-              <tr>
-                {(es
-                  ? ['Cliente', 'Contacto', 'Pedidos abiertos', 'Próxima recogida', '']
-                  : ['Customer', 'Contact', 'Open orders', 'Next pickup', '']
-                ).map((heading, index) => (
-                  <th key={heading || 'actions'} scope="col">
-                    {index === 4 ? (
-                      <span className="sr-only">{es ? 'Acciones' : 'Actions'}</span>
-                    ) : (
-                      heading
-                    )}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {customers
-                .toSorted((a, b) => a.name.localeCompare(b.name))
-                .map((customer) => {
-                  const own = openOrders
-                    .filter((order) => order.customer_id === customer.id)
-                    .toSorted((a, b) => a.needed_on.localeCompare(b.needed_on));
-                  return (
-                    <tr key={customer.id}>
-                      <td>
-                        <Link href={`/app/customers?customer=${customer.id}`}>{customer.name}</Link>
-                      </td>
-                      <td>
-                        {customer.contact_name || '—'}
-                        <br />
-                        {customer.email}
-                        <br />
-                        {customer.phone}
-                      </td>
-                      <td>{canReadOrders ? own.length : '—'}</td>
-                      <td>{own[0] ? formatDate(own[0].needed_on) : '—'}</td>
-                      <td>
-                        <Link href={`/app/orders?customer=${customer.id}#new-order`}>
-                          {es ? 'Seleccionar para pedido →' : 'Select for order →'}
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-            </tbody>
-          </table>
-        </div>
+        <ListGrid
+          label={es ? 'Directorio de clientes' : 'Customer directory'}
+          locale={locale}
+          columns={[
+            { key: 'name', label: es ? 'Cliente' : 'Customer' },
+            { key: 'contact', label: es ? 'Contacto' : 'Contact', minWidth: 220 },
+            { key: 'orders', label: es ? 'Pedidos abiertos' : 'Open orders' },
+            { key: 'pickup', label: es ? 'Próxima recogida' : 'Next pickup' },
+            {
+              key: 'action', label: es ? 'Acciones' : 'Actions', sortable: false, filterable: false,
+            },
+          ]}
+          rows={customers.toSorted((a, b) => a.name.localeCompare(b.name)).map((customer) => {
+            const own = openOrders
+              .filter((order) => order.customer_id === customer.id)
+              .toSorted((a, b) => a.needed_on.localeCompare(b.needed_on));
+            return {
+              id: customer.id,
+              cells: {
+                name: { text: customer.name, href: `/app/customers?customer=${customer.id}` },
+                contact: { text: customer.contact_name || '—', secondary: [customer.email, customer.phone].filter(Boolean).join('\n') },
+                orders: { text: canReadOrders ? String(own.length) : '—', sortValue: canReadOrders ? own.length : -1 },
+                pickup: { text: own[0] ? formatDate(own[0].needed_on) : '—', sortValue: own[0]?.needed_on ?? '' },
+                action: {
+                  text: es ? 'Seleccionar para pedido →' : 'Select for order →',
+                  href: `/app/orders?customer=${customer.id}#new-order`,
+                },
+              },
+            };
+          })}
+        />
         {!customers.length && (
           <p className="empty">{es ? 'Aún no hay clientes.' : 'No customers yet.'}</p>
         )}

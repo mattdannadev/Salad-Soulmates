@@ -8,6 +8,48 @@ import type {
 } from '@/domain/master-data';
 import { RecordForm } from './record-form';
 
+function DeleteReferenceOption({ option }: { option: ReferenceOption }) {
+  const [pending, start] = useTransition();
+  const [message, setMessage] = useState('');
+  const [confirming, setConfirming] = useState(false);
+  const router = useRouter();
+  return (
+    <div className="reference-delete">
+      {confirming ? (
+        <>
+          <p>{`Delete ${option.label_en}? Values already used cannot be deleted.`}</p>
+          <button
+            type="button"
+            className="secondary"
+            disabled={pending}
+            onClick={() => {
+              start(async () => {
+                const result = await saveRecord('reference-option-delete', {
+                  id: option.id,
+                  list_code: option.list_code,
+                  code: option.code,
+                });
+                setMessage(result.message);
+                if (result.ok) router.refresh();
+              });
+            }}
+          >
+            {pending ? 'Deleting…' : 'Confirm permanent deletion'}
+          </button>
+          <button type="button" className="secondary" disabled={pending} onClick={() => setConfirming(false)}>
+            Cancel
+          </button>
+        </>
+      ) : (
+        <button type="button" className="secondary" onClick={() => setConfirming(true)}>
+          Delete permanently
+        </button>
+      )}
+      {message ? <p role="status">{message}</p> : null}
+    </div>
+  );
+}
+
 export function ReferenceOptionForm({
   listCode,
   option = undefined,
@@ -68,32 +110,6 @@ export function ReferenceOptionForm({
       />
       {option ? <DeleteReferenceOption option={option} /> : null}
     </>
-  );
-}
-
-function DeleteReferenceOption({ option }: { option: ReferenceOption }) {
-  const [pending, start] = useTransition();
-  const [message, setMessage] = useState('');
-  const router = useRouter();
-  return (
-    <div className="reference-delete">
-      <button
-        type="button"
-        className="secondary"
-        disabled={pending}
-        onClick={() => {
-          if (!window.confirm(`Delete ${option.label_en}? Values already used cannot be deleted.`)) return;
-          start(async () => {
-            const result = await saveRecord('reference-option-delete', { id: option.id, list_code: option.list_code, code: option.code });
-            setMessage(result.message);
-            if (result.ok) router.refresh();
-          });
-        }}
-      >
-        {pending ? 'Deleting…' : 'Delete permanently'}
-      </button>
-      {message ? <p role="status">{message}</p> : null}
-    </div>
   );
 }
 

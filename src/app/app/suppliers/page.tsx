@@ -3,8 +3,9 @@ import { purchaseProgress } from '@/domain/supplier-orders';
 import { PageHeader } from '@/components/shell';
 import { SupplierForm } from '@/components/master-forms';
 import SupplierPurchases from '@/components/supplier-purchases';
-import SupplierDetailLink from '@/components/supplier-detail-link';
 import Link from 'next/link';
+import ListGrid from '@/components/list-grid';
+import { SupplierHashDetails } from '@/components/supplier-detail-link';
 
 export default async function Suppliers() {
   const workspace = await loadSupplierWorkspace();
@@ -33,6 +34,7 @@ export default async function Suppliers() {
         }
       />
       <section className="panel">
+        <SupplierHashDetails />
         <h2>{es ? 'Tus proveedores' : 'Your suppliers'}</h2>
         {!suppliers.length && (
           <div className="empty">
@@ -45,49 +47,33 @@ export default async function Suppliers() {
           </div>
         )}
         {!!suppliers.length && (
-          <div className="table-wrap">
-            <table aria-label={es ? 'Directorio de proveedores' : 'Supplier directory'}>
-              <thead>
-                <tr>
-                  <th>{es ? 'Proveedor' : 'Supplier'}</th>
-                  <th>{es ? 'Contacto' : 'Contact'}</th>
-                  <th>{es ? 'Estado' : 'Status'}</th>
-                  {canReadPurchases && <th>{es ? 'Compras abiertas' : 'Open purchase orders'}</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {suppliers.map((supplier) => {
-                  const openCount = workspace.drafts.filter(
-                    (draft) => draft.supplier_id === supplier.id
-                      && purchaseProgress(draft, workspace.lines, workspace.receipts).open,
-                  ).length;
-                  return (
-                    <tr key={supplier.id}>
-                      <td>
-                        <SupplierDetailLink
-                          supplierId={supplier.id}
-                          supplierName={supplier.name}
-                        />
-                      </td>
-                      <td>
-                        {supplier.contact_name || '—'}
-                        <br />
-                        {supplier.email}
-                        <br />
-                        {supplier.phone}
-                      </td>
-                      <td>
-                        <span className={`badge ${supplier.active ? '' : 'muted'}`}>
-                          {supplier.active ? activeLabel : inactiveLabel}
-                        </span>
-                      </td>
-                      {canReadPurchases && <td>{openCount}</td>}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <ListGrid
+            label={es ? 'Directorio de proveedores' : 'Supplier directory'}
+            locale={locale}
+            columns={[
+              { key: 'name', label: es ? 'Proveedor' : 'Supplier' },
+              { key: 'contact', label: es ? 'Contacto' : 'Contact', minWidth: 220 },
+              { key: 'status', label: es ? 'Estado' : 'Status' },
+              ...(canReadPurchases ? [{ key: 'purchases', label: es ? 'Compras abiertas' : 'Open purchase orders' }] : []),
+            ]}
+            rows={suppliers.map((supplier) => {
+              const openCount = canReadPurchases ? workspace.drafts.filter(
+                (draft) => draft.supplier_id === supplier.id
+                  && purchaseProgress(draft, workspace.lines, workspace.receipts).open,
+              ).length : 0;
+              return {
+                id: supplier.id,
+                cells: {
+                  name: { text: supplier.name, detailsId: `supplier-${supplier.id}` },
+                  contact: { text: supplier.contact_name || '—', secondary: [supplier.email, supplier.phone].filter(Boolean).join('\n') },
+                  status: { text: supplier.active ? activeLabel : inactiveLabel, badge: supplier.active ? 'default' as const : 'muted' as const },
+                  ...(canReadPurchases ? {
+                    purchases: { text: String(openCount), sortValue: openCount },
+                  } : {}),
+                },
+              };
+            })}
+          />
         )}
         {suppliers.map((supplier) => (
           <details className="supplier-orders" id={`supplier-${supplier.id}`} key={supplier.id}>

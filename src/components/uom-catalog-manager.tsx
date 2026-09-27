@@ -5,7 +5,13 @@ import { useRouter } from 'next/navigation';
 import { saveRecord } from '@/app/actions';
 import { RecordForm, type Field } from './record-form';
 
-interface Family { code: string; label_en: string; label_es: string; sort_order: number; active: boolean }
+interface Family {
+  code: string;
+  label_en: string;
+  label_es: string;
+  sort_order: number;
+  active: boolean;
+}
 interface Unit {
   id: string;
   family_code: string;
@@ -19,7 +25,45 @@ interface Unit {
   active: boolean;
 }
 
-function UnitForm({ unit, families }: { unit?: Unit; families: Family[] }) {
+function DeleteUnit({ unit }: { unit: Unit }) {
+  const [pending, start] = useTransition();
+  const [message, setMessage] = useState('');
+  const [confirming, setConfirming] = useState(false);
+  const router = useRouter();
+  return (
+    <div className="reference-delete">
+      {confirming ? (
+        <>
+          <p>{`Delete ${unit.label_en}? Units already used cannot be deleted.`}</p>
+          <button
+            type="button"
+            className="secondary"
+            disabled={pending}
+            onClick={() => {
+              start(async () => {
+                const result = await saveRecord('uom-delete', { id: unit.id, code: unit.code });
+                setMessage(result.message);
+                if (result.ok) router.refresh();
+              });
+            }}
+          >
+            {pending ? 'Deleting…' : 'Confirm permanent deletion'}
+          </button>
+          <button type="button" className="secondary" disabled={pending} onClick={() => setConfirming(false)}>
+            Cancel
+          </button>
+        </>
+      ) : (
+        <button type="button" className="secondary" onClick={() => setConfirming(true)}>
+          Delete permanently
+        </button>
+      )}
+      {message ? <p role="status">{message}</p> : null}
+    </div>
+  );
+}
+
+function UnitForm({ unit = undefined, families }: { unit?: Unit; families: Family[] }) {
   const fields: Field[] = [
     {
       name: 'family_code', label: 'UOM family', type: 'select', required: true, value: unit?.family_code, options: families.filter((family) => family.active).map((family) => ({ value: family.code, label: family.label_en })),
@@ -57,36 +101,18 @@ function UnitForm({ unit, families }: { unit?: Unit; families: Family[] }) {
   );
 }
 
-function DeleteUnit({ unit }: { unit: Unit }) {
-  const [pending, start] = useTransition();
-  const [message, setMessage] = useState('');
-  const router = useRouter();
-  return (
-    <div className="reference-delete">
-      <button
-        type="button"
-        className="secondary"
-        disabled={pending}
-        onClick={() => {
-          if (!window.confirm(`Delete ${unit.label_en}? Units already used cannot be deleted.`)) return;
-          start(async () => {
-            const result = await saveRecord('uom-delete', { id: unit.id, code: unit.code }); setMessage(result.message); if (result.ok) router.refresh();
-          });
-        }}
-      >
-        {pending ? 'Deleting…' : 'Delete permanently'}
-      </button>
-      {message ? <p role="status">{message}</p> : null}
-    </div>
-  );
-}
-
-export default function UomCatalogManager({ families, units }: { families: Family[]; units: Unit[] }) {
+export default function UomCatalogManager({
+  families,
+  units,
+}: { families: Family[]; units: Unit[] }) {
   return (
     <section className="panel" id="units">
       <p className="eyebrow">UNITS OF MEASURE</p>
       <h2>Shared unit catalog</h2>
-      <p>Family selection controls the available units. Metric and imperial are intentionally separate attributes; packaging units describe the pack, not a conversion.</p>
+      <p>
+        Family selection controls the available units. Metric and imperial are intentionally
+        separate attributes; packaging units describe the pack, not a conversion.
+      </p>
       {families.map((family) => (
         <details key={family.code}>
           <summary>
@@ -97,19 +123,22 @@ export default function UomCatalogManager({ families, units }: { families: Famil
             {family.label_es}
             {!family.active ? ' (Inactive)' : ''}
           </summary>
-          {units.filter((unit) => unit.family_code === family.code).sort((a, b) => a.sort_order - b.sort_order).map((unit) => (
-            <details key={unit.id}>
-              <summary>
-                {unit.label_en}
-                {' '}
-                ·
-                {' '}
-                {unit.measurement_system}
-                {!unit.active ? ' (Inactive)' : ''}
-              </summary>
-              <UnitForm unit={unit} families={families} />
-            </details>
-          ))}
+          {units
+            .filter((unit) => unit.family_code === family.code)
+            .sort((a, b) => a.sort_order - b.sort_order)
+            .map((unit) => (
+              <details key={unit.id}>
+                <summary>
+                  {unit.label_en}
+                  {' '}
+                  ·
+                  {' '}
+                  {unit.measurement_system}
+                  {!unit.active ? ' (Inactive)' : ''}
+                </summary>
+                <UnitForm unit={unit} families={families} />
+              </details>
+            ))}
           <details>
             <summary>
               Add unit to

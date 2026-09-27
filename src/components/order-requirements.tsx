@@ -14,17 +14,17 @@ export default function OrderRequirements({
   return (
     <section className="panel">
       <div className="section-heading">
-        <h2>{es ? 'Ingredientes y estimación de compras' : 'Ingredients & purchasing estimate'}</h2>
+        <h2>{es ? 'Ingredientes y estimación de compras' : 'Ingredient needs & purchasing'}</h2>
         {plan.status === 'Active' && (
           <Link className="button" href={`/app/purchasing?plan=${plan.id}`}>
-            {es ? 'Revisar compras' : 'Review purchasing'}
+            {es ? 'Revisar faltantes y compras' : 'Review shortages & purchases'}
           </Link>
         )}
       </div>
       <p>
         {es
           ? 'Las cantidades provienen de los productos y lotes del pedido. La estimación se actualiza con las existencias y compras confirmadas.'
-          : 'Quantities come from the order’s products and batch counts. The estimate updates with current stock and confirmed purchases.'}
+          : 'Recipe-based totals combine every batch in this order. Compare each ingredient’s requirement with stock, commitments, and confirmed inbound purchases below.'}
       </p>
       {plan.status === 'Cancelled' ? (
         <p>{es ? 'Compromisos liberados. Se conserva el historial.' : 'Commitments released. The original requirements remain in history.'}</p>
@@ -45,7 +45,7 @@ export default function OrderRequirements({
           <thead>
             <tr>
               {(es ? ['Ingrediente', 'Requerido', 'Existencias utilizables', 'Otros compromisos', 'Entrada confirmada', 'Faltante']
-                : ['Ingredient', 'Required', 'Usable stock', 'Other commitments', 'Confirmed inbound', 'Shortage'])
+                : ['Ingredient', 'Recipe total', 'Usable stock', 'Other commitments', 'Confirmed inbound', 'Shortage'])
                 .map((heading) => <th key={heading} scope="col">{heading}</th>)}
             </tr>
           </thead>

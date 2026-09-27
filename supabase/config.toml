@@ -10,6 +10,7 @@ port = 54322
 major_version = 17
 [db.seed]
 enabled = false
+sql_paths = ["./seed.sql"]
 [auth]
 enabled = true
 site_url = "http://localhost:3000"

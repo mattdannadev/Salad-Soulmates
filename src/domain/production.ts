@@ -53,7 +53,7 @@ export type ProductionLot = z.infer<typeof productionLotSchema>;
 export const PRODUCTION_MESSAGES = [
   'Production plan changed; reload before trying again',
   'Choose an active customer order',
-  'Production must finish by the customer needed date',
+  'Production must finish before the customer pickup date',
   'Save a production draft before confirming',
   'Save changed dates as a draft before confirming',
   'Only a draft can be confirmed',

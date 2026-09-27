@@ -55,6 +55,13 @@ it('surfaces safe conflicts and does not return success for SDK errors', async (
   expect((await saveProduction(input)).message).not.toContain('private internal');
   expect(mocks.revalidate).not.toHaveBeenCalled();
 });
+it('shows the customer pickup boundary returned by the production guard', async () => {
+  mocks.rpc.mockResolvedValueOnce({ data: null, error: { message: 'Production must finish before the customer pickup date' } });
+  expect(await saveProduction(input)).toMatchObject({
+    ok: false,
+    message: 'Production must finish before the customer pickup date',
+  });
+});
 it('preserves retryability on lost responses and invalid acknowledgments', async () => {
   mocks.rpc.mockRejectedValueOnce(new Error('Lost response'));
   expect((await saveProduction(input)).message).toContain('Retry');

@@ -179,12 +179,56 @@ it('retries creation and confirmation without duplicate records or revisions', a
 });
 it('rejects stale revisions, invalid dates, and missing orders without partial batches', async () => {
   await prepareOrder();
-  await expect(rpc('save_order_production_plan', { ...productionInput(), finish_on: '2026-10-02' })).rejects.toThrow('must finish');
+  await expect(rpc('save_order_production_plan', { ...productionInput(), finish_on: '2026-10-01' })).rejects.toThrow('must finish before');
+  await expect(rpc('save_order_production_plan', { ...productionInput(), finish_on: '2026-10-02' })).rejects.toThrow('must finish before');
   await expect(rpc('save_order_production_plan', { ...productionInput(), start_on: '2026-10-01' })).rejects.toThrow('Check production dates');
   await expect(rpc('save_order_production_plan', { ...productionInput(), id: id(999) })).rejects.toThrow('active customer order');
   expect((await counts()).batches).toBe(0);
   await rpc('save_order_production_plan', productionInput());
   await expect(rpc('save_order_production_plan', { ...productionInput(), note: 'Different request' })).rejects.toThrow('changed');
+});
+it('enforces finish before pickup for direct writes and revisions', async () => {
+  await prepareOrder();
+  await expect(query(`insert into public.order_production_plans(id,start_on,finish_on)
+    values($1,'2026-09-28','2026-10-01')`, [id(800)])).rejects.toThrow('must finish before');
+  await rpc('save_order_production_plan', productionInput());
+  await expect(query(`update public.order_production_plans
+    set finish_on='2026-10-01',revision=revision+1 where id=$1`, [id(800)])).rejects.toThrow('must finish before');
+  expect((await query('select finish_on::text finish_on from public.order_production_plans where id=$1', [id(800)])).rows)
+    .toEqual([{ finish_on: '2026-09-30' }]);
+});
+it('lets a preexisting same-day plan be revised and cancelled without changing its dates', async () => {
+  await prepareOrder();
+  // Model a row written before the stricter guard was installed.
+  await database.exec('reset role; alter table public.order_production_plans disable trigger production_plan_guard');
+  try {
+    await database.query(`insert into public.order_production_plans(id,start_on,finish_on)
+      values($1,'2026-09-28','2026-10-01')`, [id(800)]);
+  } finally {
+    await database.exec('alter table public.order_production_plans enable trigger production_plan_guard; set role authenticated');
+  }
+
+  await expect(rpc('save_order_production_plan', {
+    ...productionInput(1),
+    finish_on: '2026-10-01',
+    start_on: '2026-09-29',
+    note: 'Move production start',
+  })).rejects.toThrow('must finish before');
+  await rpc('save_order_production_plan', {
+    ...productionInput(1), finish_on: '2026-10-01', note: 'Review existing schedule',
+  });
+  await expect(rpc('save_order_production_plan', {
+    ...productionInput(2),
+    finish_on: '2026-10-01',
+    status: 'Confirmed',
+    note: 'Review existing schedule',
+    shortage_reason: 'Purchase ingredients',
+  })).rejects.toThrow('must finish before');
+  await rpc('save_order_production_plan', {
+    ...productionInput(2), finish_on: '2026-10-01', status: 'Cancelled', note: 'Customer changed request',
+  });
+  expect((await query('select finish_on::text finish_on,status,revision from public.order_production_plans where id=$1', [id(800)])).rows)
+    .toEqual([{ finish_on: '2026-10-01', status: 'Cancelled', revision: 3 }]);
 });
 it('requires a shortage resolution before confirmation and preserves batch identities during revisions', async () => {
   await prepareOrder();

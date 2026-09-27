@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { PageHeader } from '@/components/shell';
+import ListGrid from '@/components/list-grid';
 import { number, rows } from '@/lib/data';
 import { requireAdminShell } from '@/lib/auth';
 import hasPermission from '@/lib/permissions';
@@ -12,10 +13,6 @@ import {
 } from '@/lib/traceability-data';
 
 export const dynamic = 'force-dynamic';
-
-function lotOrigin(origin: 'supplier_provided' | 'salad_soulmates_assigned') {
-  return <small>{lotOriginLabel(origin)}</small>;
-}
 
 export default async function Traceability({ searchParams }: {
   searchParams: Promise<Record<string, string | undefined>>;
@@ -121,71 +118,51 @@ export default async function Traceability({ searchParams }: {
             . This code is internal only and is not a customer-facing label lot.
           </p>
           <h3>Batches</h3>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Batch</th>
-                  <th>Target</th>
-                  <th>Worksheet</th>
-                </tr>
-              </thead>
-              <tbody>
-                {backward.batches.map((batch) => (
-                  <tr key={batch.id}>
-                    <td>
-                      Batch
-                      {batch.sequence}
-                    </td>
-                    <td>
-                      {number(batch.target_gallons)}
-                      {' '}
-                      gal
-                    </td>
-                    <td>{batch.worksheet_status ?? 'Not opened'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ListGrid
+            label="Production batches"
+            columns={[
+              { key: 'batch', label: 'Batch' },
+              { key: 'target', label: 'Target' },
+              { key: 'worksheet', label: 'Worksheet' },
+            ]}
+            rows={backward.batches.map((batch) => ({
+              id: batch.id,
+              cells: {
+                batch: { text: `Batch ${batch.sequence}`, sortValue: batch.sequence },
+                target: { text: `${number(batch.target_gallons)} gal`, sortValue: batch.target_gallons },
+                worksheet: { text: batch.worksheet_status ?? 'Not opened' },
+              },
+            }))}
+          />
           <h3>Recorded source allocations</h3>
           {backward.allocations.length ? (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Batch</th>
-                    <th>Ingredient</th>
-                    <th>Source lot</th>
-                    <th>Package</th>
-                    <th>Receipt</th>
-                    <th>Quantity</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {backward.allocations.map((allocation) => (
-                    <tr key={allocation.usage_id}>
-                      <td>{allocation.batch_sequence}</td>
-                      <td>{allocation.ingredient_name}</td>
-                      <td>
-                        {allocation.source_lot}
-                        <br />
-                        {lotOrigin(allocation.source_lot_origin)}
-                      </td>
-                      <td>{allocation.package_serial}</td>
-                      <td>
-                        {allocation.supplier_name}
-                        {' '}
-                        ·
-                        {' '}
-                        {allocation.received_on}
-                      </td>
-                      <td>{number(allocation.quantity)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ListGrid
+              label="Recorded source allocations"
+              columns={[
+                { key: 'batch', label: 'Batch' },
+                { key: 'ingredient', label: 'Ingredient' },
+                { key: 'lot', label: 'Source lot' },
+                { key: 'package', label: 'Package' },
+                { key: 'receipt', label: 'Receipt' },
+                { key: 'quantity', label: 'Quantity' },
+              ]}
+              rows={backward.allocations.map((allocation) => ({
+                id: allocation.usage_id,
+                cells: {
+                  batch: {
+                    text: String(allocation.batch_sequence), sortValue: allocation.batch_sequence,
+                  },
+                  ingredient: { text: allocation.ingredient_name },
+                  lot: {
+                    text: allocation.source_lot,
+                    secondary: lotOriginLabel(allocation.source_lot_origin),
+                  },
+                  package: { text: allocation.package_serial },
+                  receipt: { text: allocation.supplier_name, secondary: allocation.received_on },
+                  quantity: { text: number(allocation.quantity), sortValue: allocation.quantity },
+                },
+              }))}
+            />
           ) : <p className="empty">No source-package allocations have been recorded for this lot.</p>}
         </section>
       )}
@@ -210,67 +187,54 @@ export default async function Traceability({ searchParams }: {
         <>
           <h3>Receipt-scoped source matches</h3>
           {forward.matches.length ? (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Source lot</th>
-                    <th>Origin</th>
-                    <th>Ingredient</th>
-                    <th>Supplier</th>
-                    <th>Received</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {forward.matches.map((match) => (
-                    <tr key={match.receipt_line_id}>
-                      <td>{match.source_lot}</td>
-                      <td>{lotOrigin(match.source_lot_origin)}</td>
-                      <td>{match.ingredient_name}</td>
-                      <td>{match.supplier_name}</td>
-                      <td>{match.received_on}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ListGrid
+              label="Receipt-scoped source matches"
+              columns={[
+                { key: 'lot', label: 'Source lot' },
+                { key: 'origin', label: 'Origin' },
+                { key: 'ingredient', label: 'Ingredient' },
+                { key: 'supplier', label: 'Supplier' },
+                { key: 'received', label: 'Received' },
+              ]}
+              rows={forward.matches.map((match) => ({
+                id: match.receipt_line_id,
+                cells: {
+                  lot: { text: match.source_lot },
+                  origin: { text: lotOriginLabel(match.source_lot_origin) },
+                  ingredient: { text: match.ingredient_name },
+                  supplier: { text: match.supplier_name },
+                  received: { text: match.received_on },
+                },
+              }))}
+            />
           ) : <p className="empty">No matching receipt or package is visible in your facility.</p>}
           <h3>Affected production batches</h3>
           {forward.affected_batches.length ? (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Product</th>
-                    <th>Internal lot</th>
-                    <th>Batch</th>
-                    <th>Package</th>
-                    <th>Source lot</th>
-                    <th>Quantity</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {forward.affected_batches.map((batch) => (
-                    <tr key={batch.usage_id}>
-                      <td>{batch.product_name}</td>
-                      <td>
-                        {batch.production_lot_code}
-                        <br />
-                        <small>{batch.assigned_on}</small>
-                      </td>
-                      <td>{batch.batch_sequence}</td>
-                      <td>{batch.package_serial}</td>
-                      <td>
-                        {batch.source_lot}
-                        <br />
-                        {lotOrigin(batch.source_lot_origin)}
-                      </td>
-                      <td>{number(batch.quantity)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ListGrid
+              label="Affected production batches"
+              columns={[
+                { key: 'product', label: 'Product' },
+                { key: 'lot', label: 'Internal lot' },
+                { key: 'batch', label: 'Batch' },
+                { key: 'package', label: 'Package' },
+                { key: 'source', label: 'Source lot' },
+                { key: 'quantity', label: 'Quantity' },
+              ]}
+              rows={forward.affected_batches.map((batch) => ({
+                id: batch.usage_id,
+                cells: {
+                  product: { text: batch.product_name },
+                  lot: { text: batch.production_lot_code, secondary: batch.assigned_on },
+                  batch: { text: String(batch.batch_sequence), sortValue: batch.batch_sequence },
+                  package: { text: batch.package_serial },
+                  source: {
+                    text: batch.source_lot,
+                    secondary: lotOriginLabel(batch.source_lot_origin),
+                  },
+                  quantity: { text: number(batch.quantity), sortValue: batch.quantity },
+                },
+              }))}
+            />
           ) : <p className="empty">No worksheet usage has connected this source material to a production batch.</p>}
         </>
         )}

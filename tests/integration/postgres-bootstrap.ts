@@ -42,6 +42,7 @@ const migrations = [
   '20260926040625_spice_preparation_consumption.sql',
   '20260926040633_spice_preparation_issues.sql',
   '20260926202013_platform_control_plane.sql',
+  '20260926210000_production_finish_before_pickup.sql',
 ];
 
 /** Apply migrations and synthetic identity data only inside the newly created test database. */

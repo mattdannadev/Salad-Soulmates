@@ -9,6 +9,7 @@ import inventoryBalances, { inventoryUnits } from '@/domain/inventory';
 import InventoryAdjustmentControls from '@/components/inventory-adjustment-controls';
 import { PageHeader } from '@/components/shell';
 import hasPermission from '@/lib/permissions';
+import ListGrid from '@/components/list-grid';
 
 const purchasePermissions = [
   'orders.read',
@@ -103,81 +104,67 @@ export default async function Inventory({
           </Link>
         </form>
         {filteredIngredients.length ? (
-          <div className="table-wrap">
-            <table className="inventory-table">
-              <thead>
-                <tr>
-                  <th>Ingredient</th>
-                  <th>On hand</th>
-                  <th>Reorder point</th>
-                  <th>Par level</th>
-                  {canPurchase && <th>Purchase</th>}
-                  {canAdjust && <th>Adjust</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredIngredients.map((i) => (
-                  <tr key={i.id}>
-                    <td>
-                      <Link href={`/app/ingredients/${i.id}`}>{i.name}</Link>
-                    </td>
-                    <td className="inventory-on-hand">
-                      <span>
-                        {number(balances[i.id] ?? 0)}
-                        {' '}
-                        {receivedUnits[i.id] ?? i.default_uom}
-                      </span>
-                      {i.reorder_point !== null && i.reorder_point !== undefined
-                        && (balances[i.id] ?? 0) <= i.reorder_point && (
-                        <small className="inventory-stock-alert">At or below reorder point</small>
-                      )}
-                    </td>
-                    <td>
-                      {i.reorder_point === null || i.reorder_point === undefined ? 'Not set' : (
-                        <>
-                          {number(i.reorder_point)}
-                          {' '}
-                          {receivedUnits[i.id] ?? i.default_uom}
-                        </>
-                      )}
-                    </td>
-                    <td>
-                      {i.par_level === null || i.par_level === undefined ? 'Not set' : (
-                        <>
-                          {number(i.par_level)}
-                          {' '}
-                          {receivedUnits[i.id] ?? i.default_uom}
-                        </>
-                      )}
-                    </td>
-                    {canPurchase && (
-                      <td>
-                        {i.active ? (
-                          <Link
-                            className="button"
-                            href={`/app/purchasing?ingredient=${i.id}`}
-                            aria-label={`Purchase ${i.name}`}
-                          >
-                            Purchase
-                          </Link>
-                        ) : 'Unavailable'}
-                      </td>
-                    )}
-                    {canAdjust && (
-                      <td>
-                        {i.active ? (
-                          <InventoryAdjustmentControls
-                            ingredients={[i]}
-                            ingredientToAdjustId={i.id}
-                          />
-                        ) : 'Unavailable'}
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ListGrid
+            label="On-hand inventory"
+            columns={[
+              { key: 'ingredient', label: 'Ingredient' },
+              { key: 'onHand', label: 'On hand' },
+              { key: 'reorder', label: 'Reorder point' },
+              { key: 'par', label: 'Par level' },
+              ...(canPurchase ? [{
+                key: 'purchase', label: 'Purchase', sortable: false, filterable: false,
+              }] : []),
+              ...(canAdjust ? [{
+                key: 'adjust', label: 'Adjust', sortable: false, filterable: false,
+              }] : []),
+            ]}
+            rows={filteredIngredients.map((ingredient) => {
+              const unit = receivedUnits[ingredient.id] ?? ingredient.default_uom;
+              const quantity = balances[ingredient.id] ?? 0;
+              const reorderPoint = ingredient.reorder_point ?? null;
+              const parLevel = ingredient.par_level ?? null;
+              return {
+                id: ingredient.id,
+                cells: {
+                  ingredient: { text: ingredient.name, href: `/app/ingredients/${ingredient.id}` },
+                  onHand: {
+                    text: `${number(quantity)} ${unit}`,
+                    secondary: reorderPoint !== null
+                      && quantity <= reorderPoint ? 'At or below reorder point' : undefined,
+                    sortValue: quantity,
+                  },
+                  reorder: {
+                    text: reorderPoint === null ? 'Not set' : `${number(reorderPoint)} ${unit}`,
+                    sortValue: reorderPoint ?? -1,
+                  },
+                  par: {
+                    text: parLevel === null ? 'Not set' : `${number(parLevel)} ${unit}`,
+                    sortValue: parLevel ?? -1,
+                  },
+                  ...(canPurchase ? {
+                    purchase: ingredient.active
+                      ? { text: 'Purchase', href: `/app/purchasing?ingredient=${ingredient.id}` }
+                      : { text: 'Unavailable' },
+                  } : {}),
+                  ...(canAdjust ? {
+                    adjust: ingredient.active
+                      ? { text: 'Adjust', slot: ingredient.id }
+                      : { text: 'Unavailable' },
+                  } : {}),
+                },
+              };
+            })}
+            cellSlots={canAdjust ? Object.fromEntries(filteredIngredients
+              .filter((ingredient) => ingredient.active)
+              .map((ingredient) => [
+                ingredient.id,
+                <InventoryAdjustmentControls
+                  key={ingredient.id}
+                  ingredients={[ingredient]}
+                  ingredientToAdjustId={ingredient.id}
+                />,
+              ])) : undefined}
+          />
         ) : (
           <div className="empty">
             <h3>No matching ingredients</h3>
@@ -199,45 +186,34 @@ export default async function Inventory({
           entries · Times in America/Chicago
         </p>
         {recent.length ? (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Effective date</th>
-                  <th>Ingredient</th>
-                  <th>Type</th>
-                  <th>Change</th>
-                  <th>Reason</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recent.map((e) => (
-                  <tr key={e.id}>
-                    <td>{e.effective_on}</td>
-                    <td>
-                      {ingredients.find((i) => i.id === e.ingredient_id)?.name ?? 'Unavailable'}
-                    </td>
-                    <td>
-                      {({
-                        OpeningBalance: 'Opening balance',
-                        Receipt: 'Purchase order receipt',
-                        ManualGain: 'Manual gain',
-                        ManualShrink: 'Manual shrink',
-                        OrderUsage: 'Usage for filling orders',
-                      }[e.event_type] ?? e.event_type)}
-                    </td>
-                    <td>
-                      {Number(e.quantity_delta) > 0 ? '+' : ''}
-                      {number(Number(e.quantity_delta))}
-                      {' '}
-                      {e.uom}
-                    </td>
-                    <td>{e.reason_note}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ListGrid
+            label="Recent inventory history"
+            columns={[
+              { key: 'date', label: 'Effective date' },
+              { key: 'ingredient', label: 'Ingredient' },
+              { key: 'type', label: 'Type' },
+              { key: 'change', label: 'Change' },
+              { key: 'reason', label: 'Reason', minWidth: 220 },
+            ]}
+            rows={recent.map((event) => ({
+              id: event.id,
+              cells: {
+                date: { text: event.effective_on },
+                ingredient: { text: ingredients.find((item) => item.id === event.ingredient_id)?.name ?? 'Unavailable' },
+                type: {
+                  text: ({
+                    OpeningBalance: 'Opening balance',
+                    Receipt: 'Purchase order receipt',
+                    ManualGain: 'Manual gain',
+                    ManualShrink: 'Manual shrink',
+                    OrderUsage: 'Usage for filling orders',
+                  }[event.event_type] ?? event.event_type),
+                },
+                change: { text: `${Number(event.quantity_delta) > 0 ? '+' : ''}${number(Number(event.quantity_delta))} ${event.uom}`, sortValue: Number(event.quantity_delta) },
+                reason: { text: event.reason_note },
+              },
+            }))}
+          />
         ) : (
           <p className="empty">No inventory entries yet.</p>
         )}

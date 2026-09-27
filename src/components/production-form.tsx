@@ -5,6 +5,12 @@ import { useRouter } from 'next/navigation';
 import saveProduction from '@/app/production-actions';
 import type { ProductionPlan } from '@/domain/production';
 
+function dayBefore(date: string) {
+  const value = new Date(`${date}T00:00:00Z`);
+  value.setUTCDate(value.getUTCDate() - 1);
+  return value.toISOString().slice(0, 10);
+}
+
 export default function ProductionForm({
   orderId, dueDate, plan, locale,
 }: {
@@ -16,8 +22,9 @@ export default function ProductionForm({
   const prefix = useId();
   const router = useRouter();
   const es = locale === 'es';
+  const completionDeadline = dayBefore(dueDate);
   const [start, setStart] = useState(plan?.start_on ?? '');
-  const [finish, setFinish] = useState(plan?.finish_on ?? dueDate);
+  const [finish, setFinish] = useState(plan?.finish_on ?? completionDeadline);
   const [note, setNote] = useState(plan?.note ?? '');
   const [shortageReason, setShortageReason] = useState('');
   const [message, setMessage] = useState('');
@@ -52,14 +59,15 @@ export default function ProductionForm({
         <legend>{es ? 'Fechas de producción' : 'Production dates'}</legend>
         <div className="form-grid">
           <label htmlFor={`${prefix}-start`}>
-            {es ? 'Inicio / ingredientes listos' : 'Start / ingredients ready by'}
+            {es ? 'Inicio de producción (ingredientes listos)' : 'Production start (ingredients ready)'}
             <input id={`${prefix}-start`} type="date" required max={finish || dueDate} value={start} onChange={(event) => setStart(event.currentTarget.value)} />
           </label>
           <label htmlFor={`${prefix}-finish`}>
-            {es ? 'Finalización prevista' : 'Planned completion'}
-            <input id={`${prefix}-finish`} type="date" required min={start} max={dueDate} value={finish} onChange={(event) => setFinish(event.currentTarget.value)} />
+            {es ? 'Finalización de producción prevista (antes de la recogida)' : 'Planned production completion (before customer pickup)'}
+            <input id={`${prefix}-finish`} type="date" required min={start} max={completionDeadline} value={finish} onChange={(event) => setFinish(event.currentTarget.value)} />
           </label>
         </div>
+        <p className="muted">{es ? 'El cliente recoge el producto después de que finalice la producción.' : 'The customer picks up the product after production is complete.'}</p>
         <label htmlFor={`${prefix}-note`}>
           {es ? 'Notas / motivo del cambio' : 'Notes / reason for change'}
           <textarea id={`${prefix}-note`} maxLength={1000} value={note} onChange={(event) => setNote(event.currentTarget.value)} />
