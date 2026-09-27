@@ -616,6 +616,11 @@ small,
   display: grid;
   gap: 5px;
 }
+.nav-group-divider {
+  height: 1px;
+  margin: 7px 14px;
+  background: #dce5d6;
+}
 .sidebar nav a,
 .nav-group summary {
   display: flex;
@@ -2220,7 +2225,7 @@ dialog::backdrop {
     bottom: max(12px, env(safe-area-inset-bottom));
     left: 12px;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     align-items: stretch;
     gap: 4px;
     padding: 7px;

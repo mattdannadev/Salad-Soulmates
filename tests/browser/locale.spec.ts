@@ -37,7 +37,6 @@ test('language changes update navigation and dashboard and survive reload', asyn
     })).toBe(true);
     await navigation('es').getByRole('link', { name: 'Pedidos', exact: true }).click();
   } else {
-    await navigation('es').getByText('Planificación de producción', { exact: true }).click();
     await navigation('es').getByRole('link', { name: 'Pedidos', exact: true }).click();
   }
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Pedidos');

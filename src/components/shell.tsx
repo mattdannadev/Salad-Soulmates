@@ -27,31 +27,43 @@ import {
   Building2,
   UserCog,
   History,
-  CalendarDays,
+  PackageCheck,
 } from 'lucide-react';
 import { signOut } from '@/app/actions';
 import FeedbackDrawer from './feedback';
 import LocaleSwitcher from './locale-switcher';
 
+const purchasingPermissions = [
+  'orders.read',
+  'planning.read',
+  'inventory.read',
+  'products.read',
+  'master_data.read',
+];
+
+const primaryNavigation = [
+  { href: '/app', en: 'Dashboard', es: 'Panel', icon: Home, permissions: ['dashboard.read'] },
+  { href: '/app/orders', en: 'Orders', es: 'Pedidos', icon: ClipboardList, permissions: ['orders.read'] },
+  { href: '/app/purchasing', en: 'Purchasing', es: 'Compras', icon: ShoppingBasket, permissions: purchasingPermissions },
+  { href: '/app/receiving', en: 'Receiving', es: 'Recepción', icon: PackageCheck, permissions: ['inventory.read'] },
+  { href: '/app/inventory', en: 'Inventory', es: 'Inventario', icon: Package, permissions: ['inventory.read'] },
+  { href: '/app/shipping', en: 'Shipping', es: 'Envíos', icon: Truck, permissions: ['orders.read'] },
+];
+
 const navigationGroups = [
   {
-    id: 'workspace',
-    en: 'Workspace',
-    es: 'Espacio de trabajo',
-    icon: Home,
+    id: 'operations',
+    en: 'Operations',
+    es: 'Operaciones',
+    icon: Search,
     items: [
-      {
-        href: '/app',
-        en: 'Dashboard',
-        es: 'Panel',
-        icon: Home,
-        permission: 'dashboard.read',
-      },
+      { href: '/app/traceability', en: 'Traceability', es: 'Trazabilidad', icon: Search, permission: 'inventory.read' },
+      { href: '/worker', en: 'Spice preparations', es: 'Preparaciones de especias', icon: ClipboardList, permission: 'production.mobile' },
     ],
   },
   {
     id: 'catalog',
-    en: 'Product catalog',
+    en: 'Catalog',
     es: 'Catálogo de productos',
     icon: Layers3,
     items: [
@@ -79,77 +91,15 @@ const navigationGroups = [
     ],
   },
   {
-    id: 'customer-orders',
-    en: 'Customer orders',
-    es: 'Pedidos de clientes',
-    icon: ClipboardList,
+    id: 'administration',
+    en: 'Administration',
+    es: 'Administración',
+    icon: Building2,
     items: [
-      {
-        href: '/app/customers',
-        en: 'Customers',
-        es: 'Clientes',
-        icon: Users,
-        permission: 'orders.read',
-      },
-      {
-        href: '/app/shipping',
-        en: 'Shipping',
-        es: 'Envíos',
-        icon: Truck,
-        permission: 'orders.read',
-      },
-    ],
-  },
-  {
-    id: 'production-planning',
-    en: 'Production Planning',
-    es: 'Planificación de producción',
-    icon: CalendarDays,
-    items: [
-      {
-        href: '/app/orders',
-        en: 'Orders',
-        es: 'Pedidos',
-        icon: ClipboardList,
-        permission: 'orders.read',
-      },
-      {
-        href: '/worker',
-        en: 'Spice preparations',
-        es: 'Preparaciones de especias',
-        icon: ClipboardList,
-        permission: 'production.mobile',
-      },
-    ],
-  },
-  {
-    id: 'procurement-inventory',
-    en: 'Procurement & inventory',
-    es: 'Compras e inventario',
-    icon: ShoppingBasket,
-    items: [
-      {
-        href: '/app/suppliers',
-        en: 'Suppliers',
-        es: 'Proveedores',
-        icon: Truck,
-        permission: 'master_data.read',
-      },
-      {
-        href: '/app/inventory',
-        en: 'Inventory',
-        es: 'Inventario',
-        icon: Package,
-        permission: 'inventory.read',
-      },
-    ],
-  },
-  {
-    id: 'user-management',
-    en: 'User Management',
-    es: 'Administración de usuarios',
-    icon: UserCog,
-    items: [
+      { href: '/app/customers', en: 'Customers', es: 'Clientes', icon: Users, permission: 'orders.read' },
+      { href: '/app/suppliers', en: 'Suppliers', es: 'Proveedores', icon: Truck, permission: 'master_data.read' },
+      { href: '/app/team', en: 'Team', es: 'Equipo', icon: Users, permission: 'workforce.read' },
+      { href: '/app/settings', en: 'Settings', es: 'Configuración', icon: Settings, permission: 'settings.manage' },
       {
         href: '/app/user-management/users',
         en: 'Users',
@@ -177,28 +127,6 @@ const navigationGroups = [
         es: 'Historial de inicio de sesión',
         icon: History,
         permission: 'audit.read',
-      },
-    ],
-  },
-  {
-    id: 'organization',
-    en: 'Organization',
-    es: 'Organización',
-    icon: Building2,
-    items: [
-      {
-        href: '/app/team',
-        en: 'Team',
-        es: 'Equipo',
-        icon: Users,
-        permission: 'workforce.read',
-      },
-      {
-        href: '/app/settings',
-        en: 'Settings',
-        es: 'Configuración',
-        icon: Settings,
-        permission: 'settings.manage',
       },
       {
         href: '/app/feedback',
@@ -240,6 +168,15 @@ export function Shell({
     if (href === '/app' || href === '/app/user-management/users') return path === href;
     return path.startsWith(href);
   };
+  const canSee = (required: string[]) => required.every((permission) => permissions.includes(permission));
+  const visiblePrimaryNavigation = primaryNavigation.filter((item) => canSee(item.permissions));
+  const mobileDestinations = [
+    primaryNavigation[0],
+    primaryNavigation[1],
+    primaryNavigation[3],
+    primaryNavigation[4],
+  ].filter((item): item is (typeof primaryNavigation)[number] => item !== undefined)
+    .filter((item) => canSee(item.permissions));
   return (
     <div
       className={`app-shell${collapsed ? ' sidebar-collapsed' : ''}${mobileNavigationOpen ? ' mobile-navigation-open' : ''}`}
@@ -282,19 +219,27 @@ export function Shell({
             {isSpanish ? 'NOS UNE' : 'PEOPLE TOGETHER'}
           </small>
         </Link>
-        <Link
-          href="/app/traceability"
-          className="sidebar-action"
-          aria-current={isCurrentPath('/app/traceability') ? 'page' : undefined}
-          onClick={() => setMobileNavigationOpen(false)}
-        >
-          <Search size={20} aria-hidden />
-          <span className="nav-label">{isSpanish ? 'Trazabilidad' : 'Traceability'}</span>
-        </Link>
         <nav
           id="main-navigation"
           aria-label={isSpanish ? 'Navegación principal' : 'Main navigation'}
         >
+          {visiblePrimaryNavigation.map(({ href, en, es, icon: Icon }) => {
+            const label = isSpanish ? es : en;
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-label={label}
+                title={label}
+                aria-current={isCurrentPath(href) ? 'page' : undefined}
+                onClick={() => setMobileNavigationOpen(false)}
+              >
+                <Icon size={20} aria-hidden />
+                <span className="nav-label">{label}</span>
+              </Link>
+            );
+          })}
+          <div className="nav-group-divider" aria-hidden />
           {navigationGroups.map((group) => {
             const visibleItems = group.items.filter(
               (item) => !item.permission || permissions.includes(item.permission),
@@ -302,30 +247,6 @@ export function Shell({
             const hasCurrentPage = visibleItems.some((item) => isCurrentPath(item.href));
 
             if (visibleItems.length === 0) return null;
-
-            if (visibleItems.length === 1
-              && group.id !== 'user-management'
-              && group.id !== 'production-planning') {
-              const item = visibleItems[0];
-              if (!item) return null;
-              const {
-                href, en, es, icon: Icon,
-              } = item;
-              const label = isSpanish ? es : en;
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  aria-label={label}
-                  title={label}
-                  aria-current={hasCurrentPage ? 'page' : undefined}
-                  onClick={() => setMobileNavigationOpen(false)}
-                >
-                  <Icon size={20} aria-hidden />
-                  <span className="nav-label">{label}</span>
-                </Link>
-              );
-            }
 
             return (
               <details key={group.id} className="nav-group" open={hasCurrentPage}>
@@ -445,36 +366,17 @@ export function Shell({
         className="mobile-navigation"
         aria-label={isSpanish ? 'Navegación móvil' : 'Mobile navigation'}
       >
-        <Link href="/app" aria-current={path === '/app' ? 'page' : undefined}>
-          <Home size={20} aria-hidden />
-          <span>{isSpanish ? 'Panel' : 'Dashboard'}</span>
-        </Link>
-        <Link
-          href="/app/ingredients"
-          aria-current={
-            path.startsWith('/app/ingredients')
-            || path.startsWith('/app/products')
-            || path.startsWith('/app/recipes')
-              ? 'page'
-              : undefined
-          }
-        >
-          <Layers3 size={20} aria-hidden />
-          <span>{isSpanish ? 'Catálogo' : 'Catalog'}</span>
-        </Link>
-        <Link
-          href="/app/orders"
-          aria-current={
-            path.startsWith('/app/customers')
-            || path.startsWith('/app/orders')
-            || path.startsWith('/app/shipping')
-              ? 'page'
-              : undefined
-          }
-        >
-          <ClipboardList size={20} aria-hidden />
-          <span>{isSpanish ? 'Pedidos' : 'Orders'}</span>
-        </Link>
+        {mobileDestinations.map(({ href, en, es, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            aria-current={isCurrentPath(href) ? 'page' : undefined}
+            onClick={() => setMobileNavigationOpen(false)}
+          >
+            <Icon size={20} aria-hidden />
+            <span>{isSpanish ? es : en}</span>
+          </Link>
+        ))}
         <button
           type="button"
           aria-label={isSpanish ? 'Más secciones' : 'More sections'}

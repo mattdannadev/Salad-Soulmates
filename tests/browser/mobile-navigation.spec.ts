@@ -20,11 +20,6 @@ test('phone navigation keeps Dashboard prominent and opens every permitted secti
   await mobileNavigation.getByRole('button', { name: 'More sections' }).click();
   const mainNavigation = page.getByRole('navigation', { name: 'Main navigation' });
   await expect(mainNavigation).toBeInViewport();
-  await mainNavigation
-    .locator('.nav-group')
-    .filter({ hasText: 'Procurement & inventory' })
-    .locator('summary')
-    .click();
   await expect(mainNavigation.getByRole('link', { name: 'Inventory', exact: true })).toBeVisible();
 
   await mainNavigation.getByRole('link', { name: 'Inventory', exact: true }).click();
@@ -55,11 +50,6 @@ test('expanded navigation stays readable after a collapsed desktop rail becomes 
   const navigation = page.getByRole('navigation', { name: 'Main navigation' });
   await expect(navigation).toBeInViewport();
   await expect(navigation.locator('.nav-group-label').first()).toBeVisible();
-  await navigation
-    .locator('.nav-group')
-    .filter({ hasText: 'Procurement & inventory' })
-    .locator('summary')
-    .click();
   await expect(navigation.getByRole('link', { name: 'Inventory', exact: true })).toBeVisible();
   await expect(page.locator('.navigation-scrim')).toBeVisible();
 
@@ -67,7 +57,7 @@ test('expanded navigation stays readable after a collapsed desktop rail becomes 
   await expect(navigation).not.toBeInViewport();
 });
 
-test('Production Planning opens worker preparations and returns to the dashboard', async ({
+test('Operations opens worker preparations and returns to the dashboard', async ({
   page,
 }, testInfo) => {
   await page.setViewportSize({ width: 457, height: 900 });
@@ -80,10 +70,9 @@ test('Production Planning opens worker preparations and returns to the dashboard
   await page.getByRole('navigation', { name: 'Mobile navigation' })
     .getByRole('button', { name: 'More sections' }).click();
   const navigation = page.getByRole('navigation', { name: 'Main navigation' });
-  const planning = navigation.locator('.nav-group').filter({ hasText: 'Production Planning' });
-  await planning.locator('summary').click();
-  await expect(planning.getByRole('link', { name: 'Orders' })).toBeVisible();
-  await planning.getByRole('link', { name: 'Spice preparations' }).click();
+  const operations = navigation.locator('.nav-group').filter({ hasText: 'Operations' });
+  await operations.locator('summary').click();
+  await operations.getByRole('link', { name: 'Spice preparations' }).click();
 
   await expect(page).toHaveURL(/\/worker$/);
   await expect(page.getByRole('heading', { name: 'Spice preparations' })).toBeVisible();
