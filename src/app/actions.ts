@@ -13,6 +13,7 @@ import hasPermission from '@/lib/permissions';
 import { logFailure } from '@/lib/operation-error';
 import confirmSignOut from '@/lib/sign-out';
 import authConfirmationUrl from '@/domain/auth-callback-url';
+import { postSignInDestination } from '@/services/platform-admin';
 
 async function recordSuccessfulSignIn(db: Awaited<ReturnType<typeof supabase>>) {
   let userAgent: string | null = null;
@@ -47,7 +48,7 @@ export async function signIn(_previous: ActionResult, form: FormData): Promise<A
   const { error } = await db.auth.signInWithPassword(login);
   if (error) return { ok: false, message: 'Unable to sign in. Check your details and try again.' };
   await recordSuccessfulSignIn(db);
-  return redirect('/app');
+  return redirect(await postSignInDestination());
 }
 
 export async function setPreferredLocale(form: FormData): Promise<ActionResult> {

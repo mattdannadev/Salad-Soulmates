@@ -4,6 +4,27 @@ Updated: September 24, 2026
 
 ## Current checkpoint
 
+Platform tenant administration: add a separately deployed operator site backed
+by the existing Supabase project. It must let a platform operator provision an
+organization, see its lifecycle state and enabled-user count, and
+suspend/reactivate it without deleting tenant history. Platform operators are
+not tenant-role administrators; all cross-tenant operations require server-side
+authorization and immutable audit records. Keep product and control-plane
+contracts/migrations together. Verify platform-role denials, tenant-suspension
+denials, cross-tenant RLS negatives, and UI error/empty states. Dedicated tenant
+databases remain deferred pending an evidenced contractual or operational need.
+
+### Environment plan — approved cost-conscious baseline
+
+Use **two Supabase databases/projects** initially: the existing Production
+project for live data and one separate Sandbox project for non-production Auth,
+migrations, and end-to-end validation. Vercel preview deployments may use the
+Sandbox environment while the team is small. Do not create paid Supabase database
+branches for each preview by default; they are billed separately. A third,
+dedicated Preview database remains a later option when preview isolation or
+parallel review work justifies its cost. Production and Sandbox must always use
+separate credentials, secrets, and deployment environment variables.
+
 Inventory management follow-up: make the Inventory workspace writable for users with
 inventory-adjust permission. Record immutable manual gains, manual shrinks and
 order-fill usage with ingredient, effective date, type and reason; show those
