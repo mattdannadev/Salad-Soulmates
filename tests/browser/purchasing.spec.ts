@@ -12,7 +12,7 @@ test('inventory starts a purchase with its ingredient fixed', async ({ page }, i
   await expect(page).toHaveURL(/\/app$/);
   await page.goto('/app/inventory');
   const mainNavigation = page.getByRole('navigation', { name: 'Main navigation' });
-  await expect(mainNavigation.getByRole('link', { name: 'Purchasing', exact: true })).toHaveCount(1);
+  await expect(mainNavigation.getByRole('link', { name: 'Purchase planning', exact: true })).toHaveCount(1);
   await page.getByRole('link', { name: 'Purchase Preview garlic powder' }).click();
   await expect(page).toHaveURL(
     /\/app\/purchasing\?ingredient=00000000-0000-4000-8000-000000000100/,

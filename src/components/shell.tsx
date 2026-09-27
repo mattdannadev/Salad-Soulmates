@@ -41,29 +41,38 @@ const purchasingPermissions = [
   'master_data.read',
 ];
 
-const primaryNavigation = [
+const homeNavigation = [
   { href: '/app', en: 'Dashboard', es: 'Panel', icon: Home, permissions: ['dashboard.read'] },
-  { href: '/app/orders', en: 'Orders', es: 'Pedidos', icon: ClipboardList, permissions: ['orders.read'] },
-  { href: '/app/purchasing', en: 'Purchasing', es: 'Compras', icon: ShoppingBasket, permissions: purchasingPermissions },
-  { href: '/app/receiving', en: 'Receiving', es: 'Recepción', icon: PackageCheck, permissions: ['inventory.read'] },
-  { href: '/app/inventory', en: 'Inventory', es: 'Inventario', icon: Package, permissions: ['inventory.read'] },
-  { href: '/app/shipping', en: 'Shipping', es: 'Envíos', icon: Truck, permissions: ['orders.read'] },
 ];
 
 const navigationGroups = [
   {
-    id: 'operations',
-    en: 'Operations',
-    es: 'Operaciones',
-    icon: Search,
+    id: 'orders-delivery',
+    en: 'Orders & delivery',
+    es: 'Pedidos y entregas',
+    icon: ClipboardList,
     items: [
+      { href: '/app/orders', en: 'Orders', es: 'Pedidos', icon: ClipboardList, permission: 'orders.read' },
+      { href: '/app/shipping', en: 'Shipping', es: 'Envíos', icon: Truck, permission: 'orders.read' },
+      { href: '/app/customers', en: 'Customers', es: 'Clientes', icon: Users, permission: 'orders.read' },
+    ],
+  },
+  {
+    id: 'inventory',
+    en: 'Inventory',
+    es: 'Inventario',
+    icon: Package,
+    items: [
+      { href: '/app/inventory', en: 'Inventory', es: 'Inventario', icon: Package, permission: 'inventory.read' },
+      { href: '/app/purchasing', en: 'Purchase planning', es: 'Planificación de compras', icon: ShoppingBasket, permissions: purchasingPermissions },
+      { href: '/app/receiving', en: 'Receive deliveries', es: 'Recibir entregas', icon: PackageCheck, permission: 'inventory.read' },
       { href: '/app/traceability', en: 'Traceability', es: 'Trazabilidad', icon: Search, permission: 'inventory.read' },
-      { href: '/worker', en: 'Spice preparations', es: 'Preparaciones de especias', icon: ClipboardList, permission: 'production.mobile' },
+      { href: '/app/suppliers', en: 'Suppliers', es: 'Proveedores', icon: Truck, permission: 'master_data.read' },
     ],
   },
   {
     id: 'catalog',
-    en: 'Catalog',
+    en: 'Product catalog',
     es: 'Catálogo de productos',
     icon: Layers3,
     items: [
@@ -169,14 +178,16 @@ export function Shell({
     return path.startsWith(href);
   };
   const canSee = (required: string[]) => required.every((permission) => permissions.includes(permission));
-  const visiblePrimaryNavigation = primaryNavigation.filter((item) => canSee(item.permissions));
+  const canSeeItem = (item: { permission?: string | null; permissions?: string[] }) => (
+    item.permissions ? canSee(item.permissions) : !item.permission || permissions.includes(item.permission)
+  );
+  const visibleHomeNavigation = homeNavigation.filter((item) => canSee(item.permissions));
   const mobileDestinations = [
-    primaryNavigation[0],
-    primaryNavigation[1],
-    primaryNavigation[3],
-    primaryNavigation[4],
-  ].filter((item): item is (typeof primaryNavigation)[number] => item !== undefined)
-    .filter((item) => canSee(item.permissions));
+    homeNavigation[0],
+    navigationGroups[0]?.items[0],
+    navigationGroups[1]?.items[0],
+  ].filter((item) => item !== undefined)
+    .filter(canSeeItem);
   return (
     <div
       className={`app-shell${collapsed ? ' sidebar-collapsed' : ''}${mobileNavigationOpen ? ' mobile-navigation-open' : ''}`}
@@ -223,7 +234,7 @@ export function Shell({
           id="main-navigation"
           aria-label={isSpanish ? 'Navegación principal' : 'Main navigation'}
         >
-          {visiblePrimaryNavigation.map(({ href, en, es, icon: Icon }) => {
+          {visibleHomeNavigation.map(({ href, en, es, icon: Icon }) => {
             const label = isSpanish ? es : en;
             return (
               <Link
@@ -239,11 +250,8 @@ export function Shell({
               </Link>
             );
           })}
-          <div className="nav-group-divider" aria-hidden />
           {navigationGroups.map((group) => {
-            const visibleItems = group.items.filter(
-              (item) => !item.permission || permissions.includes(item.permission),
-            );
+            const visibleItems = group.items.filter(canSeeItem);
             const hasCurrentPage = visibleItems.some((item) => isCurrentPath(item.href));
 
             if (visibleItems.length === 0) return null;

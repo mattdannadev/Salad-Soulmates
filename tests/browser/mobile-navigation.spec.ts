@@ -20,9 +20,11 @@ test('phone navigation keeps Dashboard prominent and opens every permitted secti
   await mobileNavigation.getByRole('button', { name: 'More sections' }).click();
   const mainNavigation = page.getByRole('navigation', { name: 'Main navigation' });
   await expect(mainNavigation).toBeInViewport();
-  await expect(mainNavigation.getByRole('link', { name: 'Inventory', exact: true })).toBeVisible();
+  const inventory = mainNavigation.locator('.nav-group').filter({ hasText: 'Inventory' });
+  await inventory.locator('summary').click();
+  await expect(inventory.getByRole('link', { name: 'Inventory', exact: true })).toBeVisible();
 
-  await mainNavigation.getByRole('link', { name: 'Inventory', exact: true }).click();
+  await inventory.getByRole('link', { name: 'Inventory', exact: true }).click();
   await expect(page).toHaveURL(/\/app\/inventory$/);
   await expect(mainNavigation).not.toBeInViewport();
   await expect(mobileNavigation.getByRole('button', { name: 'More sections' })).toHaveAttribute(
@@ -50,14 +52,16 @@ test('expanded navigation stays readable after a collapsed desktop rail becomes 
   const navigation = page.getByRole('navigation', { name: 'Main navigation' });
   await expect(navigation).toBeInViewport();
   await expect(navigation.locator('.nav-group-label').first()).toBeVisible();
-  await expect(navigation.getByRole('link', { name: 'Inventory', exact: true })).toBeVisible();
+  const inventory = navigation.locator('.nav-group').filter({ hasText: 'Inventory' });
+  await inventory.locator('summary').click();
+  await expect(inventory.getByRole('link', { name: 'Inventory', exact: true })).toBeVisible();
   await expect(page.locator('.navigation-scrim')).toBeVisible();
 
   await page.locator('.navigation-scrim').click({ position: { x: 580, y: 100 } });
   await expect(navigation).not.toBeInViewport();
 });
 
-test('Operations opens worker preparations and returns to the dashboard', async ({
+test('Inventory groups receiving and purchase planning in the mobile drawer', async ({
   page,
 }, testInfo) => {
   await page.setViewportSize({ width: 457, height: 900 });
@@ -70,13 +74,12 @@ test('Operations opens worker preparations and returns to the dashboard', async 
   await page.getByRole('navigation', { name: 'Mobile navigation' })
     .getByRole('button', { name: 'More sections' }).click();
   const navigation = page.getByRole('navigation', { name: 'Main navigation' });
-  const operations = navigation.locator('.nav-group').filter({ hasText: 'Operations' });
-  await operations.locator('summary').click();
-  await operations.getByRole('link', { name: 'Spice preparations' }).click();
+  const inventory = navigation.locator('.nav-group').filter({ hasText: 'Inventory' });
+  await inventory.locator('summary').click();
+  await expect(inventory.getByRole('link', { name: 'Purchase planning' })).toBeVisible();
+  await inventory.getByRole('link', { name: 'Receive deliveries' }).click();
 
-  await expect(page).toHaveURL(/\/worker$/);
-  await expect(page.getByRole('heading', { name: 'Spice preparations' })).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath('worker-preparations.png'), fullPage: true });
-  await page.getByRole('link', { name: 'Back to dashboard' }).click();
-  await expect(page).toHaveURL(/\/app$/);
+  await expect(page).toHaveURL(/\/app\/receiving$/);
+  await expect(page.getByText('No receipts yet', { exact: true })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('receiving-navigation.png'), fullPage: true });
 });

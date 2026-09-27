@@ -27,7 +27,7 @@ describe('User Management navigation', () => {
       children: createElement('p', null, 'Content'),
     };
     const html = renderToStaticMarkup(createElement(Shell, props));
-    expect(html).toContain('User Management');
+    expect(html).toContain('Administration');
     expect(html).toContain('href="/app/user-management/users"');
     expect(html).toContain('href="/app/user-management/profiles"');
     expect(html).toContain('href="/app/user-management/access-requests"');
@@ -48,7 +48,7 @@ describe('User Management navigation', () => {
     };
     const html = renderToStaticMarkup(createElement(Shell, props));
     expect(html).toContain('<details class="nav-group"');
-    expect(html).toContain('Administración de usuarios');
+    expect(html).toContain('Administración');
     expect(html).toContain('Historial de inicio de sesión');
     expect(html).not.toContain('Administración de perfiles');
   });

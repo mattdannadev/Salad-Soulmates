@@ -23,30 +23,30 @@ function renderNavigation(locale: 'en' | 'es', permissions: string[]) {
   return renderToStaticMarkup(createElement(Shell, props));
 }
 
-describe('Production Planning navigation', () => {
+describe('Inventory navigation', () => {
   beforeEach(() => {
     mocks.pathname = '/app';
   });
 
-  it('exposes the worker workspace to permitted staff without duplicating Orders', () => {
+  it('groups inventory destinations without exposing the retired worker workspace', () => {
     const html = renderNavigation('en', ['production.mobile', 'orders.read']);
-    expect(html).toContain('Production Planning');
-    expect(html).toContain('href="/worker"');
-    expect(html).toContain('Spice preparations');
+    expect(html).toContain('Orders &amp; delivery');
+    expect(html).not.toContain('href="/worker"');
+    expect(html).not.toContain('Spice preparations');
     expect(html.match(/href="\/app\/orders"/g)).toHaveLength(2);
     expect(html).not.toContain('href="/app/planning"');
   });
 
-  it('hides the worker destination when production permission is absent', () => {
+  it('keeps orders visible without production permission', () => {
     const html = renderNavigation('en', ['orders.read']);
-    expect(html).toContain('Production Planning');
+    expect(html).toContain('Orders &amp; delivery');
     expect(html).toContain('href="/app/orders"');
     expect(html).not.toContain('href="/worker"');
   });
 
-  it('provides Spanish labels for the permitted destination', () => {
+  it('provides Spanish labels for the grouped destination', () => {
     const html = renderNavigation('es', ['production.mobile']);
-    expect(html).toContain('Planificación de producción');
-    expect(html).toContain('Preparaciones de especias');
+    expect(html).not.toContain('Planificación de producción');
+    expect(html).not.toContain('Preparaciones de especias');
   });
 });
