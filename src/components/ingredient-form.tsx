@@ -113,7 +113,10 @@ export default function IngredientForm({
           <select name="default_uom" defaultValue={ingredient?.default_uom ?? baseUnits[0]?.code}>
             {baseUnits.map((unit) => (
               <option key={unit.code} value={unit.code}>
-                {unit.label_en} · {unit.measurement_system}
+                {unit.label_en}
+                {' '}
+                ·
+                {unit.measurement_system}
               </option>
             ))}
           </select>

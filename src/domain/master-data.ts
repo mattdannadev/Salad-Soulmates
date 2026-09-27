@@ -217,9 +217,16 @@ export const referenceOptionRowSchema = z.object({
 });
 export type ReferenceOption = z.infer<typeof referenceOptionRowSchema>;
 export const uomRowSchema = z.object({
-  id: z.uuid(), family_code: z.string(), code: z.string(), label_en: z.string(), label_es: z.string(),
-  measurement_system: z.enum(['metric', 'imperial', 'universal']), is_inventory_unit: z.boolean(),
-  is_purchase_unit: z.boolean(), sort_order: z.number().finite(), active: z.boolean(),
+  id: z.uuid(),
+  family_code: z.string(),
+  code: z.string(),
+  label_en: z.string(),
+  label_es: z.string(),
+  measurement_system: z.enum(['metric', 'imperial', 'universal']),
+  is_inventory_unit: z.boolean(),
+  is_purchase_unit: z.boolean(),
+  sort_order: z.number().finite(),
+  active: z.boolean(),
 });
 export interface Permission {
   code: string;

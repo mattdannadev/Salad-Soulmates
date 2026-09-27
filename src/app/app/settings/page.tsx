@@ -19,7 +19,9 @@ export default async function SettingsPage() {
     db.from('uoms').select('*').order('sort_order'),
   ]);
   const lists = readResult(listResult, rowSchemas.reference_lists.array(), 'reference_lists');
-  const families = readResult(familyResult, z.array(z.object({ code: z.string(), label_en: z.string(), label_es: z.string(), sort_order: z.number(), active: z.boolean() })), 'uom_families');
+  const families = readResult(familyResult, z.array(z.object({
+    code: z.string(), label_en: z.string(), label_es: z.string(), sort_order: z.number(), active: z.boolean(),
+  })), 'uom_families');
   const units = readResult(unitResult, rowSchemas.uoms.array(), 'uoms');
   const pageDescription = 'Manage the shared business values used across Salad Soulmates.';
   return (

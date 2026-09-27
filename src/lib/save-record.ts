@@ -176,7 +176,8 @@ async function saveUom(db: Client, input: unknown) {
   if (!parsed.success) return invalidInput(parsed.error);
   const { id, ...values } = parsed.data;
   const result = id
-    ? await db.from('uoms').update(values).eq('id', id).select('id').single()
+    ? await db.from('uoms').update(values).eq('id', id).select('id')
+      .single()
     : await db.from('uoms').insert(values).select('id').single();
   return saved(result, 'uom');
 }

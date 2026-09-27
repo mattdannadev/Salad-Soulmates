@@ -13,12 +13,15 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('server-only', () => ({}));
 vi.mock('../src/lib/supabase', () => ({
-  supabase: async () => ({ auth: { getUser: mocks.getUser } }),
+  supabase: () => Promise.resolve({ auth: { getUser: mocks.getUser } }),
 }));
 
-const repository = {
+const repository: PlatformAdminRepository = {
   isPlatformAdmin: mocks.isPlatformAdmin,
-} as unknown as PlatformAdminRepository;
+  listOrganizations: () => Promise.resolve([]),
+  provisionOrganization: () => Promise.resolve('00000000-0000-4000-8000-000000000002'),
+  setOrganizationSuspended: () => Promise.resolve(),
+};
 
 beforeEach(() => {
   vi.clearAllMocks();

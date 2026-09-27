@@ -18,7 +18,8 @@ export default async function NewIngredient() {
       .eq('active', true)
       .order('sort_order'),
     db.from('uoms').select('code,label_en,label_es,family_code,measurement_system')
-      .eq('active', true).eq('is_inventory_unit', true).order('sort_order'),
+      .eq('active', true).eq('is_inventory_unit', true)
+      .order('sort_order'),
   ]);
   if (!canWrite) redirect('/app/ingredients');
   const categories = readResult(
@@ -28,7 +29,9 @@ export default async function NewIngredient() {
   );
   const baseUnits = readResult(
     unitsResult,
-    rowSchemas.uoms.pick({ code: true, label_en: true, label_es: true, family_code: true, measurement_system: true }).array(),
+    rowSchemas.uoms.pick({
+      code: true, label_en: true, label_es: true, family_code: true, measurement_system: true,
+    }).array(),
     'inventory_uoms',
   );
   return (

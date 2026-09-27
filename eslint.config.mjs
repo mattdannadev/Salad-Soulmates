@@ -34,9 +34,12 @@ export default defineConfig([
       '@typescript-eslint/no-unsafe-type-assertion': 'error',
     },
   },
-  { files: ['scripts/**/*.mjs'], languageOptions: { globals: { process: 'readonly' } } },
   {
-    files: ['tests/**', 'scripts/**', '*.config.*'],
+    files: ['scripts/**/*.mjs', 'outputs/customer-data-intake/scripts/**/*.mjs'],
+    languageOptions: { globals: { process: 'readonly' } },
+  },
+  {
+    files: ['tests/**', 'scripts/**', 'outputs/customer-data-intake/scripts/**', '*.config.*'],
     rules: { 'import-x/no-extraneous-dependencies': ['error', { devDependencies: true }] },
   },
   {

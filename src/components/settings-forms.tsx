@@ -17,78 +17,84 @@ export function ReferenceOptionForm({
   option?: ReferenceOption;
   allowCustom: boolean;
 }) {
-  return (<>
-    <RecordForm
-      kind="reference-option"
-      submit={option ? 'Save changes' : 'Add value'}
-      hidden={{ id: option?.id }}
-      fields={[
-        {
-          name: 'list_code',
-          label: 'List',
-          type: 'hidden',
-          value: listCode,
-        },
-        {
-          name: 'code',
-          label: 'Stable code',
-          value: option?.code ?? '',
-          required: true,
-          readOnly: Boolean(option) || !allowCustom,
-          hint: 'Stored in records; labels may change safely.',
-        },
-        {
-          name: 'label_en',
-          label: 'English label',
-          value: option?.label_en ?? '',
-          required: true,
-        },
-        {
-          name: 'label_es',
-          label: 'Spanish label',
-          value: option?.label_es ?? '',
-          required: true,
-        },
-        {
-          name: 'sort_order',
-          label: 'Sort order',
-          type: 'number',
-          value: option?.sort_order ?? 0,
-          min: 0,
-          required: true,
-        },
-        {
-          name: 'active',
-          label: 'Active',
-          type: 'checkbox',
-          value: option?.active ?? true,
-        },
-      ]}
-    />
-    {option ? <DeleteReferenceOption option={option} /> : null}
-  </>);
+  return (
+    <>
+      <RecordForm
+        kind="reference-option"
+        submit={option ? 'Save changes' : 'Add value'}
+        hidden={{ id: option?.id }}
+        fields={[
+          {
+            name: 'list_code',
+            label: 'List',
+            type: 'hidden',
+            value: listCode,
+          },
+          {
+            name: 'code',
+            label: 'Stable code',
+            value: option?.code ?? '',
+            required: true,
+            readOnly: Boolean(option) || !allowCustom,
+            hint: 'Stored in records; labels may change safely.',
+          },
+          {
+            name: 'label_en',
+            label: 'English label',
+            value: option?.label_en ?? '',
+            required: true,
+          },
+          {
+            name: 'label_es',
+            label: 'Spanish label',
+            value: option?.label_es ?? '',
+            required: true,
+          },
+          {
+            name: 'sort_order',
+            label: 'Sort order',
+            type: 'number',
+            value: option?.sort_order ?? 0,
+            min: 0,
+            required: true,
+          },
+          {
+            name: 'active',
+            label: 'Active',
+            type: 'checkbox',
+            value: option?.active ?? true,
+          },
+        ]}
+      />
+      {option ? <DeleteReferenceOption option={option} /> : null}
+    </>
+  );
 }
 
 function DeleteReferenceOption({ option }: { option: ReferenceOption }) {
   const [pending, start] = useTransition();
   const [message, setMessage] = useState('');
   const router = useRouter();
-  return (<div className="reference-delete">
-    <button
-      type="button"
-      className="secondary"
-      disabled={pending}
-      onClick={() => {
-        if (!window.confirm(`Delete ${option.label_en}? Values already used cannot be deleted.`)) return;
-        start(async () => {
-          const result = await saveRecord('reference-option-delete', { id: option.id, list_code: option.list_code, code: option.code });
-          setMessage(result.message);
-          if (result.ok) router.refresh();
-        });
-      }}
-    >{pending ? 'Deleting…' : 'Delete permanently'}</button>
-    {message ? <p role="status">{message}</p> : null}
-  </div>);
+  return (
+    <div className="reference-delete">
+      <button
+        type="button"
+        className="secondary"
+        disabled={pending}
+        onClick={() => {
+          if (!window.confirm(`Delete ${option.label_en}? Values already used cannot be deleted.`)) return;
+          start(async () => {
+            const result = await saveRecord('reference-option-delete', { id: option.id, list_code: option.list_code, code: option.code });
+            setMessage(result.message);
+            if (result.ok) router.refresh();
+          });
+        }}
+      >
+        {pending ? 'Deleting…' : 'Delete permanently'}
+      </button>
+      {message ? <p role="status">{message}</p> : null}
+    </div>
+  );
 }
 
 function isMeasurementList(list: ReferenceList) {

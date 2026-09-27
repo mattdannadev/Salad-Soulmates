@@ -8,7 +8,8 @@ export default async function Layout({ children }: { children: React.ReactNode }
   const { db, profile } = await requireAdminShell();
   const [result, feedbackResult] = await Promise.all([
     db.from('access_profile_permissions').select('permission_code').eq('access_profile_id', profile.access_profile_id),
-    db.from('reference_options').select('code,label_en,label_es').eq('list_code', 'feedback_type').eq('active', true).order('sort_order'),
+    db.from('reference_options').select('code,label_en,label_es').eq('list_code', 'feedback_type').eq('active', true)
+      .order('sort_order'),
   ]);
   const permissionRows = readResult(
     result,

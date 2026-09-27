@@ -59,7 +59,9 @@ export default async function IngredientDetail({ params }: { params: Promise<{ i
   const packs = allPacks.filter((p) => p.ingredient_id === id);
   const units = readResult(
     unitsResult,
-    rowSchemas.uoms.pick({ code: true, label_en: true, label_es: true, family_code: true, measurement_system: true, is_inventory_unit: true, is_purchase_unit: true }).array(),
+    rowSchemas.uoms.pick({
+      code: true, label_en: true, label_es: true, family_code: true, measurement_system: true, is_inventory_unit: true, is_purchase_unit: true,
+    }).array(),
     'uoms',
   );
   return (
