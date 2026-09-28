@@ -26,7 +26,7 @@ async function actAs(actor: string) {
   await database.exec('set role authenticated');
 }
 
-async function rpc(name: 'save_customer_order' | 'save_order_production_plan' | 'post_inventory_receipt' | 'create_purchase_draft' | 'change_purchase_status', payload: unknown) {
+async function rpc(name: 'save_customer_order' | 'save_order_production_plan' | 'change_customer_order_pickup_date' | 'post_inventory_receipt' | 'create_purchase_draft' | 'change_purchase_status', payload: unknown) {
   return query(`select public.${name}($1::jsonb) as id`, [JSON.stringify(payload)]);
 }
 async function assignLot(productId = id(300), assignedOn = '2026-09-18') {
@@ -196,6 +196,23 @@ it('enforces finish before pickup for direct writes and revisions', async () => 
     set finish_on='2026-10-01',revision=revision+1 where id=$1`, [id(800)])).rejects.toThrow('must finish before');
   expect((await query('select finish_on::text finish_on from public.order_production_plans where id=$1', [id(800)])).rows)
     .toEqual([{ finish_on: '2026-09-30' }]);
+});
+it('changes pickup dates atomically, records the reason, and preserves the production boundary', async () => {
+  await prepareOrder();
+  await rpc('save_order_production_plan', productionInput());
+  await rpc('change_customer_order_pickup_date', {
+    id: id(800), needed_on: '2026-10-03', reason: 'Customer requested a later pickup',
+  });
+  expect((await query(`select customer.needed_on::text customer_date, plan.needed_on::text material_date
+    from public.customer_orders customer join public.material_plans plan on plan.id=customer.id`)).rows)
+    .toEqual([{ customer_date: '2026-10-03', material_date: '2026-10-03' }]);
+  expect((await query(`select previous_needed_on::text previous_date, needed_on::text new_date, reason
+    from public.customer_order_pickup_date_changes`)).rows).toEqual([{
+    previous_date: '2026-10-01', new_date: '2026-10-03', reason: 'Customer requested a later pickup',
+  }]);
+  await expect(rpc('change_customer_order_pickup_date', {
+    id: id(800), needed_on: '2026-09-30', reason: 'Customer moved pickup earlier',
+  })).rejects.toThrow('must be after');
 });
 it('lets a preexisting same-day plan be revised and cancelled without changing its dates', async () => {
   await prepareOrder();

@@ -52,6 +52,21 @@ it('soft-deactivates an order through the cancellation RPC', async () => {
   });
   expect(mocks.rpc).toHaveBeenCalledWith('cancel_customer_order', { order_id: id });
 });
+it('validates and saves a tracked customer pickup-date change', async () => {
+  expect((await savePurchasing('change-pickup-date', {
+    id, needed_on: '2026-10-03', reason: 'Customer requested Friday pickup',
+  }))).toMatchObject({
+    ok: true,
+    id,
+    message: 'Customer pickup date updated.',
+  });
+  expect(mocks.rpc).toHaveBeenCalledWith('change_customer_order_pickup_date', {
+    payload: { id, needed_on: '2026-10-03', reason: 'Customer requested Friday pickup' },
+  });
+  expect((await savePurchasing('change-pickup-date', {
+    id, needed_on: '2026-10-03', reason: '',
+  })).ok).toBe(false);
+});
 it('does not report SDK errors or malformed write acknowledgements as success', async () => {
   mocks.rpc.mockResolvedValueOnce({
     data: null,

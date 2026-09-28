@@ -39,6 +39,13 @@ export const customerOrderRowSchema = z.object({
   })).min(1),
   created_at: z.string(),
 });
+
+/** A recorded adjustment to the customer-facing pickup commitment. */
+export const customerPickupDateChangeInputSchema = z.object({
+  id: z.uuid(),
+  needed_on: z.iso.date(),
+  reason: z.string().trim().min(3, 'Enter a reason for the pickup-date change.').max(1000),
+});
 export type CustomerOrder = z.infer<typeof customerOrderRowSchema>;
 
 export function customerOrderLabel(order: CustomerOrder) {

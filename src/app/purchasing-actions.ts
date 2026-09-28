@@ -10,13 +10,14 @@ import {
   purchaseStatusInputSchema,
 } from '@/domain/purchasing';
 import { customerOptionInputSchema, customerRowSchema } from '@/domain/customer-pricing';
-import { customerOrderInputSchema } from '@/domain/customer-orders';
+import { customerOrderInputSchema, customerPickupDateChangeInputSchema } from '@/domain/customer-orders';
 import type { ActionResult } from '@/domain/master-data';
 
 const operationSchema = z.enum([
   'save-customer',
   'save-option',
   'save-order',
+  'change-pickup-date',
   'cancel-order',
   'create-draft',
   'change-status',
@@ -26,6 +27,7 @@ const inputSchemas = {
   'save-customer': customerRowSchema,
   'save-option': customerOptionInputSchema,
   'save-order': customerOrderInputSchema,
+  'change-pickup-date': customerPickupDateChangeInputSchema,
   'cancel-order': z.object({ id: z.uuid() }),
   'create-draft': purchaseDraftInputSchema,
   'change-status': purchaseStatusInputSchema,
@@ -36,6 +38,9 @@ const safeDatabaseMessages = [
   'Customer name cannot be changed here',
   'Cancel production preparation before cancelling this order',
   'Request ID already used with different values',
+  'Customer pickup date changed; reload before trying again',
+  'Customer pickup date must be after the planned production completion',
+  'Enter a reason for the pickup-date change',
   'Customer option changed; reload before trying again',
   'Order line value exceeds supported precision',
   'Choose an active packaging option for this customer and product',
@@ -51,6 +56,12 @@ const safeDatabaseMessages = [
   'A standalone purchase requires a reason',
   'Received purchases cannot be cancelled',
 ];
+
+function successMessage(operation: z.infer<typeof operationSchema>) {
+  if (operation === 'cancel-order') return 'Order deactivated.';
+  if (operation === 'change-pickup-date') return 'Customer pickup date updated.';
+  return 'Saved successfully.';
+}
 
 /** Authorize at the action boundary and again through database RLS/validated functions. */
 export default async function savePurchasing(
@@ -68,7 +79,7 @@ export default async function savePurchasing(
   }
   const { db } = await requireProfile({ readOnly: false });
   let requiredPermissions = [
-    ...(kind.data === 'save-order' || kind.data === 'cancel-order' ? ['orders.write', 'orders.read'] : []),
+    ...(kind.data === 'save-order' || kind.data === 'change-pickup-date' || kind.data === 'cancel-order' ? ['orders.write', 'orders.read'] : []),
     'planning.write', 'planning.read', 'inventory.read', 'products.read', 'master_data.read',
   ];
   if (kind.data === 'save-customer') requiredPermissions = ['orders.read', 'orders.write'];
@@ -88,6 +99,9 @@ export default async function savePurchasing(
         break;
       case 'save-order':
         result = await db.rpc('save_customer_order', { payload: validated.data });
+        break;
+      case 'change-pickup-date':
+        result = await db.rpc('change_customer_order_pickup_date', { payload: validated.data });
         break;
       case 'cancel-order':
         result = await db.rpc('cancel_customer_order', { order_id: validated.data.id });
@@ -140,7 +154,7 @@ export default async function savePurchasing(
     return {
       ok: true,
       id: saved.data,
-      message: kind.data === 'cancel-order' ? 'Order deactivated.' : 'Saved successfully.',
+      message: successMessage(kind.data),
     };
   } catch (error) {
     logFailure(`purchasing_${kind.data}`, error);

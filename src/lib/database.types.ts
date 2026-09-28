@@ -2033,6 +2033,7 @@ export type Database = {
       current_facility: { Args: never; Returns: string };
       current_org: { Args: never; Returns: string };
       current_role: { Args: never; Returns: string };
+      change_customer_order_pickup_date: { Args: { payload: Json }; Returns: string };
       has_permission: { Args: { requested: string }; Returns: boolean };
       operations_copilot_enabled: {
         Args: Record<PropertyKey, never>;

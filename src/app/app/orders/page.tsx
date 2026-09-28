@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { z } from 'zod';
 import { PageHeader } from '@/components/shell';
 import CustomerOrderForm from '@/components/customer-order-form';
+import CustomerPickupDateForm from '@/components/customer-pickup-date-form';
 import OrderCardDetails from '@/components/order-card-details';
 import OrderProduction from '@/components/order-production';
 import OrderRequirements from '@/components/order-requirements';
@@ -103,6 +104,13 @@ export default async function Orders({ searchParams }: {
             <h2>{order ? customerOrderLabel(order) : selected.name}</h2>
             {order && <p><Link href={`/app/shipping?order=${order.id}`}>{es ? 'Preparar envío / recogida' : 'Prepare shipment / pickup'}</Link></p>}
             <p>{`${es ? 'Fecha de recogida' : 'Pickup date'} ${formatDate(selected.needed_on)} · ${selected.status === 'Active' ? activeLabel : cancelledLabel}`}</p>
+            {order && selected.status === 'Active' && workspace.canOrder && (
+              <CustomerPickupDateForm
+                orderId={order.id}
+                pickupDate={order.needed_on}
+                locale={locale}
+              />
+            )}
             {order && selected.status === 'Active' && workspace.canOrder ? (
               <OrderDeactivateAction
                 orderId={order.id}

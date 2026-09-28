@@ -1,5 +1,14 @@
 # Implementation decisions
 
+## 2026-09-27 — Editable, tracked customer pickup dates
+
+The saved customer pickup date is now editable from an active order. Every change
+requires a reason and records the prior date, new date, actor and timestamp. The
+customer order and its linked material-plan horizon change atomically; scheduled
+production and supplier deliveries do not move automatically. A pickup date cannot
+be changed to the production-completion date or earlier. This supersedes the
+September 26 non-editable pickup-date display decision only.
+
 ## 2026-09-27 — Dedicated standalone mobile delivery plan
 
 The owner authorized a dedicated build plan for the standalone Expo/React Native

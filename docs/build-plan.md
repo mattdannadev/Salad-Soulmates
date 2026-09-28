@@ -13,6 +13,11 @@ database access from a device, production credentials, deployment, or release.
 
 ## Current checkpoint
 
+Order follow-up: allow an authorized user to correct an active customer pickup
+date with a required reason and immutable change record. Keep the customer order
+and material-demand horizon synchronized, preserve the production-completion
+boundary, and require an explicit review of purchasing/production after a change.
+
 Platform tenant administration: add a separately deployed operator site backed
 by the existing Supabase project. It must let a platform operator provision an
 organization, see its lifecycle state and enabled-user count, and

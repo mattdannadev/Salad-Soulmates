@@ -20,6 +20,11 @@ receiving remain intact. This includes merged PRs #2 and #4 and the supplier pur
   Orders without active preparation retain the customer-needed-date horizon.
 - Revise dates as a draft before reconfirming. Reopening confirmed/cancelled work
   requires a reason and preserves the existing mixer/spice identities.
+- Change an active order's customer pickup date from the order. The change requires
+  a reason and records the prior/new date, actor and timestamp. It updates the
+  linked demand horizon atomically, never moves production or supplier deliveries
+  automatically, and rejects an earlier pickup that would be on/before planned
+  production completion.
 - Cancel preparation with a reason before cancelling the customer order. Cancelling
   preparation alone keeps the customer's ingredient commitments active. Cancelling
   the order releases those commitments through the existing workflow.
