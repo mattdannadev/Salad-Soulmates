@@ -151,6 +151,9 @@ export default function WorkforceScheduler({
   const [periodEnd, setPeriodEnd] = useState(initialPeriodEnd);
   const [weeklyHours, setWeeklyHours] = useState(String(facilities[0]?.weeklyHours ?? 40));
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
+  const [employeeSearch, setEmployeeSearch] = useState('');
+  const [selectedTypes, setSelectedTypes] = useState<WorkType[]>([]);
+  const [sortPeople, setSortPeople] = useState<'least' | 'most' | 'name'>('least');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<AssignmentInput>({
@@ -203,9 +206,25 @@ export default function WorkforceScheduler({
   const reportValid = reportEndExclusive > reportStart;
   const capacityDays = reportValid ? countWeekdays(reportStart, reportEndExclusive) : 0;
   const capacityHours = (capacityDays * (facility?.weeklyHours ?? 40)) / 5;
+  const utilization = useMemo(() => new Map(facilityEmployees.map((person) => {
+    const scheduledDates = new Set<string>();
+    facilityAssignments.filter((item) => item.employeeIds.includes(person.id) && item.type !== 'off')
+      .forEach((item) => assignmentDates(item, reportStart, reportEndExclusive)
+        .forEach((date) => scheduledDates.add(date)));
+    const hours = (scheduledDates.size * (facility?.weeklyHours ?? 40)) / 5;
+    return [person.id, { hours, percent: capacityHours ? Math.round((hours / capacityHours) * 100) : 0 }];
+  })), [facilityEmployees, facilityAssignments, reportStart, reportEndExclusive, facility, capacityHours]);
+  const peopleForPanel = useMemo(() => facilityEmployees
+    .filter((person) => person.name.toLocaleLowerCase().includes(employeeSearch.trim().toLocaleLowerCase()))
+    .toSorted((left, right) => {
+      if (sortPeople === 'name') return left.name.localeCompare(right.name);
+      const difference = (utilization.get(left.id)?.percent ?? 0) - (utilization.get(right.id)?.percent ?? 0);
+      return sortPeople === 'least' ? difference || left.name.localeCompare(right.name) : -difference || left.name.localeCompare(right.name);
+    }), [facilityEmployees, employeeSearch, sortPeople, utilization]);
 
   const calendarEvents = useMemo<SchedulerEvent[]>(() => [...facilityAssignments
-    .filter((item) => !item.employeeIds.length || item.employeeIds.some((id) => shownIds.has(id)))
+    .filter((item) => (!item.employeeIds.length || item.employeeIds.some((id) => shownIds.has(id)))
+      && (!selectedTypes.length || selectedTypes.includes(item.type)))
     .map((item) => ({
       id: item.id,
       title: `${labels[locale][item.type]} · ${item.employeeIds.map((id) => facilityEmployees.find((person) => person.id === id)?.name).filter(Boolean).join(', ')}`,
@@ -223,7 +242,7 @@ export default function WorkforceScheduler({
     resource: 'production-context',
     color: productionColor,
     readOnly: true,
-  }))], [facilityAssignments, shownIds, locale, facilityEmployees, productionBands]);
+  }))], [facilityAssignments, shownIds, selectedTypes, locale, facilityEmployees, productionBands]);
   const resources = [
     { id: 'production-context', title: es ? 'Producción planificada' : 'Planned production', areEventsReadOnly: true },
     { id: 'unassigned', title: es ? 'Sin asignar' : 'Unassigned' },
@@ -520,7 +539,8 @@ export default function WorkforceScheduler({
 
   return (
     <div className={styles.workspace}>
-      <div className={styles.toolbar}>
+      <div className={styles.controlBar}>
+      <div className={styles.filters} aria-label={es ? 'Filtros de horario' : 'Schedule filters'}>
         <label>
           {es ? 'Instalación' : 'Facility'}
           <select value={facilityId} onChange={(event) => selectFacility(event.target.value)}>
@@ -531,8 +551,15 @@ export default function WorkforceScheduler({
           <button type="button" aria-pressed={view === 'day'} onClick={() => setView('day')}>{es ? 'Día' : 'Day'}</button>
           <button type="button" aria-pressed={view === 'week'} onClick={() => setView('week')}>{es ? 'Semana' : 'Week'}</button>
         </div>
-        {canManage && <button type="button" className={styles.primary} onClick={() => openForm()}>{es ? 'Nueva asignación' : 'New assignment'}</button>}
-        {canManage && (
+        <label>
+          {es ? 'Tipos de trabajo' : 'Work types'}
+          <select multiple value={selectedTypes} onChange={(event) => setSelectedTypes([...event.currentTarget.selectedOptions].map((option) => option.value as WorkType))}>
+            {types.map((type) => <option key={type} value={type}>{labels[locale][type]}</option>)}
+          </select>
+        </label>
+      </div>
+      {canManage && <div className={styles.actions} aria-label={es ? 'Acciones de horario' : 'Schedule actions'}>
+        <button type="button" className={styles.primary} onClick={() => openForm()}>{es ? 'Nueva asignación' : 'New assignment'}</button>
         <button
           type="button"
           disabled={pending}
@@ -552,17 +579,15 @@ export default function WorkforceScheduler({
         >
           {es ? 'Registrar ausencia' : 'Record time off'}
         </button>
-        )}
-        {canManage && (
         <button
           type="button"
-          className={styles.primary}
+          className={styles.publish}
           disabled={pending}
           onClick={publishDraft}
         >
           {es ? 'Publicar horario' : 'Publish schedule'}
         </button>
-        )}
+      </div>}
       </div>
       <p className={styles.publication}>
         {publicationStatus}
@@ -584,13 +609,23 @@ export default function WorkforceScheduler({
         )}
         <div className={styles.layout}>
           <aside className={styles.sidebar} aria-label={es ? 'Empleados y producción' : 'Employees and production'}>
-            <h2>{es ? 'Empleados' : 'Employees'}</h2>
-            <p>{es ? 'Seleccione a quién mostrar. Sin selección se muestra todo el equipo.' : 'Select people to show. With none selected, the whole team appears.'}</p>
+            <h2>{es ? 'Personas' : 'People'}</h2>
+            <p>{es ? 'Menor utilización aparece primero para ayudar a equilibrar el trabajo.' : 'Least utilized appears first to help balance work.'}</p>
+            <div className={styles.peopleControls}>
+              <input aria-label={es ? 'Buscar empleados' : 'Search employees'} placeholder={es ? 'Buscar' : 'Search'} value={employeeSearch} onChange={(event) => setEmployeeSearch(event.target.value)} />
+              <select aria-label={es ? 'Ordenar empleados' : 'Sort employees'} value={sortPeople} onChange={(event) => setSortPeople(event.target.value as typeof sortPeople)}>
+                <option value="least">{es ? 'Menor utilización' : 'Least utilized'}</option>
+                <option value="most">{es ? 'Mayor utilización' : 'Most utilized'}</option>
+                <option value="name">{es ? 'Nombre' : 'Name'}</option>
+              </select>
+              <button type="button" onClick={() => setSelectedEmployees([])}>{es ? 'Ver todos' : 'Show all'}</button>
+            </div>
             <div className={styles.employeeList}>
-              {facilityEmployees.map((person) => (
+              {peopleForPanel.map((person) => (
                 <label key={person.id}>
                   <input type="checkbox" checked={selectedEmployees.includes(person.id)} onChange={(event) => setSelectedEmployees((current) => (event.target.checked ? [...current, person.id] : current.filter((id) => id !== person.id)))} />
-                  {person.name}
+                  <span className={styles.personName}>{person.name}</span>
+                  <span className={styles.utilization}>{utilization.get(person.id)?.hours.toFixed(1)}h · {utilization.get(person.id)?.percent}%</span>
                 </label>
               ))}
               {!facilityEmployees.length && <p>{es ? 'No hay empleados en esta instalación.' : 'No employees at this facility.'}</p>}
@@ -614,6 +649,7 @@ export default function WorkforceScheduler({
             </ul>
           </aside>
           <div className={styles.calendar} aria-label={es ? 'Calendario de empleados' : 'Employee calendar'}>
+            <p className={styles.calendarHint}>{es ? 'Arrastre trabajo a una persona y día, o seleccione Nueva asignación.' : 'Drag work to a person and day, or select New assignment.'}</p>
             <ThemeProvider theme={es ? spanishTheme : englishTheme}>
               <EventCalendar
                 events={calendarEvents}

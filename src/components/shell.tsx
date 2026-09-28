@@ -386,7 +386,6 @@ export function Shell({
                 title={isSpanish ? 'Copiloto de operaciones' : 'Operations Copilot'}
               >
                 <Sparkles size={18} aria-hidden />
-                <span>{isSpanish ? 'Copiloto de operaciones' : 'Operations Copilot'}</span>
               </Link>
             )}
             <LocaleSwitcher key={locale} locale={locale} />

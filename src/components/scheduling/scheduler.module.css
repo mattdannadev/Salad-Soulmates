@@ -2,32 +2,44 @@
   display: grid;
   gap: 1.25rem;
 }
-.toolbar {
+.controlBar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #d2e0d8;
+  border-radius: 0.8rem;
+  background: #fff;
+}
+.filters,
+.actions {
   display: flex;
   flex-wrap: wrap;
   align-items: end;
-  gap: 0.8rem;
+  gap: 0.55rem;
 }
-.toolbar label,
+.filters label,
 .periodFields label,
 .modal label {
   display: grid;
   gap: 0.3rem;
   font-weight: 650;
 }
-.toolbar select,
+.filters select,
 .periodFields input,
 .modal input,
 .modal select,
 .modal textarea {
   border: 1px solid #a9b8b0;
   border-radius: 0.45rem;
-  padding: 0.55rem 0.7rem;
+  padding: 0.42rem 0.55rem;
   background: #fff;
   color: #143b2c;
   font: inherit;
 }
-.toolbar button,
+.filters button,
+.actions button,
 .periodFields button,
 .assignments button,
 .dialogActions button {
@@ -35,11 +47,14 @@
   border-radius: 0.45rem;
   background: #fff;
   color: #143b2c;
-  padding: 0.55rem 0.9rem;
+  min-height: 36px;
+  padding: 0.42rem 0.65rem;
+  font-size: 0.875rem;
   font: inherit;
   cursor: pointer;
 }
-.toolbar button:focus-visible,
+.filters button:focus-visible,
+.actions button:focus-visible,
 .periodFields button:focus-visible,
 .assignments button:focus-visible,
 .dialogActions button:focus-visible,
@@ -47,16 +62,21 @@
   outline: 3px solid #c8801c;
   outline-offset: 2px;
 }
-.toolbar button:disabled,
+.actions button:disabled,
 .dialogActions button:disabled {
   opacity: 0.55;
   cursor: wait;
 }
-.toolbar .primary,
+.actions .primary,
 .dialogActions .primary {
   background: #176240;
   border-color: #176240;
   color: #fff;
+}
+.actions .publish {
+  border-color: #176240;
+  background: #fff;
+  color: #176240;
 }
 .viewSwitch {
   display: flex;
@@ -139,8 +159,17 @@
   display: flex;
   align-items: center;
   gap: 0.45rem;
+  padding: 0.45rem;
+  border: 1px solid #e5eee7;
+  border-radius: 0.45rem;
   font-weight: 500;
 }
+.peopleControls { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.4rem; margin-bottom: 0.7rem; }
+.peopleControls input,
+.peopleControls select { min-width: 0; border: 1px solid #a9b8b0; border-radius: 0.4rem; padding: 0.4rem; font: inherit; }
+.peopleControls button { border: 1px solid #9ab3a5; border-radius: 0.4rem; background: #fff; color: #143b2c; font: inherit; }
+.personName { flex: 1; }
+.utilization { color: #4c6055; font-size: 0.78rem; white-space: nowrap; }
 .employeeList input {
   width: 1rem;
   height: 1rem;
@@ -165,6 +194,7 @@
   overflow: auto;
   min-height: 650px;
 }
+.calendarHint { margin: 0 0 0.65rem; color: #4c6055; font-size: 0.85rem; }
 .calendar > * {
   min-width: 500px;
   min-height: 620px;
@@ -328,7 +358,8 @@
   .summary {
     order: 4;
   }
-  .toolbar button,
+  .filters button,
+  .actions button,
   .assignments button,
   .dialogActions button {
     min-height: 48px;

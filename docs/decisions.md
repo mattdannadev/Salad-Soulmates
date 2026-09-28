@@ -143,6 +143,13 @@ events; it is not the name of a calendar event and it does not restrict the
 calendar to production work. The lot number belongs to the Production Run and
 is issued when that run starts.
 
+The Scheduler separates filters from actions, while the people panel is the
+decision surface: it ranks people by utilization for the active calendar window
+and shows scheduled hours and percentage beside each selectable person. Managers
+can create work with **New assignment** or by dragging across a person's day;
+the screen states both options. The Operations Copilot launcher is icon-only
+with an accessible name and tooltip.
+
 Source-lot evidence and production-lot assignment are audit-critical. A
 correction must preserve the original value, correction reason, actor,
 timestamp and the record it corrects. It must never silently overwrite a
