@@ -1,8 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { logFailure } from '@/lib/operation-error';
-import { provisionOrganization, setOrganizationSuspended } from '@/services/platform-admin';
+import {
+  provisionOrganization,
+  setOperationsCopilotPlan,
+  setOrganizationSuspended,
+} from '@/services/platform-admin';
 
 /**
  * Provisions a tenant through the platform-admin service. The service validates
@@ -35,4 +40,24 @@ export async function changeOrganizationStatus(formData: FormData): Promise<void
     throw new Error('Could not update the organization. Review the reason and try again.');
   }
   revalidatePath('/admin');
+}
+
+/** Changes a tenant's paid Operations Copilot ceiling through the platform control plane. */
+export async function changeOperationsCopilotPlan(formData: FormData): Promise<void> {
+  const enabled = formData.get('enabled');
+  if (enabled !== 'true' && enabled !== 'false') {
+    throw new Error('Invalid Operations Copilot plan request.');
+  }
+  try {
+    await setOperationsCopilotPlan({
+      organizationId: formData.get('organizationId'),
+      enabled: enabled === 'true',
+      reason: formData.get('reason'),
+    });
+  } catch (cause) {
+    logFailure('platform_operations_copilot_plan_change', cause);
+    throw new Error('Could not update Operations Copilot plan access. Review the reason and try again.');
+  }
+  revalidatePath('/admin');
+  redirect(`/admin?notice=${enabled === 'true' ? 'copilot-enabled' : 'copilot-disabled'}`);
 }

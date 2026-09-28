@@ -2,13 +2,17 @@ import {
   beforeEach, expect, it, vi,
 } from 'vitest';
 import {
-  PlatformAdminAccessError, postSignInDestination, requirePlatformAdmin,
+  PlatformAdminAccessError,
+  postSignInDestination,
+  requirePlatformAdmin,
+  setOperationsCopilotPlan,
 } from '../src/services/platform-admin';
 import type { PlatformAdminRepository } from '../src/data/platform-admin';
 
 const mocks = vi.hoisted(() => ({
   getUser: vi.fn(),
   isPlatformAdmin: vi.fn(),
+  setOperationsCopilotPlan: vi.fn(),
 }));
 
 vi.mock('server-only', () => ({}));
@@ -21,6 +25,7 @@ const repository: PlatformAdminRepository = {
   listOrganizations: () => Promise.resolve([]),
   provisionOrganization: () => Promise.resolve('00000000-0000-4000-8000-000000000002'),
   setOrganizationSuspended: () => Promise.resolve(),
+  setOperationsCopilotPlan: mocks.setOperationsCopilotPlan,
 };
 
 beforeEach(() => {
@@ -30,6 +35,7 @@ beforeEach(() => {
     error: null,
   });
   mocks.isPlatformAdmin.mockResolvedValue(false);
+  mocks.setOperationsCopilotPlan.mockResolvedValue(undefined);
 });
 
 it('keeps tenant users in the operational workspace', async () => {
@@ -49,4 +55,38 @@ it('denies access without a verified user before checking membership', async () 
   mocks.getUser.mockResolvedValue({ data: { user: null }, error: null });
   await expect(requirePlatformAdmin(repository)).rejects.toBeInstanceOf(PlatformAdminAccessError);
   expect(mocks.isPlatformAdmin).not.toHaveBeenCalled();
+});
+
+it('validates and delegates Operations Copilot plan changes for platform operators', async () => {
+  mocks.isPlatformAdmin.mockResolvedValue(true);
+  await expect(setOperationsCopilotPlan({
+    organizationId: '00000000-0000-4000-8000-000000000010',
+    enabled: true,
+    reason: 'Premium subscription activated',
+  }, repository)).resolves.toBeUndefined();
+  expect(mocks.setOperationsCopilotPlan).toHaveBeenCalledWith(
+    '00000000-0000-4000-8000-000000000001',
+    {
+      organizationId: '00000000-0000-4000-8000-000000000010',
+      enabled: true,
+      reason: 'Premium subscription activated',
+    },
+  );
+});
+
+it('denies tenant administrators and invalid plan changes before persistence', async () => {
+  await expect(setOperationsCopilotPlan({
+    organizationId: '00000000-0000-4000-8000-000000000010',
+    enabled: true,
+    reason: 'Premium subscription activated',
+  }, repository)).rejects.toBeInstanceOf(PlatformAdminAccessError);
+  expect(mocks.setOperationsCopilotPlan).not.toHaveBeenCalled();
+
+  mocks.isPlatformAdmin.mockResolvedValue(true);
+  await expect(setOperationsCopilotPlan({
+    organizationId: 'not-a-uuid',
+    enabled: true,
+    reason: 'x',
+  }, repository)).rejects.toThrow();
+  expect(mocks.setOperationsCopilotPlan).not.toHaveBeenCalled();
 });

@@ -18,6 +18,11 @@ const statusSchema = z.object({
   suspended: z.boolean(),
   reason: z.string().trim().min(3).max(500),
 });
+const operationsCopilotPlanSchema = z.object({
+  organizationId: z.uuid(),
+  enabled: z.boolean(),
+  reason: z.string().trim().min(3).max(500),
+});
 
 export interface OrganizationSummary {
   id: string;
@@ -25,6 +30,7 @@ export interface OrganizationSummary {
   slug: string;
   status: 'active' | 'suspended';
   signupEnabled: boolean;
+  operationsCopilotPlanEnabled: boolean;
   enabledUserCount: number;
   createdAt: string;
 }
@@ -70,6 +76,7 @@ export async function listOrganizations(
     slug: organization.slug,
     status: organization.status,
     signupEnabled: organization.signup_enabled,
+    operationsCopilotPlanEnabled: organization.operations_copilot_plan_enabled,
     enabledUserCount: organization.enabled_user_count,
     createdAt: organization.created_at,
   }));
@@ -89,4 +96,16 @@ export async function setOrganizationSuspended(
 ): Promise<void> {
   const { actorUserId } = await requirePlatformAdmin(repository);
   await repository.setOrganizationSuspended(actorUserId, statusSchema.parse(input));
+}
+
+/** Changes the paid-plan ceiling after rechecking platform authority server-side. */
+export async function setOperationsCopilotPlan(
+  input: unknown,
+  repository: PlatformAdminRepository = createPlatformAdminRepository(),
+): Promise<void> {
+  const { actorUserId } = await requirePlatformAdmin(repository);
+  await repository.setOperationsCopilotPlan(
+    actorUserId,
+    operationsCopilotPlanSchema.parse(input),
+  );
 }

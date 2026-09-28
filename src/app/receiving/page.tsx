@@ -5,6 +5,7 @@ import SerializedInventory from '@/components/serialized-inventory';
 import { outstandingInbound } from '@/domain/purchasing';
 import { rowSchemas } from '@/domain/master-data';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { requireProfile } from '@/lib/auth';
 import { rows } from '@/lib/data';
 import ReceiptForm from '@/components/receipt-form';
@@ -12,6 +13,7 @@ import ReceiptHistory from '@/components/receipt-history';
 import FeedbackDrawer from '@/components/feedback';
 import PurchaseReceiving from '@/components/purchase-receiving';
 import loadPurchaseReceivingData from '@/lib/purchase-receiving-data';
+import isMobileOperationsCopilotEnabled from '@/services/mobile-operations-copilot-gate';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,6 +47,13 @@ export default async function ReceiverWorkspace() {
           ? 'Registra entregas de proveedores de forma sencilla.'
           : 'Post supplier deliveries from this focused workspace.'}
       </p>
+      {isMobileOperationsCopilotEnabled() && (
+        <nav aria-label={es ? 'Herramientas de recepción' : 'Receiving tools'}>
+          <Link className="button secondary" href="/receiving/copilot">
+            {es ? 'Abrir Copiloto de operaciones' : 'Open Operations Copilot'}
+          </Link>
+        </nav>
+      )}
       <PurchaseReceiving
         orders={orders}
         canReceive={canReceive}

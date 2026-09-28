@@ -3,7 +3,7 @@
 import { useRef } from 'react';
 import { useFormStatus } from 'react-dom';
 import {
-  Building2, PauseCircle, PlayCircle, Plus, X,
+  Bot, Building2, PauseCircle, PlayCircle, Plus, X,
 } from 'lucide-react';
 import styles from './portal.module.css';
 
@@ -14,6 +14,7 @@ export interface OrganizationSummary {
   name: string;
   slug: string;
   status: OrganizationStatus;
+  operationsCopilotPlanEnabled: boolean;
   enabledUserCount: number;
   createdAt: string;
 }
@@ -159,6 +160,82 @@ export function OrganizationStatusControl({
               Cancel
             </button>
             <SubmitButton label={`${verb} organization`} />
+          </div>
+        </form>
+      </dialog>
+    </>
+  );
+}
+
+export function OperationsCopilotPlanControl({
+  action = undefined,
+  organization,
+}: {
+  action?: OrganizationFormAction;
+  organization: OrganizationSummary;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const enabled = organization.operationsCopilotPlanEnabled;
+  const verb = enabled ? 'Disable' : 'Enable';
+  const dialogId = `copilot-plan-title-${organization.id}`;
+
+  return (
+    <>
+      <button
+        aria-label={`${verb} Operations Copilot for ${organization.name}`}
+        className={styles.rowAction}
+        disabled={!action}
+        onClick={() => dialog.current?.showModal()}
+        type="button"
+      >
+        <Bot size={15} aria-hidden="true" />
+        {verb}
+        {' '}
+        Copilot
+      </button>
+      <dialog aria-labelledby={dialogId} className={styles.dialog} ref={dialog}>
+        <div className={styles.dialogHeading}>
+          <div>
+            <p className={styles.kicker}>PAID MODULE ACCESS</p>
+            <h2 id={dialogId}>
+              {verb}
+              {' '}
+              Operations Copilot?
+            </h2>
+          </div>
+          <button
+            aria-label="Close Operations Copilot plan form"
+            className={styles.iconButton}
+            onClick={() => dialog.current?.close()}
+            type="button"
+          >
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
+        <p className={styles.dialogIntro}>
+          {enabled
+            ? `This removes the plan ceiling for ${organization.name}. Tenant profile and user settings are preserved but will no longer grant access.`
+            : `This makes Operations Copilot available to ${organization.name}. Tenant administrators still choose which profiles and users receive access.`}
+        </p>
+        <form action={action} className={styles.form}>
+          <input name="organizationId" type="hidden" value={organization.id} />
+          <input name="enabled" type="hidden" value={enabled ? 'false' : 'true'} />
+          <label htmlFor={`copilot-reason-${organization.id}`}>Reason</label>
+          <textarea
+            id={`copilot-reason-${organization.id}`}
+            maxLength={500}
+            minLength={3}
+            name="reason"
+            placeholder={enabled ? 'Example: Subscription ended' : 'Example: Premium plan activated'}
+            required
+            rows={4}
+          />
+          <p className={styles.fieldHint}>This reason is saved in the immutable audit history.</p>
+          <div className={styles.dialogActions}>
+            <button className={styles.cancelButton} onClick={() => dialog.current?.close()} type="button">
+              Cancel
+            </button>
+            <SubmitButton label={`${verb} Operations Copilot`} />
           </div>
         </form>
       </dialog>

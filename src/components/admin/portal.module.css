@@ -253,6 +253,12 @@
   background: #edf3e9;
 }
 
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
 .emptyState {
   display: grid;
   justify-items: center;

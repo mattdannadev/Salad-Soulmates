@@ -5,12 +5,17 @@ import { listOrganizations, requirePlatformAdmin } from '@/services/platform-adm
 import {
   CreateOrganizationControl,
   EmptyOrganizations,
+  OperationsCopilotPlanControl,
   OrganizationStatusControl,
   type OrganizationFormAction,
   type OrganizationSummary,
 } from '@/components/admin/organization-controls';
 import styles from '@/components/admin/portal.module.css';
-import { changeOrganizationStatus, createOrganization } from './actions';
+import {
+  changeOperationsCopilotPlan,
+  changeOrganizationStatus,
+  createOrganization,
+} from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +23,7 @@ interface AdminPortalProps {
   organizations: OrganizationSummary[];
   createAction?: OrganizationFormAction;
   statusAction?: OrganizationFormAction;
+  operationsCopilotPlanAction?: OrganizationFormAction;
   notice?: string;
 }
 
@@ -27,10 +33,21 @@ function formatCreatedAt(value: string): string {
   return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' }).format(date);
 }
 
+function operationsCopilotNotice(value: string | undefined): string | undefined {
+  if (value === 'copilot-enabled') {
+    return 'Operations Copilot plan access is now enabled. The tenant administrator can assign profile and user access.';
+  }
+  if (value === 'copilot-disabled') {
+    return 'Operations Copilot plan access is now disabled. Existing tenant assignments are preserved.';
+  }
+  return undefined;
+}
+
 export function AdminPortal({
   organizations,
   createAction = undefined,
   statusAction = undefined,
+  operationsCopilotPlanAction = undefined,
   notice = undefined,
 }: AdminPortalProps) {
   const activeCount = organizations.filter((organization) => organization.status === 'active').length;
@@ -104,6 +121,7 @@ export function AdminPortal({
                 { key: 'organization', label: 'Organization' },
                 { key: 'slug', label: 'Slug' },
                 { key: 'status', label: 'Status' },
+                { key: 'copilot', label: 'Operations Copilot' },
                 { key: 'users', label: 'Enabled users' },
                 { key: 'created', label: 'Created' },
                 {
@@ -123,6 +141,10 @@ export function AdminPortal({
                     text: organization.enabledUserCount.toLocaleString('en-US'),
                     sortValue: organization.enabledUserCount,
                   },
+                  copilot: {
+                    text: organization.operationsCopilotPlanEnabled ? 'Plan enabled' : 'Not in plan',
+                    badge: organization.operationsCopilotPlanEnabled ? 'default' as const : 'muted' as const,
+                  },
                   created: {
                     text: formatCreatedAt(organization.createdAt),
                     sortValue: organization.createdAt,
@@ -132,11 +154,16 @@ export function AdminPortal({
               }))}
               cellSlots={Object.fromEntries(organizations.map((organization) => [
                 organization.id,
-                <OrganizationStatusControl
-                  key={organization.id}
-                  action={statusAction}
-                  organization={organization}
-                />,
+                <div className={styles.rowActions} key={organization.id}>
+                  <OperationsCopilotPlanControl
+                    action={operationsCopilotPlanAction}
+                    organization={organization}
+                  />
+                  <OrganizationStatusControl
+                    action={statusAction}
+                    organization={organization}
+                  />
+                </div>,
               ]))}
             />
           )}
@@ -146,13 +173,19 @@ export function AdminPortal({
   );
 }
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ notice?: string }>;
+}) {
   await requirePlatformAdmin();
-  const organizations = await listOrganizations();
+  const [organizations, query] = await Promise.all([listOrganizations(), searchParams]);
   return (
     <AdminPortal
       createAction={createOrganization}
+      notice={operationsCopilotNotice(query.notice)}
       organizations={organizations}
+      operationsCopilotPlanAction={changeOperationsCopilotPlan}
       statusAction={changeOrganizationStatus}
     />
   );

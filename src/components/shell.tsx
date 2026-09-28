@@ -28,10 +28,13 @@ import {
   UserCog,
   History,
   PackageCheck,
+  Sparkles,
+  CalendarDays,
 } from 'lucide-react';
 import { signOut } from '@/app/actions';
 import FeedbackDrawer from './feedback';
 import LocaleSwitcher from './locale-switcher';
+import styles from './shell-ai-launcher.module.css';
 
 const purchasingPermissions = [
   'orders.read',
@@ -42,7 +45,9 @@ const purchasingPermissions = [
 ];
 
 const homeNavigation = [
-  { href: '/app', en: 'Dashboard', es: 'Panel', icon: Home, permissions: ['dashboard.read'] },
+  {
+    href: '/app', en: 'Dashboard', es: 'Panel', icon: Home, permissions: ['dashboard.read'],
+  },
 ];
 
 const navigationGroups = [
@@ -52,9 +57,15 @@ const navigationGroups = [
     es: 'Pedidos y entregas',
     icon: ClipboardList,
     items: [
-      { href: '/app/orders', en: 'Orders', es: 'Pedidos', icon: ClipboardList, permission: 'orders.read' },
-      { href: '/app/shipping', en: 'Shipping', es: 'Envíos', icon: Truck, permission: 'orders.read' },
-      { href: '/app/customers', en: 'Customers', es: 'Clientes', icon: Users, permission: 'orders.read' },
+      {
+        href: '/app/orders', en: 'Orders', es: 'Pedidos', icon: ClipboardList, permission: 'orders.read',
+      },
+      {
+        href: '/app/shipping', en: 'Shipping', es: 'Envíos', icon: Truck, permission: 'orders.read',
+      },
+      {
+        href: '/app/customers', en: 'Customers', es: 'Clientes', icon: Users, permission: 'orders.read',
+      },
     ],
   },
   {
@@ -63,11 +74,21 @@ const navigationGroups = [
     es: 'Inventario',
     icon: Package,
     items: [
-      { href: '/app/inventory', en: 'Inventory', es: 'Inventario', icon: Package, permission: 'inventory.read' },
-      { href: '/app/purchasing', en: 'Purchase planning', es: 'Planificación de compras', icon: ShoppingBasket, permissions: purchasingPermissions },
-      { href: '/app/receiving', en: 'Receive deliveries', es: 'Recibir entregas', icon: PackageCheck, permission: 'inventory.read' },
-      { href: '/app/traceability', en: 'Traceability', es: 'Trazabilidad', icon: Search, permission: 'inventory.read' },
-      { href: '/app/suppliers', en: 'Suppliers', es: 'Proveedores', icon: Truck, permission: 'master_data.read' },
+      {
+        href: '/app/inventory', en: 'Inventory', es: 'Inventario', icon: Package, permission: 'inventory.read',
+      },
+      {
+        href: '/app/purchasing', en: 'Purchase planning', es: 'Planificación de compras', icon: ShoppingBasket, permissions: purchasingPermissions,
+      },
+      {
+        href: '/app/receiving', en: 'Receive deliveries', es: 'Recibir entregas', icon: PackageCheck, permission: 'inventory.read',
+      },
+      {
+        href: '/app/traceability', en: 'Traceability', es: 'Trazabilidad', icon: Search, permission: 'inventory.read',
+      },
+      {
+        href: '/app/suppliers', en: 'Suppliers', es: 'Proveedores', icon: Truck, permission: 'master_data.read',
+      },
     ],
   },
   {
@@ -105,10 +126,21 @@ const navigationGroups = [
     es: 'Administración',
     icon: Building2,
     items: [
-      { href: '/app/customers', en: 'Customers', es: 'Clientes', icon: Users, permission: 'orders.read' },
-      { href: '/app/suppliers', en: 'Suppliers', es: 'Proveedores', icon: Truck, permission: 'master_data.read' },
-      { href: '/app/team', en: 'Team', es: 'Equipo', icon: Users, permission: 'workforce.read' },
-      { href: '/app/settings', en: 'Settings', es: 'Configuración', icon: Settings, permission: 'settings.manage' },
+      {
+        href: '/app/customers', en: 'Customers', es: 'Clientes', icon: Users, permission: 'orders.read',
+      },
+      {
+        href: '/app/suppliers', en: 'Suppliers', es: 'Proveedores', icon: Truck, permission: 'master_data.read',
+      },
+      {
+        href: '/app/team', en: 'Team', es: 'Equipo', icon: Users, permission: 'workforce.read',
+      },
+      {
+        href: '/app/scheduling', en: 'Schedule', es: 'Calendario', icon: CalendarDays, permission: 'workforce.read',
+      },
+      {
+        href: '/app/settings', en: 'Settings', es: 'Configuración', icon: Settings, permission: 'settings.manage',
+      },
       {
         href: '/app/user-management/users',
         en: 'Users',
@@ -136,6 +168,13 @@ const navigationGroups = [
         es: 'Historial de inicio de sesión',
         icon: History,
         permission: 'audit.read',
+      },
+      {
+        href: '/app/administration-copilot',
+        en: 'Administration Copilot',
+        es: 'Copiloto de administración',
+        icon: Sparkles,
+        permission: 'access.manage',
       },
       {
         href: '/app/feedback',
@@ -177,9 +216,13 @@ export function Shell({
     if (href === '/app' || href === '/app/user-management/users') return path === href;
     return path.startsWith(href);
   };
-  const canSee = (required: string[]) => required.every((permission) => permissions.includes(permission));
+  const canSee = (required: string[]) => required.every(
+    (permission) => permissions.includes(permission),
+  );
   const canSeeItem = (item: { permission?: string | null; permissions?: string[] }) => (
-    item.permissions ? canSee(item.permissions) : !item.permission || permissions.includes(item.permission)
+    item.permissions
+      ? canSee(item.permissions)
+      : !item.permission || permissions.includes(item.permission)
   );
   const visibleHomeNavigation = homeNavigation.filter((item) => canSee(item.permissions));
   const mobileDestinations = [
@@ -234,7 +277,9 @@ export function Shell({
           id="main-navigation"
           aria-label={isSpanish ? 'Navegación principal' : 'Main navigation'}
         >
-          {visibleHomeNavigation.map(({ href, en, es, icon: Icon }) => {
+          {visibleHomeNavigation.map(({
+            href, en, es, icon: Icon,
+          }) => {
             const label = isSpanish ? es : en;
             return (
               <Link
@@ -332,6 +377,18 @@ export function Shell({
             {isSpanish ? 'Etapa 1A' : 'Increment 1A'}
           </span>
           <div className="identity">
+            {role === 'admin' && (
+              <Link
+                href="/app/operations-copilot"
+                className={styles.launcher}
+                aria-label={isSpanish ? 'Abrir copiloto de operaciones' : 'Open Operations Copilot'}
+                aria-current={path === '/app/operations-copilot' ? 'page' : undefined}
+                title={isSpanish ? 'Copiloto de operaciones' : 'Operations Copilot'}
+              >
+                <Sparkles size={18} aria-hidden />
+                <span>{isSpanish ? 'Copiloto de operaciones' : 'Operations Copilot'}</span>
+              </Link>
+            )}
             <LocaleSwitcher key={locale} locale={locale} />
             <span className="avatar">{name.slice(0, 1)}</span>
             <span>
@@ -374,7 +431,9 @@ export function Shell({
         className="mobile-navigation"
         aria-label={isSpanish ? 'Navegación móvil' : 'Mobile navigation'}
       >
-        {mobileDestinations.map(({ href, en, es, icon: Icon }) => (
+        {mobileDestinations.map(({
+          href, en, es, icon: Icon,
+        }) => (
           <Link
             key={href}
             href={href}

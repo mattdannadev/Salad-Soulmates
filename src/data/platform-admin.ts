@@ -9,6 +9,7 @@ const organizationRecordSchema = z.object({
   slug: z.string(),
   status: z.enum(['active', 'suspended']),
   signup_enabled: z.boolean(),
+  operations_copilot_plan_enabled: z.boolean(),
   enabled_user_count: z.number().int().nonnegative(),
   created_at: z.string(),
 });
@@ -23,6 +24,9 @@ export interface PlatformAdminRepository {
   }): Promise<string>;
   setOrganizationSuspended(actorUserId: string, input: {
     organizationId: string; suspended: boolean; reason: string;
+  }): Promise<void>;
+  setOperationsCopilotPlan(actorUserId: string, input: {
+    organizationId: string; enabled: boolean; reason: string;
   }): Promise<void>;
 }
 
@@ -61,6 +65,21 @@ export default function createPlatformAdminRepository(): PlatformAdminRepository
         reason: input.reason,
       });
       if (error) throw operationError('platform_organization_status', 'Unable to change organization status.', error);
+    },
+    async setOperationsCopilotPlan(actorUserId, input) {
+      const { error } = await db.rpc('set_platform_operations_copilot_plan', {
+        actor_user_id: actorUserId,
+        target_organization_id: input.organizationId,
+        plan_enabled: input.enabled,
+        reason: input.reason,
+      });
+      if (error) {
+        throw operationError(
+          'platform_operations_copilot_plan',
+          'Unable to change Operations Copilot plan access.',
+          error,
+        );
+      }
     },
   };
 }

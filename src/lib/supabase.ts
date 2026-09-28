@@ -12,12 +12,24 @@ export function isConfigured() {
     process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   );
 }
-export async function supabase({ readOnly = true } = {}) {
+export async function supabase({ readOnly = true, signal }: {
+  readOnly?: boolean; signal?: AbortSignal;
+} = {}) {
+  signal?.throwIfAborted();
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) throw new Error('Supabase is not configured.');
   const jar = await cookies();
+  signal?.throwIfAborted();
   return createServerClient<Database>(url, key, {
+    ...(signal ? {
+      global: {
+        fetch: (input: RequestInfo | URL, init?: RequestInit) => fetch(input, {
+          ...init,
+          signal: init?.signal ? AbortSignal.any([signal, init.signal]) : signal,
+        }),
+      },
+    } : {}),
     cookies: {
       getAll: () => jar.getAll(),
       setAll(values) {

@@ -43,6 +43,13 @@ const migrations = [
   '20260926040633_spice_preparation_issues.sql',
   '20260926202013_platform_control_plane.sql',
   '20260926210000_production_finish_before_pickup.sql',
+  '20260927154241_operations_copilot_entitlements.sql',
+  '20260927183127_platform_operations_copilot_plan_control.sql',
+  '20260927191415_copilot_recipe_read_permission.sql',
+  '20260927210000_worker_scheduler.sql',
+  '20260927223514_workforce_schedule_publication.sql',
+  '20260927223625_copilot_read_audit_limits.sql',
+  '20260927231547_copilot_setter_active_profile_guard.sql',
 ];
 
 /** Apply migrations and synthetic identity data only inside the newly created test database. */

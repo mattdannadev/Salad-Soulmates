@@ -6,15 +6,27 @@ import hasPermission from '@/lib/permissions';
 import { rows, readResult } from '@/lib/data';
 import { PageHeader } from '@/components/shell';
 import { AccessProfileForm } from '@/components/settings-forms';
+import { CopilotProfileAccess } from '@/components/operations-copilot-access';
+
+const copilotProfileSchema = z.object({
+  id: z.uuid(),
+  operations_copilot_enabled: z.boolean(),
+});
+const copilotPlanSchema = z.object({ operations_copilot_plan_enabled: z.boolean() });
 
 export default async function ProfileManagementPage() {
   const { db, profile } = await requireAdminShell();
   const allowed = await hasPermission(db, 'settings.manage');
   if (!allowed) redirect('/app');
-  const [permissionResult, profiles, assignments] = await Promise.all([
+  const [
+    permissionResult, profiles, assignments, copilotProfilesResult, planResult,
+  ] = await Promise.all([
     db.from('permissions').select('*').order('area').order('code'),
     rows(db, 'access_profiles', rowSchemas.access_profiles),
     db.from('access_profile_permissions').select('access_profile_id,permission_code'),
+    db.from('access_profiles').select('id,operations_copilot_enabled'),
+    db.from('organizations').select('operations_copilot_plan_enabled')
+      .eq('id', profile.organization_id).single(),
   ]);
   const permissions = readResult(permissionResult, rowSchemas.permissions.array(), 'permissions');
   const assigned = readResult(
@@ -22,6 +34,16 @@ export default async function ProfileManagementPage() {
     z.array(z.object({ access_profile_id: z.uuid(), permission_code: z.string() })),
     'permission_assignments',
   );
+  const copilotProfiles = new Map(readResult(
+    copilotProfilesResult,
+    copilotProfileSchema.array(),
+    'operations_copilot_profile_defaults',
+  ).map((item) => [item.id, item.operations_copilot_enabled]));
+  const planEnabled = readResult(
+    planResult,
+    copilotPlanSchema,
+    'operations_copilot_plan',
+  ).operations_copilot_plan_enabled;
   const isSpanish = profile.preferred_locale === 'es';
   return (
     <>
@@ -53,6 +75,11 @@ export default async function ProfileManagementPage() {
                     </span>
                   ))}
               </div>
+              <CopilotProfileAccess
+                accessProfileId={accessProfile.id}
+                enabled={copilotProfiles.get(accessProfile.id) ?? false}
+                planEnabled={planEnabled}
+              />
               <details>
                 <summary>
                   {isSpanish ? 'Configurar áreas de acceso' : 'Configure access areas'}
@@ -70,6 +97,11 @@ export default async function ProfileManagementPage() {
           ) : (
             <details key={accessProfile.id}>
               <summary>{accessProfile.name}</summary>
+              <CopilotProfileAccess
+                accessProfileId={accessProfile.id}
+                enabled={copilotProfiles.get(accessProfile.id) ?? false}
+                planEnabled={planEnabled}
+              />
               <AccessProfileForm
                 profile={accessProfile}
                 permissions={permissions}

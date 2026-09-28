@@ -29,10 +29,16 @@ const managedProfileSchema = z.object({
   deactivated_at: z.string().nullable(),
   deactivated_by: z.uuid().nullable(),
   deactivation_reason: z.string().nullable(),
+  operations_copilot_override: z.boolean().nullable(),
 });
 
 const facilitySchema = z.object({ id: z.uuid(), name: z.string() });
-const accessProfileSchema = z.object({ id: z.uuid(), name: z.string(), active: z.boolean() });
+const accessProfileSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  active: z.boolean(),
+  operations_copilot_enabled: z.boolean(),
+});
 const loginEventSchema = z.object({
   id: z.uuid(),
   event_type: z.enum(['signed_in', 'signed_out']),
@@ -58,6 +64,9 @@ export interface ManagedUser {
 
 export interface ManagedUserDetail extends ManagedUser {
   loginHistory: z.infer<typeof loginEventSchema>[] | null;
+  operationsCopilotOverride?: boolean | null;
+  operationsCopilotProfileDefault?: boolean;
+  operationsCopilotPlanEnabled?: boolean;
 }
 
 export interface AccessProfileOption {
@@ -137,7 +146,7 @@ export function filterAndSortUsers(
 async function loadReferenceNames(db: UserManagementContext['db']) {
   const [facilitiesResult, accessProfilesResult] = await Promise.all([
     db.from('facilities').select('id,name').order('name'),
-    db.from('access_profiles').select('id,name,active').order('name'),
+    db.from('access_profiles').select('id,name,active,operations_copilot_enabled').order('name'),
   ]);
   const facilities = readResult(
     facilitiesResult,
@@ -152,6 +161,10 @@ async function loadReferenceNames(db: UserManagementContext['db']) {
   return {
     facilities: new Map(facilities.map((facility) => [facility.id, facility.name])),
     accessProfiles: new Map(accessProfiles.map((profile) => [profile.id, profile.name])),
+    copilotDefaults: new Map(accessProfiles.map((profile) => [
+      profile.id,
+      profile.operations_copilot_enabled,
+    ])),
     activeAccessProfileIds: new Set(
       accessProfiles.filter((profile) => profile.active).map((profile) => profile.id),
     ),
@@ -163,7 +176,7 @@ export async function loadUserDirectory(query: UserDirectoryQuery) {
   const [profilesResult, references] = await Promise.all([
     context.db
       .from('profiles')
-      .select('id,organization_id,facility_id,access_profile_id,first_name,last_name,display_name,work_email,role,preferred_locale,active,deactivated_at,deactivated_by,deactivation_reason')
+      .select('id,organization_id,facility_id,access_profile_id,first_name,last_name,display_name,work_email,role,preferred_locale,active,deactivated_at,deactivated_by,deactivation_reason,operations_copilot_override')
       .order('last_name')
       .order('first_name'),
     loadReferenceNames(context.db),
@@ -194,10 +207,10 @@ export async function loadManagedUser(userId: string): Promise<{
   if (!parsedUserId.success) notFound();
   const context = await requireUserManagement();
   const canReadAudit = await hasPermission(context.db, 'audit.read');
-  const [profileResult, references, loginResult] = await Promise.all([
+  const [profileResult, references, loginResult, planResult] = await Promise.all([
     context.db
       .from('profiles')
-      .select('id,organization_id,facility_id,access_profile_id,first_name,last_name,display_name,work_email,role,preferred_locale,active,deactivated_at,deactivated_by,deactivation_reason')
+      .select('id,organization_id,facility_id,access_profile_id,first_name,last_name,display_name,work_email,role,preferred_locale,active,deactivated_at,deactivated_by,deactivation_reason,operations_copilot_override')
       .eq('id', parsedUserId.data)
       .maybeSingle(),
     loadReferenceNames(context.db),
@@ -209,6 +222,7 @@ export async function loadManagedUser(userId: string): Promise<{
         .order('occurred_at', { ascending: false })
         .limit(10)
       : Promise.resolve({ data: null, error: null }),
+    context.db.from('organizations').select('operations_copilot_plan_enabled').single(),
   ]);
   if (profileResult.error) {
     throw operationError(
@@ -222,6 +236,11 @@ export async function loadManagedUser(userId: string): Promise<{
   const loginHistory = canReadAudit
     ? readResult(loginResult, loginEventSchema.array(), 'user_management_login_history')
     : null;
+  const copilotPlan = readResult(
+    planResult,
+    z.object({ operations_copilot_plan_enabled: z.boolean() }),
+    'user_management_copilot_plan',
+  );
   return {
     actorUserId: context.actorUserId,
     accessProfiles: [...references.accessProfiles]
@@ -230,6 +249,10 @@ export async function loadManagedUser(userId: string): Promise<{
     user: {
       ...combineUser(profile, references.facilities, references.accessProfiles),
       loginHistory,
+      operationsCopilotOverride: profile.operations_copilot_override,
+      operationsCopilotProfileDefault: references.copilotDefaults.get(profile.access_profile_id)
+        ?? false,
+      operationsCopilotPlanEnabled: copilotPlan.operations_copilot_plan_enabled,
     },
   };
 }

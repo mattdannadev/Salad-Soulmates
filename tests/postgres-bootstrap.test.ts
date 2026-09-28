@@ -9,7 +9,7 @@ it('initializes the native gate fixture with real migration permissions and RLS'
     await db.query("select set_config('request.jwt.claim.sub',$1,false)", [gateActor]);
     await db.exec('set role authenticated');
     expect((await db.query('select count(*)::int as count from public.access_profile_permissions')).rows)
-      .toEqual([{ count: 30 }]);
+      .toEqual([{ count: 38 }]);
     expect((await db.query("select public.has_permission('inventory.receive') as allowed")).rows)
       .toEqual([{ allowed: true }]);
     await expect(db.query('select public.validate_inventory()')).rejects.toThrow('permission denied');

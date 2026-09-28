@@ -3,11 +3,21 @@ import { z } from 'zod';
 import { requireAdminShell } from '@/lib/auth';
 import { rowSchemas, type Feedback } from '@/domain/master-data';
 import { rows } from '@/lib/data';
+import isOperationsCopilotEnabled from '@/services/operations-copilot-entitlement';
 
 const requestSchema = z.discriminatedUnion('mode', [
   z.object({ mode: z.literal('plan'), message: z.string().trim().min(1).max(1500), history: z.array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().max(2000) })).max(20).optional() }),
   z.object({ mode: z.literal('execute'), proposal: z.object({ action: z.literal('update_feedback_status'), feedbackId: z.uuid(), changes: z.object({ status: z.enum(['New', 'Reviewed', 'Resolved']), resolution_note: z.string().trim().max(2000).default('') }) }) }),
 ]);
+
+const providerResponseSchema = z.object({
+  output: z.array(z.object({
+    content: z.array(z.object({
+      type: z.string().optional(),
+      text: z.string().optional(),
+    })).optional(),
+  })).optional(),
+});
 
 function contextFor(feedback: Feedback[]) {
   return feedback.slice(0, 30).map((item) => ({
@@ -20,15 +30,35 @@ function contextFor(feedback: Feedback[]) {
   }));
 }
 
-export async function runAiWorkspace(input: unknown) {
+export default async function runAiWorkspace(input: unknown) {
   const parsed = requestSchema.safeParse(input);
   if (!parsed.success) return { ok: false as const, error: 'Enter a valid request.' };
+
+  // This legacy feedback workspace predates the Operations Copilot security gate.
+  // Keep it fail-closed until its provider, audit, proposal/confirmation and
+  // isolation controls are independently reviewed. The default prevents both an
+  // outbound provider call and the direct feedback-status mutation below.
+  if (process.env.OPERATIONS_COPILOT_AI_ENABLED !== 'true') {
+    return {
+      ok: false as const,
+      error: 'AI operations are not enabled. No data was changed.',
+    };
+  }
+  if (!await isOperationsCopilotEnabled()) {
+    return {
+      ok: false as const,
+      error: 'Operations Copilot is not enabled for your access profile. No data was changed.',
+    };
+  }
   const { db, profile } = await requireAdminShell();
 
   if (parsed.data.mode === 'execute') {
     const permissions = await db.from('access_profile_permissions').select('permission_code').eq('access_profile_id', profile.access_profile_id).eq('permission_code', 'feedback.manage');
     if (permissions.error || !permissions.data.length) return { ok: false as const, error: 'You do not have permission to update feedback.' };
-    const { feedbackId, changes: { status, resolution_note: resolutionNote } } = parsed.data.proposal;
+    const {
+      feedbackId,
+      changes: { status, resolution_note: resolutionNote },
+    } = parsed.data.proposal;
     const result = await db.from('feedback_items')
       .update({ status, resolution_note: resolutionNote })
       .eq('id', feedbackId)
@@ -53,17 +83,32 @@ export async function runAiWorkspace(input: unknown) {
     }),
   });
   if (!response.ok) return { ok: false as const, error: 'The AI workspace is temporarily unavailable. Your feedback data was not changed.' };
-  const payload = await response.json() as { output?: Array<{ type?: string; content?: Array<{ type?: string; text?: string }> }> };
-  const message = payload.output?.flatMap((item) => item.content ?? [])
-    .filter((part) => part.type === 'output_text').map((part) => part.text ?? '').join('').trim()
+  const payload: unknown = await response.json();
+  const parsedPayload = providerResponseSchema.safeParse(payload);
+  if (!parsedPayload.success) {
+    return { ok: false as const, error: 'The AI workspace is temporarily unavailable. Your feedback data was not changed.' };
+  }
+  const message = parsedPayload.data.output?.flatMap((item) => item.content ?? [])
+    .filter((part) => part.type === 'output_text').map((part) => part.text ?? '').join('')
+    .trim()
     || 'I could not produce a response. Please try again.';
-  const requestedStatus = /\b(resolve|resolved|close|closed)\b/i.test(plan.message) ? 'Resolved'
-    : /\b(review|reviewed)\b/i.test(plan.message) ? 'Reviewed' : null;
+  let requestedStatus: 'Resolved' | 'Reviewed' | null = null;
+  if (/\b(resolve|resolved|close|closed)\b/i.test(plan.message)) {
+    requestedStatus = 'Resolved';
+  } else if (/\b(review|reviewed)\b/i.test(plan.message)) {
+    requestedStatus = 'Reviewed';
+  }
   const id = plan.message.match(/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}/i)?.[0];
   const matching = id ? feedback.find((item) => item.id === id) : undefined;
-  const permissionResult = await db.from('access_profile_permissions').select('permission_code').eq('access_profile_id', profile.access_profile_id).eq('permission_code', 'feedback.manage');
-  const proposal = requestedStatus && matching && !permissionResult.error && permissionResult.data.length > 0
-    ? { action: 'update_feedback_status' as const, feedbackId: matching.id, feedbackSummary: matching.comment.slice(0, 140), changes: { status: requestedStatus, resolution_note: '' } }
+  const permissionResult = await db.from('access_profile_permissions')
+    .select('permission_code')
+    .eq('access_profile_id', profile.access_profile_id)
+    .eq('permission_code', 'feedback.manage');
+  const proposal = requestedStatus && matching && !permissionResult.error
+    && permissionResult.data.length > 0
+    ? {
+      action: 'update_feedback_status' as const, feedbackId: matching.id, feedbackSummary: matching.comment.slice(0, 140), changes: { status: requestedStatus, resolution_note: '' },
+    }
     : undefined;
   return { ok: true as const, message, proposal };
 }

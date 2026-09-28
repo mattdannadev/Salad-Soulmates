@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { PageHeader } from '@/components/shell';
 import UserAccountActions from '@/components/user-account-actions';
+import { CopilotUserAccess } from '@/components/operations-copilot-access';
 import { loadManagedUser } from '@/lib/user-management-data';
 import styles from '@/components/user-management.module.css';
 
@@ -99,6 +100,12 @@ export default async function UserDetail({
           {activity}
         </section>
       </div>
+      <CopilotUserAccess
+        userId={user.id}
+        override={user.operationsCopilotOverride ?? null}
+        profileDefault={user.operationsCopilotProfileDefault ?? false}
+        planEnabled={user.operationsCopilotPlanEnabled ?? false}
+      />
       <UserAccountActions
         userId={user.id}
         userName={fullName}

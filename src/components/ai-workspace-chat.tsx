@@ -64,6 +64,93 @@ async function postWorkspace(body: unknown): Promise<ApiResponse> {
   return payload;
 }
 
+function ProposalCard({
+  proposal,
+  state,
+  busy,
+  onChange,
+  onConfirm,
+  onCancel,
+}: {
+  proposal: FeedbackProposal;
+  state: 'pending' | 'cancelled' | 'completed';
+  busy: boolean;
+  onChange: (proposal: FeedbackProposal) => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [status, setStatus] = useState<FeedbackStatus>(proposal.changes.status);
+  const [note, setNote] = useState(proposal.changes.resolution_note);
+  const pending = state === 'pending';
+
+  return (
+    <div className={styles.proposal} aria-label="Proposed feedback update">
+      <div className={styles.proposalHeading}>
+        <strong>Update feedback</strong>
+        <span className={styles.state}>{({ pending: 'Needs approval', completed: 'Saved', cancelled: 'Cancelled' })[state]}</span>
+      </div>
+      <p className={styles.summary}>{proposal.feedbackSummary}</p>
+      <dl className={styles.details}>
+        <div>
+          <dt>Feedback ID</dt>
+          <dd>{proposal.feedbackId}</dd>
+        </div>
+        <div>
+          <dt>Status</dt>
+          <dd>{proposal.changes.status}</dd>
+        </div>
+        <div>
+          <dt>Resolution note</dt>
+          <dd>{proposal.changes.resolution_note || 'None'}</dd>
+        </div>
+      </dl>
+      {editing && pending && (
+        <div className={styles.editForm}>
+          <label htmlFor={`status-${proposal.feedbackId}`}>Status</label>
+          <select
+            id={`status-${proposal.feedbackId}`}
+            value={status}
+            onChange={(event) => {
+              const { value } = event.target;
+              if (value === 'New' || value === 'Reviewed' || value === 'Resolved') setStatus(value);
+            }}
+          >
+            <option>New</option>
+            <option>Reviewed</option>
+            <option>Resolved</option>
+          </select>
+          <label htmlFor={`note-${proposal.feedbackId}`}>Resolution note</label>
+          <textarea id={`note-${proposal.feedbackId}`} value={note} onChange={(event) => setNote(event.target.value)} rows={3} maxLength={2000} />
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              onChange({ ...proposal, changes: { status, resolution_note: note.trim() } });
+              setEditing(false);
+            }}
+          >
+            Save draft
+          </button>
+        </div>
+      )}
+      {pending && !editing && (
+        <div className={styles.actions}>
+          <button type="button" onClick={onConfirm} disabled={busy}>
+            <Check size={16} aria-hidden="true" />
+            Confirm update
+          </button>
+          <button type="button" className="secondary" onClick={() => setEditing(true)} disabled={busy}>Edit</button>
+          <button type="button" className="secondary" onClick={onCancel} disabled={busy}>
+            <X size={16} aria-hidden="true" />
+            Cancel
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AiWorkspaceChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -134,10 +221,10 @@ export default function AiWorkspaceChat() {
         <span className={styles.introIcon}><Sparkles size={20} aria-hidden="true" /></span>
         <div>
           <h2>What would you like to do?</h2>
-            <p>
-              Find feedback, ask a question, or describe a change.
-              You will review any update before it is saved.
-            </p>
+          <p>
+            Find feedback, ask a question, or describe a change.
+            You will review any update before it is saved.
+          </p>
         </div>
       </div>
 
@@ -153,13 +240,18 @@ export default function AiWorkspaceChat() {
             <span className={styles.speaker}>{message.role === 'user' ? 'You' : 'AI Workspace'}</span>
             <div className={styles.messageBody}>{message.content}</div>
             {message.proposal && (
-              // eslint-disable-next-line @typescript-eslint/no-use-before-define
               <ProposalCard
                 proposal={message.proposal}
                 state={message.proposalState || 'pending'}
                 busy={busy}
                 onChange={(proposal) => updateMessage(message.id, { proposal })}
-                onConfirm={() => { if (message.proposal) void confirm(message.id, message.proposal); }}
+                onConfirm={() => {
+                  if (message.proposal) {
+                    confirm(message.id, message.proposal).catch((cause: unknown) => {
+                      setError(cause instanceof Error ? cause.message : 'The update could not be saved.');
+                    });
+                  }
+                }}
                 onCancel={() => updateMessage(message.id, { proposalState: 'cancelled' })}
               />
             )}
@@ -170,7 +262,14 @@ export default function AiWorkspaceChat() {
       </div>
 
       {error && <div className={styles.error} role="alert">{error}</div>}
-      <form onSubmit={(event) => { void send(event); }} className={styles.composer}>
+      <form
+        onSubmit={(event) => {
+          send(event).catch((cause: unknown) => {
+            setError(cause instanceof Error ? cause.message : 'The request could not be completed.');
+          });
+        }}
+        className={styles.composer}
+      >
         <label className={styles.label} htmlFor="workspace-prompt">Your request</label>
         <div className={styles.composerRow}>
           <textarea
@@ -196,92 +295,5 @@ export default function AiWorkspaceChat() {
         <small>Enter to send · Shift + Enter for a new line</small>
       </form>
     </section>
-  );
-}
-
-function ProposalCard({
-  proposal,
-  state,
-  busy,
-  onChange,
-  onConfirm,
-  onCancel,
-}: {
-  proposal: FeedbackProposal;
-  state: 'pending' | 'cancelled' | 'completed';
-  busy: boolean;
-  onChange: (proposal: FeedbackProposal) => void;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [status, setStatus] = useState<FeedbackStatus>(proposal.changes.status);
-  const [note, setNote] = useState(proposal.changes.resolution_note);
-  const pending = state === 'pending';
-
-  return (
-    <div className={styles.proposal} aria-label="Proposed feedback update">
-      <div className={styles.proposalHeading}>
-        <strong>Update feedback</strong>
-        <span className={styles.state}>{({ pending: 'Needs approval', completed: 'Saved', cancelled: 'Cancelled' })[state]}</span>
-      </div>
-      <p className={styles.summary}>{proposal.feedbackSummary}</p>
-      <dl className={styles.details}>
-        <div>
-          <dt>Feedback ID</dt>
-          <dd>{proposal.feedbackId}</dd>
-        </div>
-        <div>
-          <dt>Status</dt>
-          <dd>{proposal.changes.status}</dd>
-        </div>
-        <div>
-          <dt>Resolution note</dt>
-          <dd>{proposal.changes.resolution_note || 'None'}</dd>
-        </div>
-      </dl>
-      {editing && pending && (
-        <div className={styles.editForm}>
-          <label htmlFor={`status-${proposal.feedbackId}`}>Status</label>
-          <select
-            id={`status-${proposal.feedbackId}`}
-            value={status}
-            onChange={(event) => {
-              const value = event.target.value;
-              if (value === 'New' || value === 'Reviewed' || value === 'Resolved') setStatus(value);
-            }}
-          >
-            <option>New</option>
-            <option>Reviewed</option>
-            <option>Resolved</option>
-          </select>
-          <label htmlFor={`note-${proposal.feedbackId}`}>Resolution note</label>
-          <textarea id={`note-${proposal.feedbackId}`} value={note} onChange={(event) => setNote(event.target.value)} rows={3} maxLength={2000} />
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              onChange({ ...proposal, changes: { status, resolution_note: note.trim() } });
-              setEditing(false);
-            }}
-          >
-            Save draft
-          </button>
-        </div>
-      )}
-      {pending && !editing && (
-        <div className={styles.actions}>
-          <button type="button" onClick={onConfirm} disabled={busy}>
-            <Check size={16} aria-hidden="true" />
-            Confirm update
-          </button>
-          <button type="button" className="secondary" onClick={() => setEditing(true)} disabled={busy}>Edit</button>
-          <button type="button" className="secondary" onClick={onCancel} disabled={busy}>
-            <X size={16} aria-hidden="true" />
-            Cancel
-          </button>
-        </div>
-      )}
-    </div>
   );
 }

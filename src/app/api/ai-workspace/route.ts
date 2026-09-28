@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { runAiWorkspace } from '@/services/ai-workspace';
+import runAiWorkspace from '@/services/ai-workspace';
 
 export async function POST(request: Request) {
   try {

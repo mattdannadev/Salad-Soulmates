@@ -1,0 +1,184 @@
+.control {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #d6e2cf;
+  border-radius: 12px;
+  background: #f8fbf5;
+}
+
+.copy,
+.panelHeading {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.copy p,
+.copy small,
+.panelHeading p,
+.planNote {
+  margin: 3px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.copy small {
+  display: block;
+  color: #7a5726;
+}
+
+.icon,
+.heroIcon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  color: var(--green);
+  background: var(--soft);
+  border-radius: 9px;
+}
+
+.icon {
+  width: 34px;
+  height: 34px;
+}
+
+.heroIcon {
+  width: 44px;
+  height: 44px;
+}
+
+.formRow,
+.userForm {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+}
+
+.formRow label,
+.userForm label {
+  display: grid;
+  flex: 1;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.formRow select,
+.userForm select {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 11px;
+  color: var(--ink);
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.formRow button,
+.userForm button {
+  width: auto;
+  min-height: 44px;
+}
+
+.success,
+.error,
+.planNote {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.success {
+  color: #245b34;
+  background: #edf7ec;
+  border: 1px solid #b8d7b5;
+}
+
+.error {
+  color: #8b2929;
+  background: #fff2f0;
+  border: 1px solid #efb7b1;
+}
+
+.userPanel {
+  overflow: hidden;
+}
+
+.panelHeading {
+  position: relative;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.panelHeading > div:nth-child(2) {
+  flex: 1;
+}
+
+.panelHeading h2 {
+  margin: 2px 0 6px;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--green) !important;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+}
+
+.allowed,
+.blocked {
+  flex: none;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.allowed {
+  color: #245b34;
+  background: #e8f3e5;
+}
+
+.blocked {
+  color: #6d4b1c;
+  background: #f8edda;
+}
+
+.userForm {
+  padding-top: 20px;
+}
+
+.planNote {
+  margin-top: 14px;
+  color: #6d4b1c;
+  background: #fff9ed;
+  border: 1px solid #ead7ab;
+}
+
+.userPanel > .success,
+.userPanel > .error {
+  margin-top: 14px;
+}
+
+@media (max-width: 700px) {
+  .formRow,
+  .userForm,
+  .panelHeading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .formRow button,
+  .userForm button {
+    width: 100%;
+  }
+
+  .allowed,
+  .blocked {
+    align-self: flex-start;
+  }
+}

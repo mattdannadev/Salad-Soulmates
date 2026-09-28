@@ -157,11 +157,15 @@ async function deleteReferenceOption(db: Client, input: unknown) {
   const parsed = referenceOptionDeleteSchema.safeParse(input);
   if (!parsed.success) return invalidInput(parsed.error);
   const { id, list_code: listCode, code } = parsed.data;
-  const usage = listCode === 'ingredient_category'
-    ? await db.from('ingredients').select('id', { count: 'exact', head: true }).eq('category', code)
-    : listCode === 'feedback_type'
-      ? await db.from('feedback_items').select('id', { count: 'exact', head: true }).eq('feedback_type', code)
-      : { count: 0, error: null };
+  let usage: { count: number | null; error: { message: string } | null } = {
+    count: 0,
+    error: null,
+  };
+  if (listCode === 'ingredient_category') {
+    usage = await db.from('ingredients').select('id', { count: 'exact', head: true }).eq('category', code);
+  } else if (listCode === 'feedback_type') {
+    usage = await db.from('feedback_items').select('id', { count: 'exact', head: true }).eq('feedback_type', code);
+  }
   if (usage.error) return saved(usage, 'reference-option-delete', false);
   if ((usage.count ?? 0) > 0) return { ok: false, message: 'This value is already in use. Deactivate it instead to preserve history.' };
   return saved(await db.from('reference_options').delete().eq('id', id), 'reference-option-delete', false);

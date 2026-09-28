@@ -2,6 +2,15 @@
 
 Updated: September 24, 2026
 
+## Native mobile companion plan
+
+The standalone Expo/React Native delivery plan is
+[Mobile build plan](../../Mobile/docs/build-plan.md). It inherits this product
+roadmap's business rules, sequencing, decisions, and release gates while
+tracking mobile-specific architecture, device, accessibility, and store-release
+work separately. It does not authorize a second backend, direct privileged
+database access from a device, production credentials, deployment, or release.
+
 ## Current checkpoint
 
 Platform tenant administration: add a separately deployed operator site backed
@@ -24,6 +33,51 @@ branches for each preview by default; they are billed separately. A third,
 dedicated Preview database remains a later option when preview isolation or
 parallel review work justifies its cost. Production and Sandbox must always use
 separate credentials, secrets, and deployment environment variables.
+
+### Enterprise identity / SSO — qualified midmarket delivery gate
+
+SSO is a **qualified midmarket capability**, not a current SMB-pilot promise or
+an implied availability date. Keep the existing authentication path for SMB and
+for every tenant until its SSO configuration has passed the staged acceptance
+gate below. Product authorization remains server-side: SSO proves identity only;
+organization, facility, role, suspension, and entitlement decisions must remain
+enforced by the application and Supabase RLS rather than by IdP group claims or
+client-side state.
+
+1. **Discovery and provider decision:** before implementation, document the
+   target buyer's identity requirements, supported IdP(s), tenant model, expected
+   user lifecycle, and procurement/security evidence. Choose SAML 2.0 or OIDC
+   (and any authentication platform/provider) from compatibility, operational,
+   security, and support evidence; do not commit to a protocol or provider in a
+   proposal before that gate.
+2. **Tenant-safe configuration:** bind each IdP connection to one verified
+   organization and verified email domain(s), with an audited, privileged setup
+   workflow. Prevent a domain or issuer from being claimed by multiple tenants.
+   Define safe handling for invite redemption, existing-password accounts,
+   duplicate identities, email changes, contractor accounts, and just-in-time
+   provisioning so that account linking never crosses organizations or silently
+   escalates permissions.
+3. **Lifecycle and access controls:** support the approved create, disable,
+   re-enable, role-change, and tenant-suspension paths with immutable audit
+   evidence. Provisioning and deprovisioning must preserve least privilege and
+   remove access promptly. SCIM is deferred unless a qualified customer volume,
+   lifecycle requirement, and delivery/support capacity justify it; it is not
+   required merely because SSO is enabled.
+4. **Resilience and support readiness:** provide an organization-scoped rollback
+   from SSO to the approved fallback sign-in path, and tightly controlled,
+   audited break-glass administrator access that cannot bypass tenant suspension,
+   server-side authorization, or RLS. Define ownership, support verification,
+   emergency recovery, configuration-change approval, and customer-facing
+   operating instructions before sale.
+5. **Acceptance and security review:** validate a real non-production IdP flow
+   for authorized and unauthorized users; verified-domain enforcement; tenant
+   isolation; safe linking/conflict cases; invitation and lifecycle events;
+   deprovisioning; rollback and break-glass recovery; audit records; and
+   organization/facility/RLS negative tests. Complete a security and privacy
+   review of assertion/token validation, redirect URIs, issuer/audience/signature
+   checks, session handling, logging, secrets, rate limits, and support access.
+   Do not mark SSO sellable until the selected integration, operational runbook,
+   and these tests are accepted for the contracted scope.
 
 Inventory management follow-up: make the Inventory workspace writable for users with
 inventory-adjust permission. Record immutable manual gains, manual shrinks and
@@ -195,17 +249,19 @@ initial 3 × 5 inch label, one per bag. The owner explicitly deferred production
 completion and tank transfers. Physical packaging execution remains dependent on
 those workflows; scheduling is still pending. See `packaging-setup.md`.
 
-| Order | Build phase                                          | Scope / sequencing                                                                                                                                                               |
-| ----- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | Engineering standards and existing-code refactor     | Complete remaining real Auth and independent-review acceptance; preserve CI and mandatory engineering standards.                                                                 |
-| 2     | Customer orders, inventory assessment and purchasing | Enter customer, products, batch counts and date once. Automatically calculate ingredient needs and supplier purchasing estimates on the order.                                   |
-| 3     | Complete receiving and serialization                 | Preserve existing work; receiving updates stock and outstanding inbound for order estimates.                                                                                     |
-| 4     | Internal production preparation                      | Generate released batch work and spice buckets from saved orders. Keep production readiness and later start-date results attached to the order; no duplicate order-entry module. |
-| 5     | Scheduling and worker schedule                       | Plan production dates and administrator assignments linked to orders, plus worker schedules and approved PTO/mobile/language requirements.                                       |
-| 6     | Packaging                                            | Complete the approved packaging workflow.                                                                                                                                        |
-| 7     | Shipping                                             | Complete the approved shipping workflow.                                                                                                                                         |
-| 8     | Dropdown-list / reference-data management            | Finish administration after shipping while preserving current settings.                                                                                                          |
-| 9     | Third-party product-grid replacement                 | Replace product grids last; keep this separate from workflow changes.                                                                                                            |
+| Order | Build phase                                          | Scope / sequencing                                                                                                                                                                     |
+| ----- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | Engineering standards and existing-code refactor     | Complete remaining real Auth and independent-review acceptance; preserve CI and mandatory engineering standards.                                                                       |
+| 2     | Customer orders, inventory assessment and purchasing | Enter customer, products, batch counts and date once. Automatically calculate ingredient needs and supplier purchasing estimates on the order.                                         |
+| 3     | Complete receiving and serialization                 | Preserve existing work; receiving updates stock and outstanding inbound for order estimates.                                                                                           |
+| 4     | Internal production preparation                      | Generate released batch work and spice buckets from saved orders. Keep production readiness and later start-date results attached to the order; no duplicate order-entry module.       |
+| 5     | Scheduling and worker schedule                       | Plan production dates and administrator assignments linked to orders, plus worker schedules and approved PTO/mobile/language requirements.                                             |
+| 6     | Packaging                                            | Complete the approved packaging workflow.                                                                                                                                              |
+| 7     | Shipping                                             | Complete the approved shipping workflow.                                                                                                                                               |
+| 8     | Dropdown-list / reference-data management            | Finish administration after shipping while preserving current settings.                                                                                                                |
+| 9     | Third-party product-grid replacement — **Complete**  | AG Grid is now the shared grid foundation, including Spanish localization, used by the application directories. Keep future workflow changes separate from this completed replacement. |
+
+Phase 5 implementation is in progress: see [Worker scheduling](scheduling-worker-schedule.md) for the approved facility-scoped calendar, employee assignment, utilization, permission, and audit contract. Calendar UI and release verification remain to be completed before marking the phase complete.
 
 This owner correction changes workflow and sequencing, not confirmed recipe,
 lot/date, inventory, facility isolation, packaging or workforce rules.

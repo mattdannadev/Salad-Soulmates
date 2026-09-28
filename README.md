@@ -21,8 +21,8 @@ Repository merge status does not establish current deployment status.
 - [Database setup and verification](docs/database.md)
 - [Review and deployment gates](docs/review.md)
 - [Owner decisions and source precedence](docs/decisions.md)
-- [Build Specification v1.1](docs/requirements/Salad_Soulmates_Build_Specification_v1.1.md)
-- [PRD v2.2](docs/requirements/Salad_Soulmates_PRD_v2.2.md)
+- [Build Specification v1.1](../Requirements/Salad_Soulmates_Build_Specification_v1.1.md)
+- [PRD v2.2](../Requirements/Salad_Soulmates_PRD_v2.2.md)
 - [Mockup reference index](docs/mockups/README.md)
 
 ## Directory map
@@ -37,7 +37,7 @@ supabase/
   migrations/   Versioned database changes
 tests/          Domain and database verification
 docs/
-  requirements/ Original versioned product specifications
+  requirements/ Historical comparison snapshots; canonical requirements are in ../Requirements/
   mockups/      Reference screenshots and screen index
 scripts/        Small development utilities when needed
 ```

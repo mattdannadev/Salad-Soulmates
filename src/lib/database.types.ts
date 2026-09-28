@@ -537,6 +537,7 @@ export type Database = {
           id: string;
           is_system: boolean;
           name: string;
+          operations_copilot_enabled: boolean;
           organization_id: string;
         };
         Insert: {
@@ -546,6 +547,7 @@ export type Database = {
           id?: string;
           is_system?: boolean;
           name: string;
+          operations_copilot_enabled?: boolean;
           organization_id: string;
         };
         Update: {
@@ -555,6 +557,7 @@ export type Database = {
           id?: string;
           is_system?: boolean;
           name?: string;
+          operations_copilot_enabled?: boolean;
           organization_id?: string;
         };
         Relationships: [
@@ -1138,6 +1141,7 @@ export type Database = {
           created_at: string;
           id: string;
           name: string;
+          operations_copilot_plan_enabled: boolean;
           signup_enabled: boolean;
           signup_enabled_before_suspension: boolean | null;
           slug: string;
@@ -1147,6 +1151,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           name: string;
+          operations_copilot_plan_enabled?: boolean;
           signup_enabled?: boolean;
           signup_enabled_before_suspension?: boolean | null;
           slug: string;
@@ -1156,6 +1161,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           name?: string;
+          operations_copilot_plan_enabled?: boolean;
           signup_enabled?: boolean;
           signup_enabled_before_suspension?: boolean | null;
           slug?: string;
@@ -1252,6 +1258,7 @@ export type Database = {
           first_name: string;
           id: string;
           last_name: string;
+          operations_copilot_override: boolean | null;
           organization_id: string;
           preferred_locale: string;
           role: string;
@@ -1268,6 +1275,7 @@ export type Database = {
           first_name: string;
           id: string;
           last_name: string;
+          operations_copilot_override?: boolean | null;
           organization_id: string;
           preferred_locale?: string;
           role: string;
@@ -1284,6 +1292,7 @@ export type Database = {
           first_name?: string;
           id?: string;
           last_name?: string;
+          operations_copilot_override?: boolean | null;
           organization_id?: string;
           preferred_locale?: string;
           role?: string;
@@ -1901,6 +1910,7 @@ export type Database = {
           slug: string;
           status: 'active' | 'suspended';
           signup_enabled: boolean;
+          operations_copilot_plan_enabled: boolean;
           enabled_user_count: number;
           created_at: string;
         }[];
@@ -1924,9 +1934,27 @@ export type Database = {
         };
         Returns: undefined;
       };
+      set_platform_operations_copilot_plan: {
+        Args: {
+          actor_user_id: string;
+          target_organization_id: string;
+          plan_enabled: boolean;
+          reason: string;
+        };
+        Returns: undefined;
+      };
       save_customer_master: { Args: { payload: Json }; Returns: string };
       save_packaging_profile: { Args: { payload: Json }; Returns: string };
       save_shipping_draft: { Args: { payload: Json }; Returns: string };
+      get_workforce_schedule: { Args: { payload: Json }; Returns: Json };
+      get_my_workforce_schedule: { Args: { payload: Json }; Returns: Json };
+      publish_workforce_schedule: { Args: { payload: Json }; Returns: string };
+      save_workforce_schedule_event: { Args: { payload: Json }; Returns: string };
+      delete_workforce_schedule_event: { Args: { payload: Json }; Returns: string };
+      save_workforce_pto: { Args: { payload: Json }; Returns: string };
+      cancel_workforce_pto: { Args: { payload: Json }; Returns: string };
+      save_workforce_availability: { Args: { payload: Json }; Returns: string };
+      save_facility_schedule_settings: { Args: { payload: Json }; Returns: string };
       save_order_production_plan: { Args: { payload: Json }; Returns: string };
       assign_production_lot: { Args: { payload: Json }; Returns: string };
       open_batch_worksheet: { Args: { batch_id: string }; Returns: string };
@@ -2006,6 +2034,30 @@ export type Database = {
       current_org: { Args: never; Returns: string };
       current_role: { Args: never; Returns: string };
       has_permission: { Args: { requested: string }; Returns: boolean };
+      operations_copilot_enabled: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      begin_operations_copilot_request: {
+        Args: { requested_intent: string; request_correlation_id: string };
+        Returns: string;
+      };
+      finish_operations_copilot_request: {
+        Args: { request_correlation_id: string; request_outcome: string };
+        Returns: undefined;
+      };
+      purge_operations_copilot_requests: {
+        Args: Record<PropertyKey, never>;
+        Returns: number;
+      };
+      set_operations_copilot_profile_default: {
+        Args: { enabled: boolean; target_access_profile_id: string };
+        Returns: undefined;
+      };
+      set_operations_copilot_user_override: {
+        Args: { enabled_override: boolean | null; target_user_id: string };
+        Returns: undefined;
+      };
       login_event_user_names: {
         Args: Record<PropertyKey, never>;
         Returns: { display_name: string; user_id: string }[];

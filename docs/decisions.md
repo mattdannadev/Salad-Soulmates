@@ -1,5 +1,19 @@
 # Implementation decisions
 
+## 2026-09-27 — Dedicated standalone mobile delivery plan
+
+The owner authorized a dedicated build plan for the standalone Expo/React Native
+mobile application. It lives at Mobile/docs/build-plan.md and is cross-linked
+from the canonical product documentation. It complements the existing product
+plan: the web/product plan remains authoritative for business rules,
+requirements, data integrity, authorization, feature sequencing, and releases.
+
+The mobile plan tracks native routing, device UX, secure mobile API contracts,
+camera/scanner work, accessibility, offline policy, mobile testing, store
+delivery, and owner acceptance. It does not authorize a separate backend,
+privileged mobile database access, production credentials, hosted data changes,
+deployment, or store release.
+
 ## 2026-09-26 — Clear order deletion, production dates, and recipe totals
 
 Order deletion remains the existing confirmed soft-deactivation workflow, but its

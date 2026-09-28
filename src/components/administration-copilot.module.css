@@ -1,0 +1,337 @@
+.workspace {
+  display: grid;
+  gap: 20px;
+}
+
+.safety {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px;
+  color: #244c2d;
+  background: #f2f8ee;
+  border: 1px solid #b9d1ad;
+  border-radius: 12px;
+}
+
+.safetyIcon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  background: #e2efdc;
+  border-radius: 10px;
+}
+
+.safety p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.safety > div {
+  flex: 1;
+}
+
+.readOnlyBadge {
+  flex: none;
+  padding: 5px 9px;
+  color: var(--green);
+  background: var(--white);
+  border: 1px solid #c8d8c0;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.intentGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.intentCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  padding: 20px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  transition:
+    border-color 0.16s ease,
+    transform 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.intentCard:hover {
+  transform: translateY(-2px);
+  border-color: #c5d1bf;
+  box-shadow: 0 10px 32px #283f2717;
+}
+
+.intentCard > svg {
+  color: var(--green);
+}
+
+.intentCard h2 {
+  margin: 14px 0 6px;
+  font-size: 18px;
+}
+
+.intentCard p {
+  flex: 1;
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.intentCard label {
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.intentCard select {
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 9px 10px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.intentCard button {
+  width: 100%;
+  min-height: 42px;
+}
+
+.intentCard a,
+.resultsHeader a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 12px;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.error {
+  padding: 14px 16px;
+  color: #8b2929;
+  background: #fff2f0;
+  border: 1px solid #efb7b1;
+  border-radius: 10px;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  color: #34553c;
+  background: #f5f8f2;
+  border: 1px solid #d1ddca;
+  border-radius: 10px;
+}
+
+.loading span,
+.shortcuts div span {
+  display: block;
+}
+
+.spinner {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.results {
+  padding: 22px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+
+.resultsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.resultsHeader > div {
+  flex: 1;
+}
+
+.confirmIcon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  color: #2d6a3b;
+  background: #e0efdc;
+  border-radius: 50%;
+}
+
+.resultsHeader span {
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.resultsHeader h2 {
+  margin: 3px 0 0;
+  font-size: 20px;
+}
+
+.resultsHeader a {
+  margin-top: 0;
+}
+
+.setupResult {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0 0;
+}
+
+.setupResult div {
+  padding: 14px;
+  background: var(--soft);
+  border-radius: 9px;
+}
+
+.setupResult dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.setupResult dd {
+  margin: 5px 0 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.record {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.record:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.record div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.record p {
+  margin: 6px 0;
+  color: var(--muted);
+}
+
+.record small {
+  color: var(--muted);
+}
+
+.badge {
+  padding: 3px 8px;
+  color: #79351e;
+  background: #fff0e7;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.empty {
+  padding: 32px 10px 14px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.empty strong {
+  color: var(--ink);
+}
+
+.empty p {
+  margin: 3px 0 0;
+}
+
+.shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  padding: 16px 18px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.shortcuts div {
+  flex: 1 1 280px;
+}
+
+.shortcuts div span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.shortcuts a {
+  color: var(--green);
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .intentGrid,
+  .setupResult {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .safety {
+    flex-direction: column;
+  }
+
+  .readOnlyBadge {
+    align-self: flex-start;
+  }
+
+  .resultsHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intentCard {
+    transition: none;
+  }
+
+  .spinner {
+    animation: none;
+  }
+}

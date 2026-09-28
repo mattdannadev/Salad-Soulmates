@@ -1,0 +1,336 @@
+.workspace {
+  display: grid;
+  gap: 1.25rem;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.8rem;
+}
+.toolbar label,
+.periodFields label,
+.modal label {
+  display: grid;
+  gap: 0.3rem;
+  font-weight: 650;
+}
+.toolbar select,
+.periodFields input,
+.modal input,
+.modal select,
+.modal textarea {
+  border: 1px solid #a9b8b0;
+  border-radius: 0.45rem;
+  padding: 0.55rem 0.7rem;
+  background: #fff;
+  color: #143b2c;
+  font: inherit;
+}
+.toolbar button,
+.periodFields button,
+.assignments button,
+.dialogActions button {
+  border: 1px solid #9ab3a5;
+  border-radius: 0.45rem;
+  background: #fff;
+  color: #143b2c;
+  padding: 0.55rem 0.9rem;
+  font: inherit;
+  cursor: pointer;
+}
+.toolbar button:focus-visible,
+.periodFields button:focus-visible,
+.assignments button:focus-visible,
+.dialogActions button:focus-visible,
+.employeeList input:focus-visible {
+  outline: 3px solid #c8801c;
+  outline-offset: 2px;
+}
+.toolbar button:disabled,
+.dialogActions button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.toolbar .primary,
+.dialogActions .primary {
+  background: #176240;
+  border-color: #176240;
+  color: #fff;
+}
+.viewSwitch {
+  display: flex;
+  gap: 0.25rem;
+}
+.viewSwitch button[aria-pressed='true'] {
+  background: #d9efe1;
+  border-color: #176240;
+}
+.capacity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.7rem;
+  padding: 0.8rem 1rem;
+  border-radius: 0.65rem;
+  background: #f0f8f1;
+}
+.capacity label {
+  display: grid;
+  gap: 0.25rem;
+  font-weight: 650;
+}
+.capacity input {
+  border: 1px solid #a9b8b0;
+  border-radius: 0.45rem;
+  padding: 0.45rem 0.6rem;
+  background: #fff;
+  color: #143b2c;
+  font: inherit;
+  max-width: 140px;
+}
+.capacity button {
+  border: 1px solid #176240;
+  border-radius: 0.45rem;
+  background: #176240;
+  color: #fff;
+  padding: 0.55rem 0.9rem;
+  font: inherit;
+  cursor: pointer;
+}
+.layout {
+  display: grid;
+  grid-template-columns: minmax(210px, 260px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+.sidebar,
+.calendar,
+.summary,
+.assignments {
+  border: 1px solid #d2e0d8;
+  border-radius: 0.8rem;
+  background: #fff;
+  padding: 1rem;
+  min-width: 0;
+}
+.sidebar h2,
+.summary h2,
+.assignments h2 {
+  font-size: 1.1rem;
+  margin: 0 0 0.4rem;
+}
+.sidebar h2:not(:first-child) {
+  margin-top: 1.5rem;
+}
+.sidebar p,
+.summary p {
+  color: #4c6055;
+  font-size: 0.9rem;
+  margin: 0.2rem 0 0.8rem;
+}
+.employeeList {
+  display: grid;
+  gap: 0.45rem;
+  max-height: 220px;
+  overflow: auto;
+}
+.employeeList label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 500;
+}
+.employeeList input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #176240;
+}
+.bands {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.bands li {
+  border-left: 4px solid #6cb787;
+  background: #f0f8f1;
+  padding: 0.45rem 0.6rem;
+  display: grid;
+  gap: 0.2rem;
+  font-size: 0.85rem;
+}
+.calendar {
+  overflow: auto;
+  min-height: 650px;
+}
+.calendar > * {
+  min-width: 500px;
+  min-height: 620px;
+}
+.summaryHeader {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.periodFields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.5rem;
+}
+.tableScroll {
+  overflow-x: auto;
+}
+.tableScroll table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+.tableScroll caption {
+  text-align: left;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+  color: #4c6055;
+}
+.tableScroll th,
+.tableScroll td {
+  border-bottom: 1px solid #d2e0d8;
+  padding: 0.6rem 0.7rem;
+  text-align: left;
+}
+.tableScroll thead {
+  background: #f0f8f1;
+}
+.assignments ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  display: grid;
+  gap: 0.45rem;
+}
+.assignments li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid #e5eee7;
+}
+.warning {
+  color: #9a4c08;
+  font-weight: 650;
+}
+.status {
+  margin: 0;
+  padding: 0.7rem;
+  border-radius: 0.45rem;
+  background: #edf7f0;
+}
+.publication {
+  margin: 0;
+  border-left: 4px solid #176240;
+  padding: 0.7rem 1rem;
+  background: #edf7f0;
+}
+.availability {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 0.8rem;
+  border: 1px solid #d2e0d8;
+  border-radius: 0.5rem;
+}
+.availability label {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  min-height: 48px;
+}
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #0b211aaa;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+.modal {
+  width: min(600px, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  background: #fff;
+  border-radius: 0.8rem;
+  padding: 1.25rem;
+  display: grid;
+  gap: 0.9rem;
+  box-shadow: 0 15px 60px #0004;
+}
+.modal h2 {
+  margin: 0;
+}
+.modal fieldset {
+  border: 1px solid #d2e0d8;
+  border-radius: 0.5rem;
+}
+.modal legend {
+  font-weight: 650;
+}
+.dates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+.dialogActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+.dialogActions button:first-child:not(:last-child) {
+  margin-right: auto;
+}
+@media (max-width: 1000px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 1rem;
+  }
+  .sidebar h2:not(:first-child) {
+    margin-top: 0;
+  }
+}
+@media (max-width: 650px) {
+  .sidebar {
+    display: block;
+  }
+  .sidebar h2:not(:first-child) {
+    margin-top: 1.2rem;
+  }
+  .dates {
+    grid-template-columns: 1fr;
+  }
+  .layout {
+    order: 5;
+  }
+  .calendar {
+    display: none;
+  }
+  .assignments {
+    order: 2;
+  }
+  .summary {
+    order: 4;
+  }
+  .toolbar button,
+  .assignments button,
+  .dialogActions button {
+    min-height: 48px;
+  }
+}

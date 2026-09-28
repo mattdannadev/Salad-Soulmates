@@ -7,7 +7,7 @@ export default function AiWorkspacePage() {
       <PageHeader
         eyebrow="WORKSPACE ASSISTANT"
         title="AI Workspace"
-        description="Ask about feedback and review proposed updates before saving them."
+        description="Ask about recipes, orders, inventory, and other workspace activity. Review every proposed change before saving it."
       />
       <AiWorkspaceChat />
     </>
