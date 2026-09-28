@@ -222,12 +222,20 @@ export default function WorkforceScheduler({
       return sortPeople === 'least' ? difference || left.name.localeCompare(right.name) : -difference || left.name.localeCompare(right.name);
     }), [facilityEmployees, employeeSearch, sortPeople, utilization]);
 
+  function assignmentContext(item: Assignment): string {
+    const product = item.productId
+      ? products.find((candidate) => candidate.id === item.productId)?.name : null;
+    const customer = item.customerId
+      ? customers.find((candidate) => candidate.id === item.customerId)?.name : null;
+    return [item.note, product, customer, item.locationLabel].filter(Boolean).join(' · ');
+  }
+
   const calendarEvents = useMemo<SchedulerEvent[]>(() => [...facilityAssignments
     .filter((item) => (!item.employeeIds.length || item.employeeIds.some((id) => shownIds.has(id)))
       && (!selectedTypes.length || selectedTypes.includes(item.type)))
     .map((item) => ({
       id: item.id,
-      title: `${labels[locale][item.type]} · ${item.employeeIds.map((id) => facilityEmployees.find((person) => person.id === id)?.name).filter(Boolean).join(', ')}`,
+      title: [labels[locale][item.type], assignmentContext(item)].filter(Boolean).join(' · '),
       start: item.startDate,
       end: addDays(item.endDate, 1),
       allDay: true,
@@ -318,7 +326,7 @@ export default function WorkforceScheduler({
       startDate: activeDate,
       endDate: activeDate,
       type: 'making_product',
-      employeeIds: [],
+      employeeIds: selectedEmployees,
       note: null,
       productionPlanId: null,
       linkedTaskType: null,
@@ -541,6 +549,10 @@ export default function WorkforceScheduler({
     <div className={styles.workspace}>
       <div className={styles.controlBar}>
       <div className={styles.filters} aria-label={es ? 'Filtros de horario' : 'Schedule filters'}>
+        <div className={styles.controlIntro}>
+          <strong>{es ? 'Vista del calendario' : 'Calendar view'}</strong>
+          <span>{es ? 'Estos controles cambian lo que se muestra.' : 'These controls change what is shown below.'}</span>
+        </div>
         <label>
           {es ? 'Instalación' : 'Facility'}
           <select value={facilityId} onChange={(event) => selectFacility(event.target.value)}>
@@ -559,6 +571,10 @@ export default function WorkforceScheduler({
         </label>
       </div>
       {canManage && <div className={styles.actions} aria-label={es ? 'Acciones de horario' : 'Schedule actions'}>
+        <div className={styles.controlIntro}>
+          <strong>{es ? 'Programar trabajo' : 'Schedule work'}</strong>
+          <span>{es ? 'Crear o publicar cambios.' : 'Create or publish changes.'}</span>
+        </div>
         <button type="button" className={styles.primary} onClick={() => openForm()}>{es ? 'Nueva asignación' : 'New assignment'}</button>
         <button
           type="button"
@@ -608,9 +624,10 @@ export default function WorkforceScheduler({
         </section>
         )}
         <div className={styles.layout}>
-          <aside className={styles.sidebar} aria-label={es ? 'Empleados y producción' : 'Employees and production'}>
-            <h2>{es ? 'Personas' : 'People'}</h2>
-            <p>{es ? 'Menor utilización aparece primero para ayudar a equilibrar el trabajo.' : 'Least utilized appears first to help balance work.'}</p>
+          <aside className={styles.sidebar} aria-label={es ? 'Personal y producción' : 'Staffing and production'}>
+            <h2>{es ? 'Personal' : 'Staffing'}</h2>
+            <p>{es ? 'Seleccione una o más personas para enfocar el calendario y rellenar una nueva asignación.' : 'Select one or more people to focus the calendar and prefill a new assignment.'}</p>
+            <p>{es ? 'La menor utilización aparece primero para ayudar a equilibrar el trabajo.' : 'Least utilized appears first to help balance work.'}</p>
             <div className={styles.peopleControls}>
               <input aria-label={es ? 'Buscar empleados' : 'Search employees'} placeholder={es ? 'Buscar' : 'Search'} value={employeeSearch} onChange={(event) => setEmployeeSearch(event.target.value)} />
               <select aria-label={es ? 'Ordenar empleados' : 'Sort employees'} value={sortPeople} onChange={(event) => setSortPeople(event.target.value as typeof sortPeople)}>
@@ -622,11 +639,17 @@ export default function WorkforceScheduler({
             </div>
             <div className={styles.employeeList}>
               {peopleForPanel.map((person) => (
-                <label key={person.id}>
-                  <input type="checkbox" checked={selectedEmployees.includes(person.id)} onChange={(event) => setSelectedEmployees((current) => (event.target.checked ? [...current, person.id] : current.filter((id) => id !== person.id)))} />
+                <button
+                  key={person.id}
+                  type="button"
+                  className={styles.personOption}
+                  aria-pressed={selectedEmployees.includes(person.id)}
+                  onClick={() => setSelectedEmployees((current) => (current.includes(person.id)
+                    ? current.filter((id) => id !== person.id) : [...current, person.id]))}
+                >
                   <span className={styles.personName}>{person.name}</span>
                   <span className={styles.utilization}>{utilization.get(person.id)?.hours.toFixed(1)}h · {utilization.get(person.id)?.percent}%</span>
-                </label>
+                </button>
               ))}
               {!facilityEmployees.length && <p>{es ? 'No hay empleados en esta instalación.' : 'No employees at this facility.'}</p>}
             </div>
@@ -649,7 +672,7 @@ export default function WorkforceScheduler({
             </ul>
           </aside>
           <div className={styles.calendar} aria-label={es ? 'Calendario de empleados' : 'Employee calendar'}>
-            <p className={styles.calendarHint}>{es ? 'Arrastre trabajo a una persona y día, o seleccione Nueva asignación.' : 'Drag work to a person and day, or select New assignment.'}</p>
+            <p className={styles.calendarHint}>{es ? 'Seleccione personal y luego haga clic en un día libre para programar. También puede usar Nueva asignación.' : 'Select staff, then click an open day to schedule work. You can also use New assignment.'}</p>
             <ThemeProvider theme={es ? spanishTheme : englishTheme}>
               <EventCalendar
                 events={calendarEvents}

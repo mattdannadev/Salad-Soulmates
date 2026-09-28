@@ -272,9 +272,11 @@ The scheduler is the facility's daily event board: it must support production
 work (spices, mixing, making product, wrapping, and cleaning) plus unrelated
 work. Production Runs are traceability groupings linked to applicable events;
 their lot numbers are issued at actual start, never while merely scheduling.
-Phase 5 acceptance includes separated filters/actions, timeframe-aware
-utilization in the people selection panel, clear click-or-drag assignment
-guidance, and consistently compact controls.
+Phase 5 acceptance includes separated, labeled calendar-view filters and
+scheduling actions; timeframe-aware utilization in the staffing selection
+panel; click-an-empty-day and form-first assignment paths; optional (never
+required) drag/drop; work context on calendar cards; and consistently compact
+controls.
 
 This owner correction changes workflow and sequencing, not confirmed recipe,
 lot/date, inventory, facility isolation, packaging or workforce rules.

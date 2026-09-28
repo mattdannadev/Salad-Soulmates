@@ -19,6 +19,19 @@
   align-items: end;
   gap: 0.55rem;
 }
+.controlIntro {
+  display: grid;
+  gap: 0.1rem;
+  margin-right: 0.2rem;
+}
+.controlIntro strong {
+  font-size: 0.84rem;
+  color: #143b2c;
+}
+.controlIntro span {
+  color: #4c6055;
+  font-size: 0.75rem;
+}
 .filters label,
 .periodFields label,
 .modal label {
@@ -155,7 +168,8 @@
   max-height: 220px;
   overflow: auto;
 }
-.employeeList label {
+.employeeList label,
+.personOption {
   display: flex;
   align-items: center;
   gap: 0.45rem;
@@ -163,6 +177,22 @@
   border: 1px solid #e5eee7;
   border-radius: 0.45rem;
   font-weight: 500;
+}
+.personOption {
+  width: 100%;
+  background: #fff;
+  color: #143b2c;
+  cursor: pointer;
+  text-align: left;
+}
+.personOption[aria-pressed='true'] {
+  border-color: #176240;
+  background: #edf7f0;
+  box-shadow: inset 3px 0 #176240;
+}
+.personOption:focus-visible {
+  outline: 3px solid #c8801c;
+  outline-offset: 2px;
 }
 .peopleControls { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.4rem; margin-bottom: 0.7rem; }
 .peopleControls input,
