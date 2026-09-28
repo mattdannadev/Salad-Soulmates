@@ -30,17 +30,12 @@ export const mixerBatchSchema = z.object({
   target_gallons: z.literal(40),
   production_lot_id: z.uuid().nullable().optional(),
 });
-export const productionLotInputSchema = z.object({
-  order_id: z.uuid(),
-  product_id: z.uuid(),
-  assigned_on: z.iso.date(),
-});
 export const productionLotSchema = z.object({
   id: z.uuid(),
   order_id: z.uuid(),
   product_id: z.uuid(),
   assigned_on: z.iso.date(),
-  production_lot_code: z.string().regex(/^\d{5}$/),
+  production_lot_code: z.string().regex(/^\d{5}(?:-[A-Z0-9]+(?:-\d{2,4})?)?$/),
   planned_gallons: z.number(),
   planned_batch_count: z.number().int(),
   status: z.enum(['Assigned', 'Cancelled']),
@@ -59,6 +54,5 @@ export const PRODUCTION_MESSAGES = [
   'Only a draft can be confirmed',
   'Enter a reason for cancelling or revising production',
   'Explain how ingredient shortages will be resolved before confirming',
-  'Save a draft production preparation before assigning lots',
-  'A production lot is already assigned for this product',
+  'Set a product lot identifier before starting production',
 ];

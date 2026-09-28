@@ -51,6 +51,7 @@ const migrations = [
   '20260927223625_copilot_read_audit_limits.sql',
   '20260927231547_copilot_setter_active_profile_guard.sql',
   '20260928201500_customer_pickup_date_changes.sql',
+  '20260928213000_production_runs.sql',
 ];
 
 /** Apply migrations and synthetic identity data only inside the newly created test database. */

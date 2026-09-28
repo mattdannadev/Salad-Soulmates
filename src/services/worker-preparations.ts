@@ -13,6 +13,6 @@ export default async function loadWorkerPreparations(db: Awaited<ReturnType<type
     await fetchWorkerPreparations(db),
     workerPreparationsSchema,
     'worker_spice_preparations',
-  ).toSorted((a, b) => a.assigned_on.localeCompare(b.assigned_on)
+  ).toSorted((a, b) => (a.assigned_on ?? a.plan_start_on).localeCompare(b.assigned_on ?? b.plan_start_on)
     || a.product_name.localeCompare(b.product_name) || a.sequence - b.sequence);
 }

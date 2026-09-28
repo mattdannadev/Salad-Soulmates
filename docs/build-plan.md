@@ -268,6 +268,11 @@ those workflows; scheduling is still pending. See `packaging-setup.md`.
 
 Phase 5 implementation is in progress: see [Worker scheduling](scheduling-worker-schedule.md) for the approved facility-scoped calendar, employee assignment, utilization, permission, and audit contract. Calendar UI and release verification remain to be completed before marking the phase complete.
 
+The scheduler is the facility's daily event board: it must support production
+work (spices, mixing, making product, wrapping, and cleaning) plus unrelated
+work. Production Runs are traceability groupings linked to applicable events;
+their lot numbers are issued at actual start, never while merely scheduling.
+
 This owner correction changes workflow and sequencing, not confirmed recipe,
 lot/date, inventory, facility isolation, packaging or workforce rules.
 

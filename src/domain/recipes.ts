@@ -5,6 +5,7 @@ export const productRowSchema = z.object({
   id: z.uuid(),
   name: z.string().trim().min(1),
   product_code: z.string().nullable(),
+  production_lot_identifier: z.string().nullable().default(null),
   standard_batch_gallons: positiveQuantity,
   bag_size_gallons: positiveQuantity,
   bags_per_case: z.number().int().positive(),

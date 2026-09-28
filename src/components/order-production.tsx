@@ -3,7 +3,6 @@ import type { ProductionPlan, MixerBatch, ProductionLot } from '@/domain/product
 import type { MaterialAvailability } from '@/domain/purchasing';
 import { formatDate, formatNumber } from '@/domain/format';
 import ProductionForm from './production-form';
-import ProductionLotForm from './production-lot-form';
 
 export default function OrderProduction({
   order, plan, batches, lots, requirements, canWrite, active, locale,
@@ -99,33 +98,12 @@ export default function OrderProduction({
           locale={locale}
         />
       )}
-      {plan?.status === 'Draft' && canWrite && active && (
-        <section className="production-lots" aria-label={es ? 'Lotes de producción' : 'Production lots'}>
-          <h3>{es ? 'Lotes de producción' : 'Production lots'}</h3>
-          <p className="muted">
-            {es
-              ? 'Cada producto recibe un lote interno. El código interno usa la fecha local de la planta (DDDYY) y puede coincidir entre productos.'
-              : 'Each product receives its own internal lot. Its internal code uses the facility-local date (DDDYY) and may match across products.'}
-          </p>
-          {order.items.map((item) => {
-            const lot = lots.find((candidate) => candidate.product_id === item.product_id && candidate.status === 'Assigned');
-            return lot ? (
-              <p key={item.product_id}>
-                <strong>{item.product_name}</strong>
-                {`: ${lot.production_lot_code} · ${formatDate(lot.assigned_on)} · ${formatNumber(lot.planned_batch_count)} ${es ? 'lotes de mezcla' : 'mixer batches'}`}
-              </p>
-            )
-              : (
-                <ProductionLotForm
-                  key={item.product_id}
-                  orderId={order.id}
-                  productId={item.product_id}
-                  productName={item.product_name}
-                  locale={locale}
-                />
-              );
-          })}
-        </section>
+      {plan?.status === 'Confirmed' && (
+        <p className="muted">
+          {es
+            ? 'El lote interno se asigna al comenzar la producción. Usa la fecha local de la planta y el identificador configurado del producto.'
+            : 'The internal lot is assigned when production starts. It uses the facility-local date and the product’s configured identifier.'}
+        </p>
       )}
       {!!batches.length && (
         <details>

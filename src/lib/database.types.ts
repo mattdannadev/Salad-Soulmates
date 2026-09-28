@@ -1207,6 +1207,7 @@ export type Database = {
           name: string;
           organization_id: string;
           product_code: string | null;
+          production_lot_identifier: string | null;
           standard_batch_gallons: number;
           updated_at: string;
         };
@@ -1220,6 +1221,7 @@ export type Database = {
           name: string;
           organization_id?: string;
           product_code?: string | null;
+          production_lot_identifier?: string | null;
           standard_batch_gallons?: number;
           updated_at?: string;
         };
@@ -1233,6 +1235,7 @@ export type Database = {
           name?: string;
           organization_id?: string;
           product_code?: string | null;
+          production_lot_identifier?: string | null;
           standard_batch_gallons?: number;
           updated_at?: string;
         };
@@ -1957,6 +1960,7 @@ export type Database = {
       save_facility_schedule_settings: { Args: { payload: Json }; Returns: string };
       save_order_production_plan: { Args: { payload: Json }; Returns: string };
       assign_production_lot: { Args: { payload: Json }; Returns: string };
+      set_product_lot_code: { Args: { payload: Json }; Returns: string };
       open_batch_worksheet: { Args: { batch_id: string }; Returns: string };
       record_batch_worksheet_usage: { Args: { payload: Json }; Returns: string };
       correct_batch_worksheet_usage: { Args: { payload: Json }; Returns: string };

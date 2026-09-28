@@ -124,16 +124,24 @@ its organization, facility and facility-local day; the system must allocate its
 daily sequence atomically and must never reuse it. A physical package keeps its
 separate serialized-unit identity; neither Source Lot is a package serial.
 
-**Internal DDDYY Production Lot** is a planning/execution grouping code,
-assigned before mixing from the assigned production date in the facility's
-local time. It is `DDDYY` (three-digit day of year plus two-digit year), so
-September 18, 2026 is `26126`. It is internal-only: do not print it on a bag
-label, expose it as the customer lot, or use it as the customer recall key. It
-is not a primary key and it is deliberately non-unique: products and multiple
-runs can share the code on the same facility-local date. The production-lot
-record UUID, with product and assigned production date, is the system identity;
-the code is a human-readable internal grouping/search aid. Actual mix time is
-recorded separately and does not change the assigned DDDYY code.
+**Internal Production Lot** is an execution identity, assigned only when a
+worker starts production, using the facility-local production date. Its format
+is `DDDYY-product-code`, so an Italian dressing with configured code `IT` made
+on September 18, 2026 is `26126-IT`. A second run of that product at the same
+facility on the same date is `26126-IT-02`, then `-03`, and so on. Product
+codes are configurable product reference data and must be present before work
+can start. This code is internal-only: do not print it on a bag label, expose
+it as the customer lot, or use it as the customer recall key. The production
+lot record UUID remains the system identity; the human-readable code is unique
+for its facility, product, production date, and run.
+
+**The workforce scheduler is the daily event board.** It schedules both
+production-related work (spice preparation, mixing, making product, wrapping,
+and cleaning) and unrelated work (deliveries, maintenance, meetings, or other
+work). A Production Run is a traceable production grouping that can link those
+events; it is not the name of a calendar event and it does not restrict the
+calendar to production work. The lot number belongs to the Production Run and
+is issued when that run starts.
 
 Source-lot evidence and production-lot assignment are audit-critical. A
 correction must preserve the original value, correction reason, actor,
@@ -155,9 +163,9 @@ Follow-on acceptance criteria:
   lot to its receipt context.
 - Source-lot searches do not treat matching text alone as globally unique and
   return enough supplier/ingredient/receipt context to distinguish matches.
-- Production planning assigns one internal DDDYY code from the facility-local
-  assigned date before mixing; multiple products/runs may share it without a
-  collision or identity ambiguity.
+- Production planning does not assign a lot. Starting production assigns one
+  product-coded internal lot from the facility-local production date; a second
+  product run that day receives the next suffix.
 - No customer-facing label, customer portal, or customer recall lookup displays
   or relies on DDDYY. Such work is blocked on the finished-label lot decision.
 - Corrections are append-only/audited and preserve original-to-corrected

@@ -373,7 +373,7 @@ function PreparationCard({ preparation, locale }: { preparation: WorkerPreparati
           <p className="worker-kicker">
             {es ? 'Lote de producción' : 'Production lot'}
             {' '}
-            {preparation.production_lot_code}
+            {preparation.production_lot_code ?? (es ? 'se asigna al comenzar' : 'assigned at start')}
           </p>
           <h3>{preparation.product_name}</h3>
           <p className="worker-card-subtitle">

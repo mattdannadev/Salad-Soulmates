@@ -10,7 +10,7 @@ export const productionLotSearchSchema = paginationSchema.extend({
     id: z.uuid(),
     product_id: z.uuid(),
     product_name: z.string(),
-    production_lot_code: z.string().regex(/^\d{5}$/),
+    production_lot_code: z.string().regex(/^\d{5}(?:-[A-Z0-9]+(?:-\d{2,4})?)?$/),
     assigned_on: z.iso.date(),
     status: z.string(),
     planned_gallons: z.number(),
@@ -42,7 +42,7 @@ export const backwardTraceSchema = paginationSchema.extend({
     id: z.uuid(),
     product_id: z.uuid(),
     product_name: z.string(),
-    production_lot_code: z.string().regex(/^\d{5}$/),
+    production_lot_code: z.string().regex(/^\d{5}(?:-[A-Z0-9]+(?:-\d{2,4})?)?$/),
     assigned_on: z.iso.date(),
     status: z.string(),
   }),
@@ -78,7 +78,7 @@ export const forwardTraceSchema = paginationSchema.extend({
     batch_id: z.uuid(),
     batch_sequence: z.number().int(),
     production_lot_id: z.uuid(),
-    production_lot_code: z.string().regex(/^\d{5}$/),
+    production_lot_code: z.string().regex(/^\d{5}(?:-[A-Z0-9]+(?:-\d{2,4})?)?$/),
     assigned_on: z.iso.date(),
     product_name: z.string(),
     serialized_unit_id: z.uuid(),
@@ -91,7 +91,7 @@ export const forwardTraceSchema = paginationSchema.extend({
 
 export const traceQuerySchema = z.object({
   product: z.uuid().optional(),
-  lot: z.string().regex(/^\d{5}$/).optional(),
+  lot: z.string().regex(/^\d{5}(?:-[A-Z0-9]+(?:-\d{2,4})?)?$/).optional(),
   productionLot: z.uuid().optional(),
   sourceLot: z.string().trim().min(1).max(120)
     .optional(),

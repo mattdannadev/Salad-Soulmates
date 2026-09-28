@@ -160,14 +160,14 @@ export default async function queryMobileOperations(
   if (access.profile.role === 'worker') {
     const preparations = (await dependencies.loadPreparations(access.db))
       .filter((item) => item.status !== 'Complete')
-      .toSorted((left, right) => left.assigned_on.localeCompare(right.assigned_on)
+      .toSorted((left, right) => (left.assigned_on ?? left.plan_start_on).localeCompare(right.assigned_on ?? right.plan_start_on)
         || left.sequence - right.sequence)
       .slice(0, limit)
       .map((item) => ({
         id: item.planned_mixer_batch_id,
         assignedOn: item.assigned_on,
         productName: item.product_name,
-        productionLotCode: item.production_lot_code,
+        productionLotCode: item.production_lot_code ?? 'Assigned when production starts',
         status: item.status,
         completedIngredients: item.lines.filter((line) => line.id
           && line.usages.reduce((sum, usage) => sum + usage.quantity, 0)

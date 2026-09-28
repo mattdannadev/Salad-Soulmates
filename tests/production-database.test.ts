@@ -141,6 +141,22 @@ it('assigns a product-specific DDDYY lot to every existing mixer/spice pair with
     where batch.production_lot_id is not null`)).rows).toEqual([{ count: 4 }]);
   expect((await counts()).events).toBe(0);
 });
+it('creates a product-coded Production Run only when confirmed work starts', async () => {
+  const runOrder = id(850);
+  await rpc('save_customer_order', orderInput(runOrder, 1));
+  await rpc('save_order_production_plan', { ...productionInput(), id: runOrder });
+  await rpc('save_order_production_plan', {
+    ...productionInput(1), id: runOrder, status: 'Confirmed', shortage_reason: 'Ingredients are available.',
+  });
+  await query('select public.set_product_lot_code($1::jsonb)', [JSON.stringify({ product_id: id(300), product_code: 'IT' })]);
+  const batch = z.object({ id: z.uuid() }).parse((await query(
+    'select id from public.planned_mixer_batches where order_id=$1', [runOrder],
+  )).rows[0]);
+  expect((await query('select count(*)::int count from public.production_lots')).rows).toEqual([{ count: 0 }]);
+  await query('select public.open_batch_worksheet($1)', [batch.id]);
+  expect((await query('select production_lot_code,planned_batch_count from public.production_lots')).rows)
+    .toEqual([expect.objectContaining({ production_lot_code: expect.stringMatching(/^\d{5}-IT$/), planned_batch_count: 1 })]);
+});
 it('allows the same DDDYY on distinct products while rejecting duplicate lot assignment for one product', async () => {
   const secondProduct = id(301);
   const secondRecipe = id(410);
