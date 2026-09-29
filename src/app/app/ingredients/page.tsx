@@ -11,7 +11,7 @@ import ListGrid from '@/components/list-grid';
 import DirectoryToolbar from '@/components/directory-toolbar';
 import { Suspense } from 'react';
 import IngredientFocus from './ingredient-focus';
-import { ingredientLinkHref } from './return-context';
+import { ingredientLinkHref, ingredientReturnContext } from './return-context';
 import {
   ingredientDirectoryFilters, ingredientDirectorySorts,
   parseIngredientDirectoryQuery, type IngredientSearchParams,
@@ -48,6 +48,7 @@ export default async function Ingredients({
   if (sort !== 'name') directoryQuery.set('sort', sort);
   if (page > 1) directoryQuery.set('page', String(page));
   const directoryHref = `/app/ingredients${directoryQuery.size ? `?${directoryQuery}` : ''}`;
+  const returnContext = ingredientReturnContext(query.returnTo, undefined, directoryHref);
   const [allIngredients, events] = await Promise.all([
     rows(db, 'ingredients', rowSchemas.ingredients),
     rows(db, 'inventory_events', rowSchemas.inventory_events),
@@ -124,7 +125,7 @@ export default async function Ingredients({
           : 'Real ingredients. Clear measurements. A shared foundation for every recipe.'}
         action={
           profile.role === 'admin' && (
-            <Link className="button" href={ingredientLinkHref('/app/ingredients/new', { href: directoryHref })}>
+            <Link className="button" href={ingredientLinkHref('/app/ingredients/new', returnContext)}>
               {es ? '+ Agregar ingrediente' : '+ Add ingredient'}
             </Link>
           )
@@ -147,7 +148,7 @@ export default async function Ingredients({
         {focusedIngredient && !focusIsVisible && (
           <p role="status">
             {es ? 'El ingrediente guardado está fuera de esta vista. ' : 'The saved ingredient is outside this view. '}
-            <Link href={ingredientLinkHref(`/app/ingredients/${focusedIngredient.id}`, { href: directoryHref, focusRow: focusedIngredient.id })}>
+            <Link href={ingredientLinkHref(`/app/ingredients/${focusedIngredient.id}`, ingredientReturnContext(query.returnTo, focusedIngredient.id, directoryHref))}>
               {es ? 'Abrir ingrediente' : 'Open ingredient'}
             </Link>
           </p>
@@ -183,7 +184,7 @@ export default async function Ingredients({
             rows={visibleIngredients.map((ingredient) => ({
               id: ingredient.id,
               cells: {
-                ingredient: { text: ingredient.name, href: ingredientLinkHref(`/app/ingredients/${ingredient.id}`, { href: directoryHref, focusRow: ingredient.id }) },
+                ingredient: { text: ingredient.name, href: ingredientLinkHref(`/app/ingredients/${ingredient.id}`, ingredientReturnContext(query.returnTo, ingredient.id, directoryHref)) },
                 category: { text: ingredient.category },
                 unit: { text: ingredient.default_uom },
                 onHand: {
@@ -222,7 +223,7 @@ export default async function Ingredients({
             <p>{emptyDescription}</p>
             {allIngredients.length && <Link href="/app/ingredients">{es ? 'Borrar filtros' : 'Clear all'}</Link>}
             {!allIngredients.length && profile.role === 'admin' && (
-              <Link href={ingredientLinkHref('/app/ingredients/new', { href: directoryHref })}>
+              <Link href={ingredientLinkHref('/app/ingredients/new', returnContext)}>
                 {es ? 'Crear ingrediente' : 'Create ingredient'}
               </Link>
             )}

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   ingredientLinkHref, ingredientReturnContext, ingredientReturnHref,
+  ingredientSupplierRecoveryHref,
 } from '../src/app/app/ingredients/return-context';
+import { supplierReturnContext } from '../src/lib/supplier-return-context';
 
 const ingredientId = '00000000-0000-4000-8000-000000000100';
 
@@ -32,5 +34,46 @@ describe('ingredient return context', () => {
   it('keeps a direct detail fallback and ignores malformed focus identity', () => {
     const detail = `/app/ingredients/${ingredientId}`;
     expect(ingredientReturnContext(undefined, 'bad row', detail)).toEqual({ href: detail });
+  });
+
+  it('returns onboarding creation and editing to Home without directory focus', () => {
+    const context = ingredientReturnContext('/app', ingredientId);
+    expect(context).toEqual({ href: '/app' });
+    expect(ingredientReturnHref(context, ingredientId)).toBe('/app');
+    expect(ingredientLinkHref('/app/ingredients/new', context))
+      .toBe('/app/ingredients/new?returnTo=%2Fapp');
+    expect(ingredientLinkHref(`/app/ingredients/${ingredientId}`, context))
+      .toBe(`/app/ingredients/${ingredientId}?returnTo=%2Fapp`);
+  });
+
+  it('resumes supplier setup at the pack form with the original ingredient directory context', () => {
+    const origin = '/app/ingredients?q=garlic&status=inactive#results';
+    const recovery = ingredientSupplierRecoveryHref(ingredientId, {
+      href: origin,
+      focusRow: ingredientId,
+    });
+    const supplierQuery = new URL(recovery, 'https://return.invalid').searchParams;
+    const resumedIngredient = supplierReturnContext(supplierQuery.get('returnTo'), undefined).href;
+    const resumedUrl = new URL(resumedIngredient, 'https://return.invalid');
+
+    expect(resumedUrl.pathname).toBe(`/app/ingredients/${ingredientId}`);
+    expect(resumedUrl.searchParams.get('addPack')).toBe('1');
+    expect(ingredientReturnContext(
+      resumedUrl.searchParams.get('returnTo'),
+      resumedUrl.searchParams.get('focusRow'),
+      resumedUrl.pathname,
+    )).toEqual({ href: origin, focusRow: ingredientId });
+  });
+
+  it('resumes a directly opened ingredient without manufacturing a directory origin', () => {
+    const recovery = ingredientSupplierRecoveryHref(ingredientId);
+    const supplierQuery = new URL(recovery, 'https://return.invalid').searchParams;
+    const resumed = new URL(
+      supplierReturnContext(supplierQuery.get('returnTo'), undefined).href,
+      'https://return.invalid',
+    );
+    expect(resumed.pathname).toBe(`/app/ingredients/${ingredientId}`);
+    expect(resumed.searchParams.get('returnTo')).toBeNull();
+    expect(resumed.searchParams.get('addPack')).toBe('1');
   });
 });

@@ -15,6 +15,12 @@ function singleValue(query: OrderSearchParams, key: string): string | undefined 
   return typeof value === 'string' ? value : undefined;
 }
 
+function isoDate(query: OrderSearchParams, key: string): string | undefined {
+  const value = singleValue(query, key);
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`))
+    ? value : undefined;
+}
+
 /** Accept only known directory criteria. The draft customer key remains separate. */
 export function parseOrderDirectoryQuery(
   query: OrderSearchParams,
@@ -46,6 +52,8 @@ export function parseOrderDirectoryQuery(
       .catch(1)
       .parse(rawPage)
     : 1;
+  const pickupFrom = isoDate(query, 'pickupFrom');
+  const pickupTo = isoDate(query, 'pickupTo');
   return {
     q,
     customerFilter:
@@ -55,6 +63,8 @@ export function parseOrderDirectoryQuery(
     view,
     sort,
     page,
+    pickupFrom: pickupFrom && (!pickupTo || pickupFrom <= pickupTo) ? pickupFrom : undefined,
+    pickupTo: pickupTo && (!pickupFrom || pickupFrom <= pickupTo) ? pickupTo : undefined,
   };
 }
 
@@ -67,6 +77,8 @@ export function orderDirectoryHref(query: ReturnType<typeof parseOrderDirectoryQ
   if (query.status) params.set('status', query.status);
   if (query.view) params.set('view', query.view);
   if (query.sort !== 'pickup-newest') params.set('sort', query.sort);
+  if (query.pickupFrom) params.set('pickupFrom', query.pickupFrom);
+  if (query.pickupTo) params.set('pickupTo', query.pickupTo);
   if (query.page > 1) params.set('page', String(query.page));
   return `/app/orders${params.size ? `?${params}` : ''}`;
 }

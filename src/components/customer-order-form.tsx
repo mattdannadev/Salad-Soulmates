@@ -8,7 +8,7 @@ import { customerCreateHref, customerReturnContext } from '@/app/app/customers/r
 import { type Customer, type CustomerOption } from '@/domain/customer-pricing';
 import {
   clearOrderDraft, orderDraftFromForm, orderDraftSnapshot, parseOrderDraftSnapshot,
-  saveOrderDraft,
+  orderProductSetupHref, saveOrderDraft,
 } from '@/app/app/orders/order-draft';
 import ProductOrderLine from './product-order-line';
 import PurchasingForm from './purchasing-form';
@@ -51,13 +51,43 @@ export default function CustomerOrderForm({
   const customerId = selectedCustomerId ?? (initialCustomerId || restoredCustomer);
   const customer = customers.find((item) => item.id === customerId);
   const createCustomerHref = customerCreateHref(customerReturnContext(returnHref, undefined));
+  const configureProductsHref = orderProductSetupHref(returnHref);
+  const missingCustomerPricing = customer && choices.every((choice) => !options.some(
+    (option) => option.active && option.customer_id === customer.id
+      && option.product_id === choice.id,
+  ));
+  const saveBeforeDetour = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    const form = event.currentTarget.closest('form');
+    const emptyDraft = {
+      customerId,
+      reference: '',
+      neededOn: '',
+      products: [],
+    };
+    const existingDraft = draft ? { ...draft, customerId } : emptyDraft;
+    const snapshot = form
+      ? orderDraftFromForm(new FormData(form), customerId, choices)
+      : existingDraft;
+    if (!snapshot || !saveOrderDraft(draftId, snapshot)) {
+      event.preventDefault();
+      setDraftError(es
+        ? 'Revisa los datos del pedido o habilita el almacenamiento de esta pestaña antes de continuar.'
+        : 'Check the order entries or enable tab storage before continuing.');
+    }
+  };
   if (!choices.length) {
     return (
-      <p className="notice">
-        {es
-          ? 'Configura un producto con una receta activa publicada de 40 galones para registrar pedidos.'
-          : 'Configure a product with an active released 40-gallon recipe before entering an order.'}
-      </p>
+      <div className="notice">
+        <p>
+          {es
+            ? 'Configura un producto con una receta activa publicada de 40 galones para registrar pedidos.'
+            : 'Configure a product with an active released 40-gallon recipe before entering an order.'}
+        </p>
+        <Link className="button secondary" href={configureProductsHref} onClick={saveBeforeDetour}>
+          {es ? 'Configurar productos →' : 'Configure products →'}
+        </Link>
+        {draftError && <p role="alert" className="error-notice">{draftError}</p>}
+      </div>
     );
   }
   return (
@@ -106,16 +136,7 @@ export default function CustomerOrderForm({
           <Link
             className="button secondary"
             href={createCustomerHref}
-            onClick={(event) => {
-              const form = event.currentTarget.closest('form');
-              const snapshot = form && orderDraftFromForm(new FormData(form), customerId, choices);
-              if (!snapshot || !saveOrderDraft(draftId, snapshot)) {
-                event.preventDefault();
-                setDraftError(es
-                  ? 'Revisa los datos del pedido o habilita el almacenamiento de esta pestaña antes de crear el cliente.'
-                  : 'Check the order entries or enable tab storage before creating the customer.');
-              }
-            }}
+            onClick={saveBeforeDetour}
           >
             {es ? '+ Agregar cliente' : '+ Add customer'}
           </Link>
@@ -149,6 +170,18 @@ export default function CustomerOrderForm({
         </section>
       )}
       <h3>{es ? 'Productos y lotes' : 'Products & batches'}</h3>
+      {missingCustomerPricing && (
+        <div className="notice">
+          <p>
+            {es
+              ? 'Este cliente no tiene precios activos para los productos disponibles.'
+              : 'This customer has no active pricing for the available products.'}
+          </p>
+          <Link className="button secondary" href={configureProductsHref} onClick={saveBeforeDetour}>
+            {es ? 'Configurar productos →' : 'Configure products →'}
+          </Link>
+        </div>
+      )}
       <p>
         {es
           ? 'Ingresa lotes completos de 40 galones por producto. Cero excluye un producto.'
@@ -174,6 +207,8 @@ export default function CustomerOrderForm({
                   && option.product_id === choice.id
                   && option.customer_id === customer.id,
               )}
+              configureHref={configureProductsHref}
+              onConfigureClick={saveBeforeDetour}
             />
           ))}
         </div>

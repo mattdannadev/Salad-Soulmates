@@ -1,4 +1,5 @@
 import type { ManagedUser } from '@/lib/user-management-data';
+import Link from 'next/link';
 import { userDetailHref } from '@/app/app/user-management/users/return-context';
 import ListGrid from './list-grid';
 
@@ -7,25 +8,48 @@ function initials(user: ManagedUser) {
 }
 
 export default function UserDirectory({
-  users, directoryHref, focusRowId = undefined,
-}: { users: ManagedUser[]; directoryHref: string; focusRowId?: string }) {
+  users, directoryHref, focusRowId = undefined, totalUsers, hasSearch, locale,
+}: {
+  users: ManagedUser[];
+  directoryHref: string;
+  focusRowId?: string;
+  totalUsers: number;
+  hasSearch: boolean;
+  locale: 'en' | 'es';
+}) {
+  const isSpanish = locale === 'es';
+  const statusLabels = isSpanish
+    ? { active: 'Activo', inactive: 'Inactivo' }
+    : { active: 'Active', inactive: 'Inactive' };
   if (!users.length) {
+    const noMatches = totalUsers > 0 && hasSearch;
+    let emptyTitle = isSpanish ? 'Aún no hay usuarios' : 'No users yet';
+    let emptyDescription = isSpanish
+      ? 'Invite a un usuario con el formulario de abajo.'
+      : 'Invite a user with the form below.';
+    if (noMatches) {
+      emptyTitle = isSpanish ? 'No hay usuarios que coincidan' : 'No matching users';
+      emptyDescription = isSpanish
+        ? 'Pruebe otra búsqueda o borre los filtros.'
+        : 'Try another search or clear the filters.';
+    }
     return (
-      <div className="empty">
-        <h2>No users found</h2>
-        <p>Try a different search, or invite a user below.</p>
+      <div className="empty" role="status">
+        <h2>{emptyTitle}</h2>
+        <p>{emptyDescription}</p>
+        {noMatches && <Link href="/app/user-management/users">{isSpanish ? 'Borrar todos los filtros' : 'Clear all filters'}</Link>}
       </div>
     );
   }
   return (
     <ListGrid
-      label="User directory"
+      label={isSpanish ? 'Directorio de usuarios' : 'User directory'}
       columns={[
-        { key: 'user', label: 'User' },
-        { key: 'email', label: 'Email', minWidth: 220 },
-        { key: 'facility', label: 'Facility' },
-        { key: 'access', label: 'Access' },
-        { key: 'status', label: 'Status' },
+        { key: 'user', label: isSpanish ? 'Usuario' : 'User' },
+        { key: 'email', label: isSpanish ? 'Correo electrónico' : 'Email', minWidth: 220 },
+        { key: 'facility', label: isSpanish ? 'Centro' : 'Facility' },
+        { key: 'access', label: isSpanish ? 'Acceso' : 'Access' },
+        { key: 'status', label: isSpanish ? 'Estado' : 'Status' },
       ]}
       rows={users.map((user) => ({
         id: user.id,
@@ -38,7 +62,10 @@ export default function UserDirectory({
           email: { text: user.workEmail ?? '—' },
           facility: { text: user.facilityName },
           access: { text: user.accessProfileName },
-          status: { text: user.active ? 'Active' : 'Inactive', badge: user.active ? 'default' as const : 'muted' as const },
+          status: {
+            text: user.active ? statusLabels.active : statusLabels.inactive,
+            badge: user.active ? 'default' as const : 'muted' as const,
+          },
         },
       }))}
       searchable={false}

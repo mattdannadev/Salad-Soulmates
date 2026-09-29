@@ -20,6 +20,11 @@
 @media (max-width: 760px) {
   .drawer {
     visibility: hidden;
+    inset-inline-start: env(safe-area-inset-left);
+    width: min(340px, calc(100dvw - env(safe-area-inset-left) - env(safe-area-inset-right) - 52px));
+    max-height: 100dvh;
+    padding-top: max(24px, env(safe-area-inset-top));
+    padding-bottom: max(36px, env(safe-area-inset-bottom));
   }
 
   .drawerOpen {
@@ -27,8 +32,71 @@
   }
 
   .shellRoot :global(.mobile-navigation-toggle) {
-    min-width: var(--control-height-compact);
-    min-height: var(--control-height-compact);
+    flex: none;
+    width: 52px;
+    height: 52px;
+    padding: 12px;
+    border-radius: 14px;
+    background: var(--soft);
+  }
+
+  .shellRoot :global(.mobile-navigation-toggle:hover),
+  .shellRoot :global(.mobile-navigation-toggle[aria-expanded='true']) {
+    background: #e6eddf;
+  }
+
+  .shellRoot :global(.topbar) {
+    min-width: 0;
+    padding-left: max(18px, env(safe-area-inset-left));
+    padding-right: max(18px, env(safe-area-inset-right));
+    padding-top: max(12px, env(safe-area-inset-top));
+  }
+
+  .shellRoot :global(.identity) {
+    flex: 1;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+
+  .shellRoot :global(.identity > span:not(.avatar)) {
+    min-width: 0;
+  }
+
+  .shellRoot :global(.mobile-drawer-close) {
+    top: max(8px, env(safe-area-inset-top));
+    right: max(15px, env(safe-area-inset-right));
+    min-width: 48px;
+    min-height: 48px;
+  }
+
+  .shellRoot :global(.navigation-scrim) {
+    width: 100dvw;
+    height: 100dvh;
+  }
+
+  .shellRoot :global(.mobile-navigation) {
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    min-width: 0;
+    max-width: calc(
+      100dvw - max(12px, env(safe-area-inset-left)) - max(12px, env(safe-area-inset-right))
+    );
+  }
+
+  .shellRoot :global(.feedback-button) {
+    right: max(16px, env(safe-area-inset-right));
+    bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+
+  .shellRoot :global(.feedback-drawer) {
+    width: min(420px, 100dvw);
+    max-width: 100dvw;
+    max-height: 100dvh;
+    padding-top: max(28px, env(safe-area-inset-top));
+    padding-right: max(28px, env(safe-area-inset-right));
+    padding-bottom: max(28px, env(safe-area-inset-bottom));
+    padding-left: max(28px, env(safe-area-inset-left));
   }
 
   .mobileBottomNavigation {

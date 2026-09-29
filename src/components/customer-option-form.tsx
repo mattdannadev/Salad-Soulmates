@@ -6,7 +6,7 @@ import PurchasingForm from './purchasing-form';
 
 export default function CustomerOptionForm({
   productId, defaultGallons, customers, locale, option = undefined,
-  orderUnits,
+  orderUnits, returnHref = null,
 }: {
   productId: string;
   defaultGallons: number;
@@ -14,6 +14,7 @@ export default function CustomerOptionForm({
   locale: 'en' | 'es';
   option?: CustomerOption;
   orderUnits: { code: string; label: string }[];
+  returnHref?: string | null;
 }) {
   const prefix = useId();
   const es = locale === 'es';
@@ -23,6 +24,8 @@ export default function CustomerOptionForm({
       operation="save-option"
       locale={locale}
       label={es ? 'Guardar opción del cliente' : 'Save customer option'}
+      destination={returnHref ? () => returnHref : undefined}
+      replaceOnSuccess={Boolean(returnHref)}
       payload={(form, requestId) => ({
         id: option?.id ?? requestId,
         revision: option?.revision ?? 0,

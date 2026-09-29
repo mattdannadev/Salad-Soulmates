@@ -53,7 +53,8 @@ it('validates and normalizes URL-backed directory controls', () => {
   expect(userDirectoryQuerySchema.parse({ q: '  kitchen ', sort: 'first_name' }))
     .toEqual({ q: 'kitchen', sort: 'first_name' });
   expect(userDirectoryQuerySchema.parse({})).toEqual({ q: '', sort: 'last_name' });
-  expect(userDirectoryQuerySchema.safeParse({ q: 'a'.repeat(121) }).success).toBe(false);
+  expect(userDirectoryQuerySchema.safeParse({ q: 'a'.repeat(200) }).success).toBe(true);
+  expect(userDirectoryQuerySchema.safeParse({ q: 'a'.repeat(201) }).success).toBe(false);
   expect(userDirectoryQuerySchema.safeParse({ sort: 'email' }).success).toBe(false);
   expect(userDirectoryQuerySchema.safeParse({ q: ['one', 'two'] }).success).toBe(false);
 });

@@ -11,7 +11,7 @@ import { Suspense } from 'react';
 import DirectoryToolbar from '@/components/directory-toolbar';
 import {
   parseSupplierDirectoryQuery, supplierDirectoryFilters, supplierDirectorySorts,
-  supplierDirectoryHref, type SupplierSearchParams,
+  supplierCreateReturnHref, supplierDirectoryHref, type SupplierSearchParams,
 } from './directory-query';
 import SupplierReturnFocus from './supplier-return-focus';
 
@@ -29,7 +29,9 @@ export default async function Suppliers({
     suppliers, locale, canEdit, canReadPurchases,
   } = workspace;
   const returnHref = supplierDirectoryHref(rawQuery, canReadPurchases);
-  const addSupplierHref = `/app/suppliers/new?${returnContextSearchParams({ href: returnHref })}`;
+  const addSupplierHref = `/app/suppliers/new?${returnContextSearchParams({
+    href: supplierCreateReturnHref(rawQuery, canReadPurchases),
+  })}`;
   const es = locale === 'es';
   const activeLabel = es ? 'Activo' : 'Active';
   const inactiveLabel = es ? 'Inactivo' : 'Inactive';

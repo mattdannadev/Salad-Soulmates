@@ -18,8 +18,8 @@ export interface PackagingProduct {
 }
 
 export default function PackagingForm({
-  product, latest, locale,
-}: { product: PackagingProduct; latest: PackagingVersion | null; locale: 'en' | 'es' }) {
+  product, latest, locale, returnHref = null,
+}: { product: PackagingProduct; latest: PackagingVersion | null; locale: 'en' | 'es'; returnHref?: string | null }) {
   const prefix = useId();
   const es = locale === 'es';
   const savingLabel = es ? 'Guardando…' : 'Saving…';
@@ -55,7 +55,8 @@ export default function PackagingForm({
         const result = await savePackaging({ ...payload, id });
         if (result.ok) {
           setMessage(es ? 'Versión guardada.' : result.message);
-          router.refresh();
+          if (returnHref) router.replace(returnHref);
+          else router.refresh();
         } else {
           setMessage(es ? 'No se pudo guardar. Revise los datos; si otra persona cambió la configuración, vuelva a cargar. Para reintentar, conserve los mismos datos.' : result.message);
         }

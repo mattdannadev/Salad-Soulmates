@@ -1,10 +1,11 @@
 'use client';
 
 import {
-  useEffect, useRef, useState, useTransition,
+  useEffect, useId, useState, useTransition,
 } from 'react';
 import { useRouter } from 'next/navigation';
 import savePurchasing from '@/app/purchasing-actions';
+import useNativeDialog from './use-native-dialog';
 
 interface OrderDeactivateActionProps {
   orderId: string;
@@ -18,8 +19,11 @@ export default function OrderDeactivateAction({
   orderLabel,
   returnToDirectory = false,
 }: OrderDeactivateActionProps) {
-  const confirmation = useRef<HTMLDialogElement>(null);
   const [pending, startTransition] = useTransition();
+  const {
+    dialog: confirmation, openDialog, closeDialog, closeAfterAction, onCancel, onClose,
+  } = useNativeDialog(pending);
+  const id = useId();
   const [message, setMessage] = useState('');
   const [failed, setFailed] = useState(false);
   const router = useRouter();
@@ -41,7 +45,7 @@ export default function OrderDeactivateAction({
           setMessage(result.message);
           return;
         }
-        confirmation.current?.close();
+        closeAfterAction();
         const successMessage = 'Order deactivated and removed from active orders.';
         if (returnToDirectory) {
           window.sessionStorage.setItem('orders-toast', successMessage);
@@ -62,27 +66,27 @@ export default function OrderDeactivateAction({
       <button
         type="button"
         className="button danger-button"
-        onClick={() => confirmation.current?.showModal()}
+        onClick={openDialog}
       >
         Delete
       </button>
       {message && !returnToDirectory ? (
         <p className={failed ? 'error-notice' : 'order-toast'} role={failed ? 'alert' : 'status'}>{message}</p>
       ) : null}
-      <dialog ref={confirmation} className="order-confirmation" aria-labelledby={`deactivate-${orderId}`}>
+      <dialog ref={confirmation} className="order-confirmation" aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`} onCancel={onCancel} onClose={onClose}>
         <form
           onSubmit={(event) => {
             event.preventDefault();
             deactivateOrder();
           }}
         >
-          <h2 id={`deactivate-${orderId}`}>Delete this order?</h2>
-          <p>
+          <h2 id={`${id}-title`}>Delete this order?</h2>
+          <p id={`${id}-description`}>
             {`${orderLabel} will be removed from active orders. Its saved quantities and history remain available.`}
           </p>
           {message && failed ? <p className="error-notice" role="alert">{message}</p> : null}
           <div className="order-dialog-actions">
-            <button type="button" className="secondary" disabled={pending} onClick={() => confirmation.current?.close()}>
+            <button type="button" className="secondary" disabled={pending} onClick={closeDialog}>
               Keep order
             </button>
             <button type="submit" className="danger-button" disabled={pending}>

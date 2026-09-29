@@ -157,6 +157,28 @@ describe('physical package receiving and serialization', () => {
     expect(result.result).toHaveLength(1);
     expect(result.result[0]).toEqual({ supplier_lot: 'LOT-2026', remaining_quantity: 30 });
   });
+  it('filters packages in SQL while preserving exact barcode priority and RLS', async () => {
+    await rpc('receive_serialized_delivery', receipt());
+    const first = await firstUnit();
+    await rpc('change_serialized_unit', await change({ status: 'Hold', remaining_quantity: 12 }));
+    const filtered = await query(
+      'select public.find_serialized_units($1,null,null,$2,$3,$4,$5,$6,$7) as result',
+      ['Test', id(100), id(200), 'Hold', 'later', 'partial', 'balance'],
+    );
+    const match = z.object({ result: z.array(z.object({ id: z.uuid() })) }).parse(filtered.rows[0]);
+    expect(match.result.map((unit) => unit.id)).toEqual([first.id]);
+    const exactExcluded = await query(
+      'select public.find_serialized_units($1,null,null,null,null,$2) as result',
+      ['UNIQUE-1', 'Available'],
+    );
+    expect(exactExcluded.rows[0]).toEqual({ result: [] });
+    await actAs(id(4));
+    const otherFacility = await query("select public.find_serialized_units('Test') as result");
+    expect(otherFacility.rows[0]).toEqual({ result: [] });
+    await actAs(id(5));
+    const noReadPermission = await query("select public.find_serialized_units('Test') as result");
+    expect(noReadPermission.rows[0]).toEqual({ result: [] });
+  });
   it('records partial balances once and rejects conflicting retries, stale changes, and excess quantity', async () => {
     await rpc('receive_serialized_delivery', receipt());
     const payload = await change({ remaining_quantity: 12 });

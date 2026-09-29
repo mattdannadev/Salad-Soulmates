@@ -50,7 +50,8 @@
 }
 
 .searchControl input,
-.field select {
+.field select,
+.field input {
   min-height: var(--control-height-compact, 44px);
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--color-border-control, #d8ded2);
@@ -132,6 +133,7 @@
 .searchControl input:focus-visible,
 .searchControl button:focus-visible,
 .field select:focus-visible,
+.field input:focus-visible,
 .chip:focus-visible,
 .clear:focus-visible,
 .pagination button:focus-visible,

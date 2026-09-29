@@ -20,13 +20,16 @@ import {
   productDirectoryHref, productDirectorySorts, selectProductDirectory, type ProductSearchParams,
 } from './directory-query';
 import ProductFocus from './product-focus';
+import productSetupReturnHref from './return-context';
 
 export default async function Products({
   searchParams,
 }: {
   searchParams?: Promise<ProductSearchParams>;
 } = {}) {
-  const query = parseProductDirectoryQuery(await searchParams ?? {});
+  const rawQuery = await searchParams ?? {};
+  const query = parseProductDirectoryQuery(rawQuery);
+  const setupReturnHref = productSetupReturnHref(rawQuery.returnTo);
   const returnTo = productDirectoryHref(query);
   const {
     db, products, recipes, versions, locale,
@@ -98,6 +101,8 @@ export default async function Products({
   if (query.page > pageCount) {
     emptyDescription = es ? 'Esta página ya no tiene resultados.' : 'This page no longer has results.';
   }
+  let returnLabel = es ? 'Volver al pedido' : 'Back to order';
+  if (setupReturnHref === '/app') returnLabel = es ? 'Volver al inicio' : 'Back to Home';
 
   return (
     <>
@@ -105,7 +110,9 @@ export default async function Products({
         eyebrow={recipeText(locale, 'CATALOG')}
         title={recipeText(locale, 'Products')}
         description={recipeText(locale, 'Finished dressings, their configured packaging and associated recipes.')}
-        action={<Link className="button secondary" href="/app/recipes">{recipeText(locale, 'View recipes')}</Link>}
+        action={setupReturnHref
+          ? <Link className="button secondary" href={setupReturnHref}>{returnLabel}</Link>
+          : <Link className="button secondary" href="/app/recipes">{recipeText(locale, 'View recipes')}</Link>}
       />
       <section className="panel">
         <ProductFocus
@@ -218,6 +225,7 @@ export default async function Products({
                       )}
                       canWrite={canWrite && product.active}
                       locale={locale}
+                      returnHref={setupReturnHref}
                     />
                     <CustomerProductOptions
                       productId={product.id}
@@ -228,6 +236,7 @@ export default async function Products({
                       canWrite={canWrite}
                       locale={locale}
                       orderUnits={orderUnits}
+                      returnHref={setupReturnHref}
                     />
                   </details>
                 );

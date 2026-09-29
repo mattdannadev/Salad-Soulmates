@@ -21,18 +21,18 @@ test('access managers can search the responsive user directory and inspect a pro
   );
   await expect(page.getByRole('heading', { name: 'Invite a new user' })).toBeVisible();
 
-  await page.getByLabel('Search users').fill('local test facility');
-  await page.getByLabel('Sort by').selectOption('first_name');
-  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByRole('region', { name: 'Search users' }).getByRole('searchbox').fill('local test facility');
+  await page.getByRole('region', { name: 'Search users' }).getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Sort by' }).selectOption('first_name');
   await expect(page).toHaveURL(/q=local(?:\+|%20)test(?:\+|%20)facility&sort=first_name/);
-  await expect(page.getByText('1 of 1 users match “local test facility”.')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Search users' })).toContainText('1 results');
 
   await page.getByRole('link', { name: 'Test Administrator', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Test Administrator' })).toBeVisible();
   await page.getByRole('link', { name: 'Back to users' }).click();
   await expect(page).toHaveURL(/q=local(?:\+|%20)test(?:\+|%20)facility&sort=first_name&focusRow=/);
-  await expect(page.getByLabel('Search users')).toHaveValue('local test facility');
-  await expect(page.getByLabel('Sort by')).toHaveValue('first_name');
+  await expect(page.getByRole('region', { name: 'Search users' }).getByRole('searchbox')).toHaveValue('local test facility');
+  await expect(page.getByRole('combobox', { name: 'Sort by' })).toHaveValue('first_name');
   await expect(page.locator('.ag-row[row-id] a[href]').first()).toBeFocused();
   await page.getByRole('link', { name: 'Test Administrator', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'User profile' })).toBeVisible();

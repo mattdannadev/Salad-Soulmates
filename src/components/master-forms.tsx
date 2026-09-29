@@ -1,5 +1,5 @@
 import type { Supplier, SupplierItem } from '@/domain/master-data';
-import { resolveReturnContext } from '@/lib/return-context';
+import { isSupplierDirectoryReturn, supplierReturnContext } from '@/lib/supplier-return-context';
 import { RecordForm, type Field } from './record-form';
 
 export function SupplierForm({
@@ -11,11 +11,10 @@ export function SupplierForm({
   returnHref?: string;
   locale?: 'en' | 'es';
 }) {
-  const { href } = resolveReturnContext(returnHref, undefined, {
-    fallbackHref: '/app/suppliers',
-    isAllowedPathname: (pathname) => pathname === '/app/suppliers',
-  });
-  const cancelHref = supplier ? `${href.split('#', 1)[0]}#supplier-${supplier.id}` : href;
+  const { href } = supplierReturnContext(returnHref, undefined);
+  const directoryReturn = isSupplierDirectoryReturn(href);
+  const cancelHref = supplier && directoryReturn
+    ? `${href.split('#', 1)[0]}#supplier-${supplier.id}` : href;
   let submitLabel = locale === 'es' ? 'Crear proveedor' : 'Create supplier';
   if (supplier) submitLabel = locale === 'es' ? 'Guardar cambios' : 'Save changes';
   return (
@@ -23,7 +22,7 @@ export function SupplierForm({
       kind="supplier"
       hidden={supplier ? { id: supplier.id } : {}}
       afterSave={href}
-      afterSaveRecordHashPrefix="supplier-"
+      afterSaveRecordHashPrefix={directoryReturn ? 'supplier-' : undefined}
       replaceAfterSave
       cancelHref={cancelHref}
       submit={submitLabel}

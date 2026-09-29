@@ -10,6 +10,8 @@ import type { ManagedUserDetail } from '@/lib/user-management-data';
 const mocks = vi.hoisted(() => ({
   directory: vi.fn(),
   detail: vi.fn(),
+  auth: vi.fn(),
+  toolbar: vi.fn(),
   notFound: vi.fn(() => {
     throw new Error('NOT_FOUND');
   }),
@@ -17,6 +19,13 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('server-only', () => ({}));
 vi.mock('next/navigation', () => ({ notFound: mocks.notFound }));
+vi.mock('@/lib/auth', () => ({ requireAdminShell: mocks.auth }));
+vi.mock('@/components/directory-toolbar', () => ({
+  default: (props: unknown) => {
+    mocks.toolbar(props);
+    return createElement('section', { 'aria-label': 'Directory toolbar' });
+  },
+}));
 vi.mock('@/lib/user-management-data', async (original) => ({
   ...await original<typeof import('@/lib/user-management-data')>(),
   loadUserDirectory: mocks.directory,
@@ -71,6 +80,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.directory.mockResolvedValue({ users: [user], totalUsers: 1, actorUserId: actorId });
   mocks.detail.mockResolvedValue({ user, actorUserId: actorId, accessProfiles: [] });
+  mocks.auth.mockResolvedValue({ profile: { preferred_locale: 'en' } });
 });
 
 it('renders a responsive directory with validated URL search, sorting, and invitations', async () => {
@@ -86,8 +96,54 @@ it('renders a responsive directory with validated URL search, sorting, and invit
   expect(html).not.toContain('Email not recorded');
   expect(html).toContain(`href="/app/user-management/users/${userId}?returnTo=%2Fapp%2Fuser-management%2Fusers%3Fq%3Dana%26sort%3Dfirst_name&amp;focusRow=${userId}"`);
   expect(html).not.toContain('View profile →');
-  expect(html).toContain('1 of 1 users match “ana”.');
+  expect(html).toContain('aria-label="Directory toolbar"');
+  expect(mocks.toolbar).toHaveBeenCalledWith(expect.objectContaining({
+    label: 'Search users',
+    resultCount: 1,
+    locale: 'en',
+    mobileFilters: true,
+    sortOptions: [
+      { value: 'last_name', label: 'Last name' },
+      { value: 'first_name', label: 'First name' },
+    ],
+  }));
   expect(html).toContain('aria-label="Invitation panel"');
+});
+
+it('distinguishes an empty directory from a search with no matches', async () => {
+  mocks.directory.mockResolvedValue({ users: [], totalUsers: 0, actorUserId: actorId });
+  const empty = renderToStaticMarkup(await Users({ searchParams: Promise.resolve({}) }));
+  expect(empty).toContain('No users yet');
+  expect(empty).toContain('Invite a user with the form below.');
+  expect(empty).not.toContain('Clear all filters');
+
+  mocks.directory.mockResolvedValue({ users: [], totalUsers: 3, actorUserId: actorId });
+  const unmatched = renderToStaticMarkup(await Users({
+    searchParams: Promise.resolve({ q: 'missing' }),
+  }));
+  expect(unmatched).toContain('No matching users');
+  expect(unmatched).toContain('href="/app/user-management/users"');
+  expect(unmatched).toContain('Clear all filters');
+});
+
+it('localizes the directory controls, columns, status and recovery copy', async () => {
+  mocks.auth.mockResolvedValue({ profile: { preferred_locale: 'es' } });
+  const populated = renderToStaticMarkup(await Users({ searchParams: Promise.resolve({}) }));
+  expect(populated).toContain('Usuarios');
+  expect(populated).toContain('Directorio de usuarios');
+  expect(populated).toContain('Correo electrónico');
+  expect(populated).toContain('Activo');
+  expect(mocks.toolbar).toHaveBeenCalledWith(expect.objectContaining({
+    label: 'Buscar usuarios',
+    locale: 'es',
+  }));
+
+  mocks.directory.mockResolvedValue({ users: [], totalUsers: 3, actorUserId: actorId });
+  const unmatched = renderToStaticMarkup(await Users({
+    searchParams: Promise.resolve({ q: 'nadie' }),
+  }));
+  expect(unmatched).toContain('No hay usuarios que coincidan');
+  expect(unmatched).toContain('Borrar todos los filtros');
 });
 
 it('rejects repeated and unsupported directory query values', async () => {

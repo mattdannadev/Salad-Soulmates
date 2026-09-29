@@ -6,12 +6,15 @@ import loadDashboard from '@/lib/dashboard-data';
 import DemandCoveragePanel from '@/components/demand-coverage-panel';
 import DashboardPriorities, { type DashboardPriority } from '@/components/dashboard-priorities';
 import DashboardQuickActions from '@/components/dashboard-quick-actions';
+import WorkspaceSetup from '@/components/workspace-setup';
+import loadWorkspaceSetup from '@/services/load-workspace-setup';
 import { facilityDate, formatDate, formatNumber } from '@/domain/format';
 import { purchaseStatusLabel } from '@/domain/supplier-orders';
 
 const DASHBOARD_LIMIT = 6;
 
 export default async function Home() {
+  const [dashboard, setupSteps] = await Promise.all([loadDashboard(), loadWorkspaceSetup()]);
   const {
     profile,
     canOrders,
@@ -25,7 +28,7 @@ export default async function Home() {
     suppliers,
     stock,
     production,
-  } = await loadDashboard();
+  } = dashboard;
   const es = profile.preferred_locale === 'es';
   const today = facilityDate();
   const futurePickups = openOrders.filter((order) => order.needed_on > today)
@@ -159,6 +162,7 @@ export default async function Home() {
           </Link>
         ))}
       </div>
+      <WorkspaceSetup steps={setupSteps} es={es} />
       {(canOrders || canPurchases || canCoverage) && (
         <DashboardPriorities items={priorities} es={es} />
       )}

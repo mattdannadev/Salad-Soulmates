@@ -43,7 +43,8 @@ export default defineConfig({
       env: {
         NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:4010',
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'local-test-publishable-key',
-        SUPABASE_SECRET_KEY: '',
+        // Local HTTP fixture only: server-side sign-in checks require a non-empty key.
+        SUPABASE_SECRET_KEY: 'local-test-secret-key',
       },
     },
   ],

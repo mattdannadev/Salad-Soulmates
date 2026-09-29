@@ -1,6 +1,8 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import {
+  useEffect, useRef, useState, useTransition,
+} from 'react';
 import { useRouter } from 'next/navigation';
 import { saveRecord } from '@/app/actions';
 import type { Ingredient, ActionResult } from '@/domain/master-data';
@@ -14,9 +16,11 @@ const adjustmentTypes = [
 export default function InventoryForm({
   ingredients,
   initialIngredientId = '',
+  onPendingChange = undefined,
 }: {
   ingredients: Ingredient[];
   initialIngredientId?: string;
+  onPendingChange?: (pending: boolean) => void;
 }) {
   const [ingredientId, setIngredientId] = useState(initialIngredientId);
   const [result, setResult] = useState<ActionResult>();
@@ -27,12 +31,16 @@ export default function InventoryForm({
   const [eventType, setEventType] = useState<(typeof adjustmentTypes)[number]['value']>('ManualGain');
   const selectedType = adjustmentTypes.find((type) => type.value === eventType)
     ?? adjustmentTypes[0];
+  useEffect(() => {
+    onPendingChange?.(pending);
+  }, [onPendingChange, pending]);
   return (
     <form
       className="record-form"
       onSubmit={(event) => {
         event.preventDefault();
         if (!selected || pending) return;
+        onPendingChange?.(true);
         const form = event.currentTarget;
         const values = new FormData(form);
         const token = requestId.current ?? crypto.randomUUID();

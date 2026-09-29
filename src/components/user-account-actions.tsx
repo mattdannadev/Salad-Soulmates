@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  useActionState, useEffect, useRef, useState,
+  useActionState, useEffect, useId, useState,
 } from 'react';
 import {
   deactivateManagedUser,
@@ -15,6 +15,7 @@ import type { AccessProfileOption } from '@/lib/user-management-data';
 import ActionButton from './action-button';
 import FormFooter from './form-footer';
 import styles from './user-management.module.css';
+import useNativeDialog from './use-native-dialog';
 
 const initialState: UserManagementActionResult = { ok: false, message: '' };
 
@@ -47,7 +48,6 @@ export default function UserAccountActions({
   const hasCurrentAccessProfile = accessProfiles.some(
     (profile) => profile.id === currentAccessProfileId,
   );
-  const confirmation = useRef<HTMLDialogElement>(null);
   const [resetState, resetAction, resetting] = useActionState(
     generateUserPasswordResetLink,
     initialState,
@@ -56,6 +56,10 @@ export default function UserAccountActions({
     deactivateManagedUser,
     initialState,
   );
+  const {
+    dialog: confirmation, openDialog, closeDialog, onCancel, onClose,
+  } = useNativeDialog(deactivating);
+  const id = useId();
   const [reactivationState, reactivateAction, reactivating] = useActionState(
     reactivateManagedUser,
     initialState,
@@ -79,7 +83,7 @@ export default function UserAccountActions({
       router.replace(returnHref);
       router.refresh();
     }
-  }, [deactivationState.ok, returnHref, router]);
+  }, [confirmation, deactivationState.ok, returnHref, router]);
 
   useEffect(() => {
     if (accessProfileState.ok) {
@@ -192,7 +196,7 @@ export default function UserAccountActions({
               type="button"
               variant="destructive"
               disabled={isCurrentUser}
-              onClick={() => confirmation.current?.showModal()}
+              onClick={openDialog}
             >
               Deactivate user
             </ActionButton>
@@ -236,14 +240,15 @@ export default function UserAccountActions({
         <dialog
           ref={confirmation}
           className={styles.confirmation}
-          aria-labelledby="deactivate-user-heading"
-          aria-describedby="deactivate-user-description"
-          onCancel={(event) => preventPendingDeactivationCancel(event, deactivating)}
+          aria-labelledby={`${id}-heading`}
+          aria-describedby={`${id}-description`}
+          onCancel={onCancel}
+          onClose={onClose}
         >
           <form action={deactivateAction}>
             <input type="hidden" name="user_id" value={userId} />
-            <h2 id="deactivate-user-heading">{`Deactivate ${userName}?`}</h2>
-            <p id="deactivate-user-description">
+            <h2 id={`${id}-heading`}>{`Deactivate ${userName}?`}</h2>
+            <p id={`${id}-description`}>
               This deactivates and revokes Salad Soulmates access. It does not hard-delete the
               authentication account or historical work.
             </p>
@@ -259,7 +264,7 @@ export default function UserAccountActions({
                 type="button"
                 className="secondary"
                 disabled={deactivating}
-                onClick={() => confirmation.current?.close()}
+                onClick={closeDialog}
               >
                 Cancel
               </button>

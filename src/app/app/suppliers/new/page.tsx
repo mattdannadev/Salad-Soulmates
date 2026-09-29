@@ -4,7 +4,7 @@ import hasPermission from '@/lib/permissions';
 import { PageHeader } from '@/components/shell';
 import { SupplierForm } from '@/components/master-forms';
 import BackButton from '@/components/back-button';
-import { resolveReturnContext } from '@/lib/return-context';
+import { isSupplierHomeReturn, supplierReturnContext } from '@/lib/supplier-return-context';
 
 export default async function NewSupplier({
   searchParams,
@@ -18,15 +18,18 @@ export default async function NewSupplier({
   if (profile.role !== 'admin' || !access.every(Boolean)) redirect('/app/suppliers');
   const es = profile.preferred_locale === 'es';
   const query = await searchParams;
-  const returnContext = resolveReturnContext(query?.returnTo, query?.focusRow, {
-    fallbackHref: '/app/suppliers',
-    isAllowedPathname: (pathname) => pathname === '/app/suppliers',
-  });
+  const returnContext = supplierReturnContext(query?.returnTo, query?.focusRow);
+  let backLabel = es ? 'Volver a proveedores' : 'Back to suppliers';
+  if (isSupplierHomeReturn(returnContext.href)) {
+    backLabel = es ? 'Volver al inicio' : 'Back to Home';
+  } else if (returnContext.href.startsWith('/app/ingredients/')) {
+    backLabel = es ? 'Volver al ingrediente' : 'Back to ingredient';
+  }
   return (
     <>
       <BackButton
         href={returnContext.href}
-        label={es ? 'Volver a proveedores' : 'Back to suppliers'}
+        label={backLabel}
       />
       <PageHeader
         eyebrow={es ? 'NUESTROS PROVEEDORES' : 'OUR PARTNERS'}

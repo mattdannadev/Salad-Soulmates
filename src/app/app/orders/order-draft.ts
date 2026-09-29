@@ -1,8 +1,10 @@
 import { z } from 'zod';
 import { MAX_BATCH_COUNT } from '@/domain/purchasing';
+import { resolveReturnContext } from '@/lib/return-context';
 
 const STORAGE_PREFIX = 'salad-soulmates:order-draft:';
 const MAX_STORED_DRAFT_LENGTH = 16_384;
+const ORDER_FALLBACK_HREF = '/app/orders#new-order';
 const draftSchema = z.object({
   customerId: z.union([z.uuid(), z.literal('')]),
   reference: z.string().max(120),
@@ -15,6 +17,32 @@ const draftSchema = z.object({
 });
 
 export type OrderDraft = z.infer<typeof draftSchema>;
+
+/** Accept only a draft-specific order continuation from the product setup page. */
+export function orderProductReturnHref(input: unknown): string {
+  const context = resolveReturnContext(input, undefined, {
+    fallbackHref: ORDER_FALLBACK_HREF,
+    isAllowedPathname: (pathname) => pathname === '/app/orders',
+  });
+  if (context.href === ORDER_FALLBACK_HREF) return context.href;
+  const url = new URL(context.href, 'https://order-return.invalid');
+  const drafts = url.searchParams.getAll('draft');
+  const customers = url.searchParams.getAll('customer');
+  if (
+    url.hash !== '#new-order'
+    || drafts.length !== 1
+    || !z.uuid().safeParse(drafts[0]).success
+    || customers.length > 1
+    || (customers.length === 1 && !z.uuid().safeParse(customers[0]).success)
+    || url.searchParams.has('order')
+    || url.searchParams.has('estimate')
+  ) return ORDER_FALLBACK_HREF;
+  return context.href;
+}
+
+export function orderProductSetupHref(returnHref: string): string {
+  return `/app/products?${new URLSearchParams({ returnTo: orderProductReturnHref(returnHref) })}`;
+}
 
 function storageKey(draftId: string): string | null {
   return z.uuid().safeParse(draftId).success ? `${STORAGE_PREFIX}${draftId}` : null;

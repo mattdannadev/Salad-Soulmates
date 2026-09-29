@@ -14,9 +14,16 @@ export interface DirectoryFilter {
   label: string;
   options: readonly DirectoryOption[];
 }
+export interface DirectoryDateRange {
+  fromKey: string;
+  toKey: string;
+  fromLabel: string;
+  toLabel: string;
+}
 export interface DirectoryQueryConfig {
   filters: readonly DirectoryFilter[];
   sortOptions: readonly DirectoryOption[];
+  dateRange?: DirectoryDateRange;
 }
 export interface DirectoryQuery {
   q: string;
@@ -29,6 +36,7 @@ export interface DirectoryQueryPatch {
   filters?: Record<string, string | null>;
   sort?: string;
   page?: number;
+  dateRange?: { from?: string | null; to?: string | null };
 }
 
 function singleValue(params: URLSearchParams, key: string): string | null {
@@ -38,6 +46,14 @@ function singleValue(params: URLSearchParams, key: string): string | null {
 
 function validFilter(filter: DirectoryFilter): boolean {
   return /^[a-z][a-z0-9_-]*$/i.test(filter.key) && !RESERVED_KEYS.has(filter.key);
+}
+
+function validDateKey(key: string | undefined): key is string {
+  return key !== undefined && /^[a-z][a-z0-9_-]*$/i.test(key) && !RESERVED_KEYS.has(key);
+}
+
+function validIsoDate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
 }
 
 /** Accepts configured, single-valued directory parameters; invalid input uses defaults. */
@@ -96,6 +112,17 @@ export function updateDirectoryQuery(
     if (config.sortOptions.some((option) => option.value === patch.sort)) next.set('sort', patch.sort);
     criteriaChanged = true;
   }
+  if (patch.dateRange && config.dateRange
+    && validDateKey(config.dateRange.fromKey) && validDateKey(config.dateRange.toKey)) {
+    const dateRange = config.dateRange;
+    ([['from', dateRange.fromKey], ['to', dateRange.toKey]] as const).forEach(([part, key]) => {
+      if (!Object.hasOwn(patch.dateRange ?? {}, part)) return;
+      next.delete(key);
+      const value = patch.dateRange?.[part];
+      if (value && validIsoDate(value)) next.set(key, value);
+      criteriaChanged = true;
+    });
+  }
   if (patch.page !== undefined || criteriaChanged) {
     next.delete('page');
     if (!criteriaChanged && patch.page && Number.isSafeInteger(patch.page)
@@ -109,7 +136,9 @@ export function clearDirectoryQuery(
   config: DirectoryQueryConfig,
 ): URLSearchParams {
   const next = new URLSearchParams(search);
-  ['q', 'sort', 'page', ...config.filters.filter(validFilter).map((filter) => filter.key)]
+  ['q', 'sort', 'page', ...config.filters.filter(validFilter).map((filter) => filter.key),
+    ...(config.dateRange && validDateKey(config.dateRange.fromKey) && validDateKey(config.dateRange.toKey)
+      ? [config.dateRange.fromKey, config.dateRange.toKey] : [])]
     .forEach((key) => next.delete(key));
   return next;
 }
@@ -125,12 +154,12 @@ export type DirectoryToolbarProps = DirectoryQueryConfig & {
 /** One URL-backed toolbar for a collection; callers own filtering and result retrieval. */
 export default function DirectoryToolbar({
   label, resultCount, filters, sortOptions, locale = 'en', mobileFilters = false,
-  pageCount = undefined,
+  pageCount = undefined, dateRange = undefined,
 }: DirectoryToolbarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const config = { filters, sortOptions };
+  const config: DirectoryQueryConfig = { filters, sortOptions, dateRange };
   const query = parseDirectoryQuery(searchParams.toString(), config);
   const searchId = useId();
   const es = locale === 'es';
@@ -152,6 +181,13 @@ export default function DirectoryToolbar({
       const option = filter.options.find((candidate) => candidate.value === value);
       return option ? [{ key: filter.key, label: `${filter.label}: ${option.label}` }] : [];
     }),
+    ...(config.dateRange && validDateKey(config.dateRange.fromKey) && validDateKey(config.dateRange.toKey)
+      ? [
+        ...(validIsoDate(searchParams.get(config.dateRange.fromKey) ?? '')
+          ? [{ key: config.dateRange.fromKey, label: `${config.dateRange.fromLabel}: ${searchParams.get(config.dateRange.fromKey)}` }] : []),
+        ...(validIsoDate(searchParams.get(config.dateRange.toKey) ?? '')
+          ? [{ key: config.dateRange.toKey, label: `${config.dateRange.toLabel}: ${searchParams.get(config.dateRange.toKey)}` }] : []),
+      ] : []),
   ];
   const filterFields = (
     <>
@@ -186,6 +222,18 @@ export default function DirectoryToolbar({
             ))}
           </select>
         </label>
+      )}
+      {config.dateRange && validDateKey(config.dateRange.fromKey) && validDateKey(config.dateRange.toKey) && (
+        <>
+          <label className={styles.field}>
+            <span>{config.dateRange.fromLabel}</span>
+            <input type="date" value={searchParams.get(config.dateRange.fromKey) ?? ''} onChange={(event) => pushQuery(updateDirectoryQuery(searchParams.toString(), config, { dateRange: { from: event.target.value || null } }))} />
+          </label>
+          <label className={styles.field}>
+            <span>{config.dateRange.toLabel}</span>
+            <input type="date" value={searchParams.get(config.dateRange.toKey) ?? ''} onChange={(event) => pushQuery(updateDirectoryQuery(searchParams.toString(), config, { dateRange: { to: event.target.value || null } }))} />
+          </label>
+        </>
       )}
     </>
   );
@@ -227,7 +275,12 @@ export default function DirectoryToolbar({
               aria-label={`${es ? 'Quitar' : 'Remove'} ${chip.label}`}
               onClick={() => {
                 const patch = chip.key === 'q'
-                  ? { q: '' } : { filters: { [chip.key]: null } };
+                  ? { q: '' }
+                  : chip.key === config.dateRange?.fromKey
+                    ? { dateRange: { from: null } }
+                    : chip.key === config.dateRange?.toKey
+                      ? { dateRange: { to: null } }
+                      : { filters: { [chip.key]: null } };
                 pushQuery(updateDirectoryQuery(searchParams.toString(), config, patch));
               }}
             >

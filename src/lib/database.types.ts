@@ -1973,7 +1973,17 @@ export type Database = {
       serialize_receipt_line: { Args: { payload: Json }; Returns: string };
       change_serialized_unit: { Args: { payload: Json }; Returns: string };
       find_serialized_units: {
-        Args: { search_text?: string; receipt_filter?: string; unit_filter?: string };
+        Args: {
+          search_text?: string;
+          receipt_filter?: string;
+          unit_filter?: string;
+          ingredient_filter?: string;
+          supplier_filter?: string;
+          availability_filter?: string;
+          expiry_filter?: string;
+          balance_filter?: string;
+          sort_order?: string;
+        };
         Returns: Json;
       };
       find_traceability_production_lots: {

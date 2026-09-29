@@ -5,7 +5,7 @@ import CustomerOptionForm from './customer-option-form';
 
 export default function CustomerProductOptions({
   productId, productName, defaultGallons, customers, options, canWrite, locale,
-  orderUnits,
+  orderUnits, returnHref = null,
 }: {
   productId: string;
   productName: string;
@@ -15,6 +15,7 @@ export default function CustomerProductOptions({
   canWrite: boolean;
   locale: 'en' | 'es';
   orderUnits: { code: string; label: string }[];
+  returnHref?: string | null;
 }) {
   const es = locale === 'es';
   const activeLabel = es ? 'Activa' : 'Active';
@@ -41,6 +42,7 @@ export default function CustomerProductOptions({
             option={option}
             locale={locale}
             orderUnits={orderUnits}
+            returnHref={returnHref}
           />
           )}
         </details>
@@ -54,6 +56,7 @@ export default function CustomerProductOptions({
           customers={customers}
           locale={locale}
           orderUnits={orderUnits}
+          returnHref={returnHref}
         />
       </details>
       )}

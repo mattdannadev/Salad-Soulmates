@@ -3,6 +3,7 @@ import ListGrid from '@/components/list-grid';
 
 export interface LoginHistoryEntry {
   id: string;
+  userId: string;
   userName: string;
   occurredAt: string;
   eventType: 'signed_in' | 'signed_out';
@@ -38,6 +39,8 @@ export default function LoginHistoryTable({
     <ListGrid
       label={isSpanish ? 'Historial de acceso' : 'Login history'}
       locale={locale}
+      searchable={false}
+      controlled={{ page: 1, pageSize: 250, totalCount: entries.length }}
       columns={[
         { key: 'user', label: isSpanish ? 'Usuario' : 'User' },
         { key: 'timestamp', label: isSpanish ? 'Fecha y hora' : 'Timestamp' },

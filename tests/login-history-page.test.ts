@@ -99,6 +99,27 @@ describe('Login History page', () => {
     expect(mocks.logFailure).toHaveBeenCalledWith('login_history_page', expect.any(Error));
   });
 
+  it('offers recovery when URL filters exclude all loaded events', async () => {
+    mocks.limit.mockResolvedValue({
+      data: [{
+        id: '00000000-0000-4000-8000-000000000011',
+        user_id: userId,
+        event_type: 'signed_in',
+        ip_address: null,
+        user_agent: null,
+        occurred_at: '2026-09-21T13:00:00.000Z',
+      }],
+      error: null,
+    });
+    const html = renderToStaticMarkup(await LoginHistoryPage({
+      searchParams: Promise.resolve({ event: 'signed_out' }),
+    }));
+    expect(html).toContain('No matching login activity');
+    expect(html).toContain('Clear all filters');
+    expect(html).toContain('/app/user-management/login-history');
+    expect(html).not.toContain('Avery Green');
+  });
+
   it('redirects users without audit access before reading events', async () => {
     mocks.permission.mockResolvedValue(false);
     await expect(LoginHistoryPage()).rejects.toThrow('REDIRECT:/app');

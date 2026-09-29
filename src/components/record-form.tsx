@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  useId, useRef, useState, useTransition,
+  useEffect, useId, useRef, useState, useTransition,
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveRecord } from '@/app/actions';
@@ -99,6 +99,7 @@ export function RecordForm({
   cancelHref = undefined,
   replaceAfterSave = false,
   afterSaveRecordHashPrefix = undefined,
+  onPendingChange = undefined,
 }: {
   kind: string;
   fields: Field[];
@@ -109,6 +110,7 @@ export function RecordForm({
   cancelHref?: string;
   replaceAfterSave?: boolean;
   afterSaveRecordHashPrefix?: string;
+  onPendingChange?: (pending: boolean) => void;
 }) {
   const [result, setResult] = useState<ActionResult>();
   const [pending, start] = useTransition();
@@ -116,12 +118,16 @@ export function RecordForm({
   const formId = useId();
   const receiptToken = useRef<string | undefined>(undefined);
   const savingLabel = locale === 'es' ? 'Guardando…' : 'Saving…';
+  useEffect(() => {
+    onPendingChange?.(pending);
+  }, [onPendingChange, pending]);
   return (
     <form
       className="record-form"
       onSubmit={(event) => {
         event.preventDefault();
         if (pending) return;
+        onPendingChange?.(true);
         const element = event.currentTarget;
         const form = new FormData(element);
         const values: Record<string, unknown> = { ...hidden };

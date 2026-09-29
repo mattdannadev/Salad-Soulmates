@@ -9,6 +9,7 @@ describe('LoginHistoryTable', () => {
       locale: 'en',
       entries: [{
         id: 'event-1',
+        userId: 'user-1',
         userName: 'Avery Green',
         occurredAt: '2026-09-21T16:30:00Z',
         eventType: 'signed_in',

@@ -46,7 +46,11 @@ test('order draft survives customer cancel and creation without leaking entries 
   await expect(page.getByLabel('Preview Italian dressing', { exact: true })).toHaveValue('2');
   expect(resumedUrl).not.toContain('Recovery reference');
 
-  await page.goto('/app/products');
+  await page.getByRole('link', { name: 'Configure products →', exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/products\?returnTo=/u);
+  const resumed = new URL(resumedUrl);
+  expect(new URL(page.url()).searchParams.get('returnTo'))
+    .toBe(`${resumed.pathname}${resumed.search}${resumed.hash}`);
   const options = page.locator('details.product-customer-options').first();
   await options.locator(':scope > summary').click();
   const addOption = options.locator('details').filter({ hasText: '+ Add customer option' });
@@ -59,7 +63,8 @@ test('order draft survives customer cancel and creation without leaking entries 
   await addOption.getByLabel('Price per unit (USD)', { exact: true }).fill('12.50');
   await addOption.getByRole('button', { name: 'Save customer option', exact: true }).click();
   await expect(options).toContainText('Recovery customer · 2-gallon bag · $12.50 / bag');
-  await page.goto(resumedUrl);
+  await page.getByRole('link', { name: 'Back to order', exact: true }).click();
+  await expect(page).toHaveURL(resumedUrl);
   await expect(page.getByLabel('Preview Italian dressing', { exact: true })).toHaveValue('2');
   await page.getByRole('button', { name: 'Save order & estimate ingredients' }).click();
   await expect(page).toHaveURL(/\/app\/orders\?order=/u);

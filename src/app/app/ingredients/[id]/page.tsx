@@ -13,18 +13,24 @@ import loadIngredientStock from '@/lib/ingredient-stock';
 import IngredientStock from '@/components/ingredient-stock';
 import recipeText from '@/domain/recipe-text';
 import BackButton from '@/components/back-button';
-import { ingredientReturnContext, ingredientReturnHref } from '../return-context';
+import {
+  ingredientReturnContext, ingredientReturnHref, ingredientSupplierRecoveryHref,
+} from '../return-context';
 
 export default async function IngredientDetail({
   params, searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ returnTo?: string; focusRow?: string }>;
+  searchParams: Promise<{ returnTo?: string; focusRow?: string; addPack?: string }>;
 }) {
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
   const query = await searchParams;
   const returnContext = ingredientReturnContext(query.returnTo, query.focusRow, `/app/ingredients/${id}`);
+  const supplierRecoveryHref = ingredientSupplierRecoveryHref(
+    id,
+    query.returnTo === undefined ? undefined : returnContext,
+  );
   const { db, profile } = await requireAdminShell();
   const result = await db.from('ingredients').select('*').eq('id', id).maybeSingle();
   if (result.error) throw operationError('ingredient_load', 'Unable to load ingredient.', result.error);
@@ -84,7 +90,8 @@ export default async function IngredientDetail({
     <>
       <BackButton
         href={query.returnTo === undefined ? '/app/ingredients' : ingredientReturnHref(returnContext)}
-        label="Back to ingredients"
+        label={new URL(returnContext.href, 'https://ingredient-return.invalid').pathname === '/app'
+          ? 'Back to Home' : 'Back to ingredients'}
       />
       <PageHeader
         eyebrow={ingredient.category}
@@ -172,7 +179,7 @@ export default async function IngredientDetail({
         ))}
         {canWrite
           && (suppliers.length ? (
-            <details>
+            <details id="add-supplier-pack" open={query.addPack === '1'}>
               <summary>+ Add supplier pack</summary>
               <PackForm
                 ingredientId={id}
@@ -183,7 +190,11 @@ export default async function IngredientDetail({
               />
             </details>
           ) : (
-            <Link href="/app/suppliers">Add a supplier to define purchasing packs →</Link>
+            <Link href={supplierRecoveryHref}>
+              {profile.preferred_locale === 'es'
+                ? 'Crear proveedor para configurar presentaciones de compra →'
+                : 'Create supplier to define purchasing packs →'}
+            </Link>
           ))}
       </section>
     </>

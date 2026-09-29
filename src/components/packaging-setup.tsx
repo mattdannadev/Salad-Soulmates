@@ -4,12 +4,13 @@ import type { PackagingProduct } from './packaging-form';
 import PackagingLabelPreview from './packaging-label-preview';
 
 export default function PackagingSetup({
-  product, versions, canWrite, locale,
+  product, versions, canWrite, locale, returnHref = null,
 }: {
   product: PackagingProduct;
   versions: PackagingVersion[];
   canWrite: boolean;
   locale: 'en' | 'es';
+  returnHref?: string | null;
 }) {
   const es = locale === 'es';
   const statusLabel = (status: string) => {
@@ -34,6 +35,7 @@ export default function PackagingSetup({
           product={product}
           latest={latest}
           locale={locale}
+          returnHref={returnHref}
         />
       )}
       {!canWrite && !versions.length && <p>{es ? 'Aún no hay versiones guardadas.' : 'No saved versions yet.'}</p>}

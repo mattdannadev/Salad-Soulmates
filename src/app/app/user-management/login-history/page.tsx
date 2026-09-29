@@ -1,4 +1,6 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import { Suspense } from 'react';
 import { z } from 'zod';
 import { requireAdminShell } from '@/lib/auth';
 import hasPermission from '@/lib/permissions';
@@ -6,6 +8,11 @@ import { readResult } from '@/lib/data';
 import { logFailure } from '@/lib/operation-error';
 import { PageHeader } from '@/components/shell';
 import LoginHistoryTable, { type LoginHistoryEntry } from '@/components/login-history-table';
+import DirectoryToolbar from '@/components/directory-toolbar';
+import {
+  hasLoginHistoryCriteria, parseLoginHistoryQuery, selectLoginHistory,
+  type LoginHistorySearchParams,
+} from './directory-query';
 
 const loginEventSchema = z.object({
   id: z.uuid(),
@@ -41,6 +48,7 @@ async function loadLoginHistory(
   return events.toSorted((left, right) => right.occurred_at.localeCompare(left.occurred_at))
     .map((event) => ({
       id: event.id,
+      userId: event.user_id,
       userName: userNames.get(event.user_id) ?? fallbackUser,
       occurredAt: event.occurred_at,
       eventType: event.event_type,
@@ -48,11 +56,15 @@ async function loadLoginHistory(
     }));
 }
 
-export default async function LoginHistoryPage() {
+export default async function LoginHistoryPage({ searchParams }: {
+  searchParams?: Promise<LoginHistorySearchParams>;
+} = {}) {
   const { db, profile } = await requireAdminShell();
   const allowed = await hasPermission(db, 'audit.read');
   if (!allowed) redirect('/app');
   const isSpanish = profile.preferred_locale === 'es';
+  const locale = profile.preferred_locale;
+  const query = parseLoginHistoryQuery(await searchParams ?? {});
   let entries: LoginHistoryEntry[] | null = null;
   try {
     entries = await loadLoginHistory(
@@ -63,6 +75,27 @@ export default async function LoginHistoryPage() {
   } catch (error) {
     logFailure('login_history_page', error);
   }
+  const userOptions = [...new Map((entries ?? []).map((entry) => [entry.userId, entry.userName]))]
+    .map(([value, label]) => ({ value, label }))
+    .sort((left, right) => left.label.localeCompare(right.label, locale, { sensitivity: 'base' })
+      || left.value.localeCompare(right.value));
+  const visibleEntries = entries ? selectLoginHistory(entries, query, locale) : [];
+  const filters = [
+    { key: 'user', label: isSpanish ? 'Usuario' : 'User', options: userOptions },
+    {
+      key: 'event',
+      label: isSpanish ? 'Evento' : 'Event',
+      options: [
+        { value: 'signed_in', label: isSpanish ? 'Sesión iniciada' : 'Signed in' },
+        { value: 'signed_out', label: isSpanish ? 'Sesión cerrada' : 'Signed out' },
+      ],
+    },
+  ];
+  const sortOptions = [
+    { value: 'newest', label: isSpanish ? 'Más recientes' : 'Newest first' },
+    { value: 'oldest', label: isSpanish ? 'Más antiguos' : 'Oldest first' },
+    { value: 'user', label: isSpanish ? 'Usuario A–Z' : 'User A–Z' },
+  ];
   return (
     <>
       <PageHeader
@@ -75,7 +108,35 @@ export default async function LoginHistoryPage() {
       <section className="panel">
         <h2>{isSpanish ? 'Actividad reciente' : 'Recent activity'}</h2>
         {entries ? (
-          <LoginHistoryTable entries={entries} locale={profile.preferred_locale} />
+          <>
+            <Suspense fallback={null}>
+              <DirectoryToolbar
+                label={isSpanish ? 'Filtrar historial de acceso' : 'Filter login history'}
+                resultCount={visibleEntries.length}
+                filters={filters}
+                sortOptions={sortOptions}
+                dateRange={{
+                  fromKey: 'from',
+                  toKey: 'to',
+                  fromLabel: isSpanish ? 'Desde' : 'From',
+                  toLabel: isSpanish ? 'Hasta' : 'To',
+                }}
+                locale={locale}
+                mobileFilters
+              />
+            </Suspense>
+            {entries.length > 0 && visibleEntries.length === 0 ? (
+              <div className="empty" role="status">
+                <h3>{isSpanish ? 'No hay actividad que coincida' : 'No matching login activity'}</h3>
+                <p>{isSpanish ? 'Pruebe otra búsqueda o borre los filtros.' : 'Try another search or clear the filters.'}</p>
+                {hasLoginHistoryCriteria(query) && (
+                  <Link href="/app/user-management/login-history">
+                    {isSpanish ? 'Borrar todos los filtros' : 'Clear all filters'}
+                  </Link>
+                )}
+              </div>
+            ) : <LoginHistoryTable entries={visibleEntries} locale={locale} />}
+          </>
         ) : (
           <div className="error-notice" role="alert">
             <h3>{isSpanish ? 'No se pudo cargar el historial' : 'Login history is unavailable'}</h3>

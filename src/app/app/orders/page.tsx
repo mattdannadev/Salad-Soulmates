@@ -109,6 +109,8 @@ export default async function Orders({
       (item) => !directoryQuery.product
         || item.items.some((line) => line.product_name === directoryQuery.product),
     )
+    .filter((item) => !directoryQuery.pickupFrom || item.needed_on >= directoryQuery.pickupFrom)
+    .filter((item) => !directoryQuery.pickupTo || item.needed_on <= directoryQuery.pickupTo)
     .filter((item) => {
       const production = workspace.productionPlans.find(
         (plan) => plan.id === item.id && plan.status !== 'Cancelled',
@@ -351,6 +353,12 @@ export default async function Orders({
                 resultCount={filteredOrders.length}
                 filters={toolbarFilters}
                 sortOptions={toolbarSorts}
+                dateRange={{
+                  fromKey: 'pickupFrom',
+                  toKey: 'pickupTo',
+                  fromLabel: es ? 'Recogida desde' : 'Pickup from',
+                  toLabel: es ? 'Recogida hasta' : 'Pickup through',
+                }}
                 locale={locale}
                 mobileFilters
                 pageCount={pageCount}

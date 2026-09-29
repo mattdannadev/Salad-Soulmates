@@ -25,6 +25,7 @@ const config: DirectoryQueryConfig = {
     },
   ],
   sortOptions: [{ value: 'name_asc', label: 'Name A–Z' }],
+  dateRange: { fromKey: 'from', toKey: 'to', fromLabel: 'From', toLabel: 'To' },
 };
 
 describe('directory query contract', () => {
@@ -73,5 +74,15 @@ describe('directory query contract', () => {
       config,
     );
     expect(next.toString()).toBe('tab=history&returnTo=%2Fapp%2Forders');
+  });
+
+  it('updates and clears validated date-range criteria', () => {
+    const next = updateDirectoryQuery('tab=history&page=2', config, {
+      dateRange: { from: '2026-10-01', to: '2026-10-31' },
+    });
+    expect(next.toString()).toBe('tab=history&from=2026-10-01&to=2026-10-31');
+    expect(updateDirectoryQuery(next, config, { dateRange: { from: 'not-a-date' } }).toString())
+      .toBe('tab=history&to=2026-10-31');
+    expect(clearDirectoryQuery(next, config).toString()).toBe('tab=history');
   });
 });

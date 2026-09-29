@@ -7,7 +7,7 @@ import { operationError } from '@/lib/operation-error';
 import hasPermission from '@/lib/permissions';
 
 export const userDirectoryQuerySchema = z.object({
-  q: z.string().trim().max(120).optional()
+  q: z.string().trim().max(200).optional()
     .default(''),
   sort: z.enum(['first_name', 'last_name']).optional().default('last_name'),
 });

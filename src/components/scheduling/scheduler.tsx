@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  useCallback, useMemo, useState, useTransition,
+  useCallback, useEffect, useMemo, useRef, useState, useTransition,
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { EventCalendar } from '@mui/x-scheduler/event-calendar';
@@ -96,6 +96,7 @@ const labels: Record<'en' | 'es', Record<WorkType, string>> = {
 };
 const spanishTheme = createTheme({}, esES);
 const englishTheme = createTheme();
+const dialogFocusable = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 function addDays(date: string, days: number): string {
   const year = Number(date.slice(0, 4));
@@ -184,6 +185,72 @@ export default function WorkforceScheduler({
     revision: 0,
   });
   const [pending, startTransition] = useTransition();
+  const dialogRef = useRef<HTMLElement>(null);
+  const dialogOpenerRef = useRef<HTMLElement | null>(null);
+  const pendingRef = useRef(pending);
+  let activeDialog: 'pto' | 'assignment' | null = null;
+  if (ptoOpen) activeDialog = 'pto';
+  else if (formOpen) activeDialog = 'assignment';
+
+  useEffect(() => {
+    pendingRef.current = pending;
+  }, [pending]);
+
+  useEffect(() => {
+    if (!activeDialog) {
+      const opener = dialogOpenerRef.current;
+      dialogOpenerRef.current = null;
+      if (opener?.isConnected) opener.focus();
+      return undefined;
+    }
+    const dialog = dialogRef.current;
+    if (!dialog) return undefined;
+    const focusable = () => Array.from(dialog.querySelectorAll<HTMLElement>(dialogFocusable))
+      .filter((element) => element.getClientRects().length > 0);
+    (focusable()[0] ?? dialog).focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (!pendingRef.current) {
+          event.preventDefault();
+          if (activeDialog === 'pto') setPtoOpen(false);
+          else setFormOpen(false);
+        }
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const items = focusable();
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (!first || !last) {
+        event.preventDefault();
+        dialog.focus();
+      } else if (event.shiftKey && (document.activeElement === first
+        || !dialog.contains(document.activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last
+        || !dialog.contains(document.activeElement))) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    const onFocus = (event: FocusEvent) => {
+      if (event.target instanceof Node && !dialog.contains(event.target)) {
+        (focusable()[0] ?? dialog).focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('focusin', onFocus);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('focusin', onFocus);
+    };
+  }, [activeDialog]);
+
+  function rememberDialogOpener() {
+    dialogOpenerRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement : null;
+  }
   const facility = facilities.find((item) => item.id === facilityId);
   const facilityEmployees = useMemo(() => employees.filter((item) => (
     item.facilityId === facilityId
@@ -306,6 +373,7 @@ export default function WorkforceScheduler({
     setMessage('');
   }
   function openForm(assignment?: Assignment) {
+    rememberDialogOpener();
     setEditingId(assignment?.id ?? null);
     setForm(assignment ? {
       facilityId: assignment.facilityId,
@@ -412,6 +480,7 @@ export default function WorkforceScheduler({
           locationLabel: null,
           availabilityOverrideReason: null,
         });
+        rememberDialogOpener();
         setFormOpen(true);
       }
       return;
@@ -580,6 +649,7 @@ export default function WorkforceScheduler({
           type="button"
           disabled={pending}
           onClick={() => {
+            rememberDialogOpener();
             setPtoForm({
               id: '',
               employeeId: facilityEmployees[0]?.id ?? '',
@@ -863,6 +933,7 @@ export default function WorkforceScheduler({
                 <button
                   type="button"
                   onClick={() => {
+                    rememberDialogOpener();
                     setPtoForm(block);
                     setPtoOpen(true);
                   }}
@@ -900,7 +971,7 @@ export default function WorkforceScheduler({
       {message && <p role="status" className={styles.status}>{message}</p>}
       {ptoOpen && canManage && (
         <div className={styles.modalBackdrop}>
-          <section className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="pto-dialog-title">
+          <section ref={dialogRef} className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="pto-dialog-title" aria-describedby="pto-dialog-description" tabIndex={-1}>
             <h2 id="pto-dialog-title">{es ? 'Ausencia del empleado' : 'Employee time off'}</h2>
             <label>
               {es ? 'Empleado' : 'Employee'}
@@ -954,7 +1025,7 @@ export default function WorkforceScheduler({
                 />
               </label>
             </div>
-            <p>{es ? 'Para días completos, deje las horas sin cambios.' : 'For full days, leave the times unchanged.'}</p>
+            <p id="pto-dialog-description">{es ? 'Para días completos, deje las horas sin cambios.' : 'For full days, leave the times unchanged.'}</p>
             <label>
               {es ? 'Nota privada' : 'Private note'}
               <textarea
@@ -963,7 +1034,7 @@ export default function WorkforceScheduler({
               />
             </label>
             <div className={styles.dialogActions}>
-              <button type="button" onClick={() => setPtoOpen(false)}>{es ? 'Cerrar' : 'Close'}</button>
+              <button type="button" disabled={pending} onClick={() => setPtoOpen(false)}>{es ? 'Cerrar' : 'Close'}</button>
               <button type="button" className={styles.primary} disabled={pending} onClick={savePto}>
                 {es ? 'Guardar ausencia' : 'Save time off'}
               </button>
@@ -973,10 +1044,13 @@ export default function WorkforceScheduler({
       )}
       {formOpen && canManage && (
       <div className={styles.modalBackdrop}>
-        <section className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="assignment-dialog-title">
+        <section ref={dialogRef} className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="assignment-dialog-title" aria-describedby="assignment-dialog-description" tabIndex={-1}>
           <h2 id="assignment-dialog-title">
             {dialogTitle}
           </h2>
+          <p id="assignment-dialog-description">
+            {es ? 'Seleccione la tarea, las fechas y los empleados para esta asignación.' : 'Choose the task, dates, and employees for this assignment.'}
+          </p>
           <label>
             {es ? 'Tarea' : 'Task'}
             <select
@@ -1095,7 +1169,7 @@ export default function WorkforceScheduler({
           )}
           <div className={styles.dialogActions}>
             {editingId && <button type="button" disabled={pending} onClick={() => deleteAssignment(editingId)}>{es ? 'Eliminar' : 'Delete'}</button>}
-            <button type="button" onClick={() => setFormOpen(false)}>{es ? 'Cancelar' : 'Cancel'}</button>
+            <button type="button" disabled={pending} onClick={() => setFormOpen(false)}>{es ? 'Cancelar' : 'Cancel'}</button>
             <button type="button" className={styles.primary} disabled={pending} onClick={saveForm}>{es ? 'Guardar' : 'Save'}</button>
           </div>
         </section>

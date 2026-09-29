@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { supplierReturnContext } from '@/lib/supplier-return-context';
 
 export type SupplierSearchParams = Record<string, string | string[] | undefined>;
 
@@ -56,6 +57,15 @@ export function supplierDirectoryHref(
   }
   if (parsed.page > 1) params.set('page', String(parsed.page));
   return `/app/suppliers${params.size ? `?${params}` : ''}`;
+}
+
+/** Preserve the setup checklist's Home continuation when opening creation. */
+export function supplierCreateReturnHref(
+  query: SupplierSearchParams,
+  canReadPurchases: boolean,
+): string {
+  if (supplierReturnContext(query.returnTo, undefined).href === '/app') return '/app';
+  return supplierDirectoryHref(query, canReadPurchases);
 }
 
 /** Find the URL page that can reveal a returned row under the current criteria. */

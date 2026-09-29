@@ -3,7 +3,7 @@ import {
 } from 'vitest';
 import {
   clearOrderDraft, orderDraftFromForm, orderDraftSnapshot, parseOrderDraftSnapshot,
-  saveOrderDraft,
+  orderProductReturnHref, orderProductSetupHref, saveOrderDraft,
 } from '@/app/app/orders/order-draft';
 
 const draftId = '10000000-0000-4000-8000-000000000001';
@@ -26,6 +26,26 @@ function stubStorage() {
 }
 
 describe('order detour draft', () => {
+  it('passes a validated draft and customer through product setup', () => {
+    const orderHref = `/app/orders?q=Preview&customer=${customerId}&draft=${draftId}#new-order`;
+    const setup = new URL(orderProductSetupHref(orderHref), 'https://internal.invalid');
+    expect(setup.pathname).toBe('/app/products');
+    expect(setup.searchParams.get('returnTo')).toBe(orderHref);
+    expect(orderProductReturnHref(setup.searchParams.get('returnTo'))).toBe(orderHref);
+  });
+
+  it.each([
+    'https://external.invalid/app/orders?draft=10000000-0000-4000-8000-000000000001#new-order',
+    '//external.invalid/app/orders',
+    '/app/orders?draft=invalid#new-order',
+    `/app/orders?draft=${draftId}&customer=invalid#new-order`,
+    `/app/orders?draft=${draftId}&order=${productId}#new-order`,
+    `/app/orders?draft=${draftId}#other`,
+    `/app/orders?draft=${draftId}&draft=${draftId}#new-order`,
+  ])('falls back for unsafe product returns: %s', (input) => {
+    expect(orderProductReturnHref(input)).toBe('/app/orders#new-order');
+  });
+
   it('keeps only typed order fields in tab storage, with no URL or customer contact data', () => {
     stubStorage();
     const form = new FormData();

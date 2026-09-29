@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useId, useState } from 'react';
+import { type MouseEvent, useId, useState } from 'react';
 import { formatPrice, type CustomerOption } from '@/domain/customer-pricing';
 import { MAX_BATCH_COUNT } from '@/domain/purchasing';
 import { formatNumber } from '@/domain/format';
@@ -12,12 +12,16 @@ export default function ProductOrderLine({
   locale,
   initialBatches = 0,
   initialOptionId = '',
+  configureHref = '/app/products',
+  onConfigureClick = undefined,
 }: {
   choice: { id: string; name: string };
   options: CustomerOption[];
   locale: 'en' | 'es';
   initialBatches?: number;
   initialOptionId?: string;
+  configureHref?: string;
+  onConfigureClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   const prefix = useId();
   const es = locale === 'es';
@@ -107,7 +111,7 @@ export default function ProductOrderLine({
         </p>
       ) : (
         <p>
-          <Link href="/app/products">
+          <Link href={configureHref} onClick={onConfigureClick}>
             {es ? 'Configurar precio en Productos →' : 'Set customer pricing in Products →'}
           </Link>
         </p>

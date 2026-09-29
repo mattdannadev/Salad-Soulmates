@@ -289,6 +289,21 @@ panel; click-an-empty-day and form-first assignment paths; optional (never
 required) drag/drop; work context on calendar cards; and consistently compact
 controls.
 
+### Dashboard schedule — planned Phase 5 capability
+
+Add a schedule to the main dashboard that gives workers a clear, read-only view
+of the operational day and upcoming work. It must surface the key dated events:
+customer pickups, supplier drop-offs, employee shifts, and spice-mixing work.
+Operations supervisors must be able to view the schedule for each facility they
+are authorized to supervise, including a combined view when they supervise
+multiple facilities; workers must see only the facilities and schedule detail
+their existing permissions allow. Reuse the facility-scoped scheduling,
+authorization, audit, and localization contracts rather than creating a separate
+calendar or bypassing the underlying order, purchasing, and workforce records.
+Acceptance includes clear empty/loading/error states, chronological event
+ordering, facility attribution, desktop and phone usability, and permission
+negative tests for cross-facility access.
+
 This owner correction changes workflow and sequencing, not confirmed recipe,
 lot/date, inventory, facility isolation, packaging or workforce rules.
 

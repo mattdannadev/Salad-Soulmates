@@ -44,7 +44,11 @@ export default async function NewIngredient({
   );
   return (
     <>
-      <BackButton href={ingredientReturnHref(returnContext)} label="Back to ingredients" />
+      <BackButton
+        href={ingredientReturnHref(returnContext)}
+        label={new URL(returnContext.href, 'https://ingredient-return.invalid').pathname === '/app'
+          ? 'Back to Home' : 'Back to ingredients'}
+      />
       <PageHeader
         eyebrow="INGREDIENTS"
         title="Add ingredient"

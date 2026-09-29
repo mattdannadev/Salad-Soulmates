@@ -1,12 +1,15 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import {
+  useId, useRef, useState, useTransition,
+} from 'react';
 import { useRouter } from 'next/navigation';
 import { saveRecord } from '@/app/actions';
 import type { Ingredient, ActionResult } from '@/domain/master-data';
 import type { ReturnContext } from '@/lib/return-context';
 import FormFooter from '@/components/form-footer';
 import { ingredientReturnHref } from '@/app/app/ingredients/return-context';
+import useNativeDialog from './use-native-dialog';
 
 export default function IngredientForm({
   ingredient = undefined,
@@ -38,7 +41,10 @@ export default function IngredientForm({
   const [pending, start] = useTransition();
   const [result, setResult] = useState<ActionResult>();
   const router = useRouter();
-  const confirmation = useRef<HTMLDialogElement>(null);
+  const {
+    dialog: confirmation, openDialog, closeDialog, closeAfterAction, onCancel, onClose,
+  } = useNativeDialog(pending);
+  const confirmationId = useId();
   const pendingForm = useRef<FormData | undefined>(undefined);
   function optionalQuantity(value: FormDataEntryValue | null) {
     return value === null || value === '' ? null : Number(value);
@@ -82,24 +88,26 @@ export default function IngredientForm({
         if (pending) return;
         if (ingredient?.active && !f.has('active')) {
           pendingForm.current = f;
-          confirmation.current?.showModal();
+          const { submitter } = e.nativeEvent;
+          openDialog(submitter instanceof HTMLElement ? submitter : e.currentTarget);
           return;
         }
         submitIngredient(f);
       }}
     >
-      <dialog ref={confirmation} aria-labelledby="confirm-deactivation">
-        <h2 id="confirm-deactivation">Deactivate this ingredient?</h2>
-        <p>Existing history will be retained.</p>
-        <button type="button" onClick={() => confirmation.current?.close()}>
+      <dialog ref={confirmation} aria-labelledby={`${confirmationId}-title`} aria-describedby={`${confirmationId}-description`} onCancel={onCancel} onClose={onClose}>
+        <h2 id={`${confirmationId}-title`}>Deactivate this ingredient?</h2>
+        <p id={`${confirmationId}-description`}>Existing history will be retained.</p>
+        <button type="button" disabled={pending} onClick={closeDialog}>
           Cancel
         </button>
         <button
           type="button"
           onClick={() => {
-            confirmation.current?.close();
+            closeAfterAction();
             if (pendingForm.current) submitIngredient(pendingForm.current);
           }}
+          disabled={pending}
         >
           Deactivate
         </button>

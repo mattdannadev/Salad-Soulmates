@@ -38,7 +38,9 @@ it('requires explicit confirmation and explains that deactivation preserves hist
   expect(html).toContain('Deactivate user');
   expect(html).toContain('<dialog');
   expect(html).toContain('Deactivate Ana Rivera?');
-  expect(html).toContain('aria-describedby="deactivate-user-description"');
+  const descriptionId = html.match(/aria-describedby="([^"]+)"/)?.[1];
+  expect(descriptionId).toBeTruthy();
+  expect(html).toContain(`id="${descriptionId}"`);
   expect(html).toContain('does not hard-delete the authentication account or historical work');
   expect(html).toContain('Reason for deactivation');
   expect(html).not.toContain('Delete user');

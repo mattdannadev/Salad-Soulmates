@@ -21,6 +21,8 @@ describe('order directory query', () => {
         view: 'historical',
         sort: 'pickup-oldest',
         page: '3',
+        pickupFrom: '2026-10-01',
+        pickupTo: '2026-10-31',
       },
       customers,
       products,
@@ -33,9 +35,11 @@ describe('order directory query', () => {
       view: 'historical',
       sort: 'pickup-oldest',
       page: 3,
+      pickupFrom: '2026-10-01',
+      pickupTo: '2026-10-31',
     });
     expect(orderDirectoryHref(parsed)).toBe(
-      `/app/orders?q=greens&customerFilter=${customerId}&product=House+Salad&status=draft&view=historical&sort=pickup-oldest&page=3`,
+      `/app/orders?q=greens&customerFilter=${customerId}&product=House+Salad&status=draft&view=historical&sort=pickup-oldest&pickupFrom=2026-10-01&pickupTo=2026-10-31&page=3`,
     );
     expect(orderDetailHref(orderDirectoryHref(parsed), orderId)).toContain(`order=${orderId}`);
   });
@@ -63,6 +67,8 @@ describe('order directory query', () => {
       view: undefined,
       sort: 'pickup-newest',
       page: 1,
+      pickupFrom: undefined,
+      pickupTo: undefined,
     });
     expect(
       orderDirectoryHref(
@@ -78,6 +84,13 @@ describe('order directory query', () => {
         ),
       ),
     ).toBe('/app/orders');
+  });
+
+  it('rejects malformed or reversed pickup ranges', () => {
+    expect(parseOrderDirectoryQuery({ pickupFrom: '2026-11-01', pickupTo: '2026-10-01' }, customers, products))
+      .toMatchObject({ pickupFrom: undefined, pickupTo: undefined });
+    expect(parseOrderDirectoryQuery({ pickupFrom: 'October 1' }, customers, products))
+      .toMatchObject({ pickupFrom: undefined });
   });
 
   it('keeps order detail links in the current directory view', () => {

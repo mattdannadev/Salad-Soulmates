@@ -8,10 +8,14 @@ import { readResult } from '@/lib/data';
 import { unitEventSchema } from '@/domain/receiving';
 import { formatDate, formatNumber } from '@/domain/format';
 import PackageChangeForm from '@/components/package-change-form';
+import { packageDirectoryHref, parsePackageDirectoryQuery } from '../directory-query';
 
 export const dynamic = 'force-dynamic';
 
-export default async function PackageDetail({ params }: { params: Promise<{ id: string }> }) {
+export default async function PackageDetail({ params, searchParams }: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ returnTo?: string | string[] }>;
+}) {
   const id = z.uuid().safeParse((await params).id);
   if (!id.success) notFound();
   const { db, profile } = await requireProfile();
@@ -29,9 +33,19 @@ export default async function PackageDetail({ params }: { params: Promise<{ id: 
   const [unit] = units;
   if (!unit) notFound();
   const events = readResult(response, z.array(unitEventSchema), 'package_history');
+  const { returnTo } = await searchParams;
+  let directoryHref = '/receiving/packages';
+  if (typeof returnTo === 'string' && returnTo.length <= 2000) {
+    const origin = new URL(returnTo, 'https://packages.invalid');
+    if (origin.origin === 'https://packages.invalid' && origin.pathname === '/receiving/packages') {
+      directoryHref = packageDirectoryHref(
+        parsePackageDirectoryQuery(Object.fromEntries(origin.searchParams)),
+      );
+    }
+  }
   return (
     <main className="worker-page package-detail">
-      <Link href="/receiving/packages">← Find a package</Link>
+      <Link href={directoryHref}>← Find a package</Link>
       <p className="eyebrow">SERIALIZED INGREDIENT</p>
       <h1>{unit.ingredient_name}</h1>
       <p className="serial-code">{unit.internal_code}</p>

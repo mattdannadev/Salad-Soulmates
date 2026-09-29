@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  parseSupplierDirectoryQuery, supplierDirectoryHref, supplierPageForRow,
+  parseSupplierDirectoryQuery, supplierCreateReturnHref,
+  supplierDirectoryHref, supplierPageForRow,
 } from '../src/app/app/suppliers/directory-query';
 
 describe('supplier directory query', () => {
@@ -36,6 +37,14 @@ describe('supplier directory query', () => {
     expect(supplierDirectoryHref({
       q: 'greens', sort: 'open-purchases', page: '2',
     }, true)).toBe('/app/suppliers?q=greens&sort=open-purchases&page=2');
+  });
+
+  it('returns to Home only for the checklist origin and otherwise retains directory filters', () => {
+    expect(supplierCreateReturnHref({ returnTo: '/app', q: 'greens' }, false)).toBe('/app');
+    expect(supplierCreateReturnHref({ returnTo: '/app/orders', q: 'greens' }, false))
+      .toBe('/app/suppliers?q=greens');
+    expect(supplierCreateReturnHref({ returnTo: ['app', '/app'], q: 'greens' }, false))
+      .toBe('/app/suppliers?q=greens');
   });
 
   it('finds the page containing a returned supplier', () => {

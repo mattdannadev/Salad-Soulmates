@@ -243,7 +243,8 @@ export function Shell({
       if (event.key !== 'Tab' || !drawerRef.current) return;
       const focusable = Array.from(drawerRef.current.querySelectorAll<HTMLElement>(
         'a[href], button:not([disabled]), summary, [tabindex]:not([tabindex="-1"])',
-      )).filter((element) => element.getClientRects().length > 0);
+      )).filter((element) => element.getClientRects().length > 0
+        && (element.tagName === 'SUMMARY' || !element.closest('details:not([open])')));
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       if (!first || !last) return;

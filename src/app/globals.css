@@ -2403,6 +2403,7 @@ dialog::backdrop {
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .route-loading,
   .route-progress::after,
   .skeleton {
     animation: none;
