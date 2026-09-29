@@ -5,6 +5,7 @@ test('customer directory keeps search and restores focus after an edit', async (
   await page.getByLabel('Email or phone number').fill('admin@example.test');
   await page.getByLabel('Password', { exact: true }).fill('local-test-password');
   await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page).toHaveURL(/\/app$/u);
   await page.goto('/app/customers/new');
   await page.getByLabel('Customer name', { exact: true }).fill('Directory focus customer');
   await page.getByRole('button', { name: 'Create customer', exact: true }).click();
@@ -46,7 +47,8 @@ test('customer master lookup fills order details and dashboard shows product bat
   await page.getByLabel('Address', { exact: true }).fill('100 Test Road');
   await page.getByLabel('Customer notes', { exact: true }).fill('Call before pickup');
   await page.getByRole('button', { name: 'Create customer', exact: true }).click();
-  await expect(page).toHaveURL(/\/app\/orders\?customer=.*#new-order$/);
+  await expect(page).toHaveURL((url) => url.pathname === '/app/orders'
+    && Boolean(url.searchParams.get('customer')) && url.hash === '#new-order');
   const savedCustomerId = new URL(page.url()).searchParams.get('customer');
   expect(savedCustomerId).toMatch(/^[a-f\d-]{36}$/u);
   const customerUrl = `/app/customers?customer=${savedCustomerId}`;

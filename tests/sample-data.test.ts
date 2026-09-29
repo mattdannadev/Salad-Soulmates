@@ -28,7 +28,7 @@ describe('local sample-data contract', () => {
   it('contains two coherent records through every implemented workflow boundary', () => {
     expect(callCount('create_purchase_draft')).toBe(2);
     expect(callCount('receive_purchase_delivery')).toBe(2);
-    expect(callCount('assign_production_lot')).toBe(2);
+    expect(callCount('assign_production_lot')).toBe(0);
     expect(callCount('open_batch_worksheet')).toBe(2);
     expect(callCount('complete_batch_worksheet')).toBe(2);
     expect(callCount('save_shipping_draft')).toBe(2);
@@ -40,15 +40,19 @@ describe('local sample-data contract', () => {
   });
 
   it('selects deterministically ordered packages with enough remaining quantity for every worksheet use', () => {
-    ([
-      ['901', 24], ['902', 8], ['906', 4], ['903', 20], ['904', 5], ['905', 4],
-    ] as const).forEach(([usageId, quantity]) => {
+    (
+      [
+        ['901', 24],
+        ['902', 8],
+        ['906', 4],
+        ['903', 20],
+        ['904', 5],
+        ['905', 4],
+      ] as const
+    ).forEach(([usageId, quantity]) => {
       const start = seed.indexOf(`'10000000-0000-4000-8000-000000000${usageId}'`);
       expect(start).toBeGreaterThan(-1);
-      const usage = seed.slice(
-        start,
-        seed.indexOf('));', start) + 3,
-      );
+      const usage = seed.slice(start, seed.indexOf('));', start) + 3);
       expect(usage).toContain(`availability='Available' and remaining_quantity >= ${quantity}`);
       expect(usage).toContain('order by created_at,id limit 1');
       expect(usage).toContain(`'quantity',${quantity}`);

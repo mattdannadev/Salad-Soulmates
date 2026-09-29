@@ -1,14 +1,14 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import {
-  describe, expect, it, vi,
-} from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import Home from '../src/app/app/page';
 
 const mocks = vi.hoisted(() => ({ load: vi.fn() }));
 vi.mock('../src/lib/dashboard-data', () => ({ default: mocks.load }));
+vi.mock('../src/services/load-workspace-setup', () => ({ default: vi.fn(async () => []) }));
 vi.mock('../src/components/demand-purchase-button', () => ({ default: () => null }));
 vi.mock('../src/domain/format', async (original) => ({
-  ...await original<typeof import('../src/domain/format')>(), facilityDate: () => '2026-09-20',
+  ...(await original<typeof import('../src/domain/format')>()),
+  facilityDate: () => '2026-09-20',
 }));
 const base = {
   canOrders: true,
@@ -40,16 +40,18 @@ describe('operations dashboard', () => {
     mocks.load.mockResolvedValue({
       ...base,
       profile: { display_name: 'Matt', preferred_locale: 'en' },
-      openOrders: [{
-        id: 'test-order',
-        customer_name: 'Test customer',
-        needed_on: '2026-10-01',
-        reference: 'TEST',
-        items: [
-          { product_id: 'italian', product_name: 'Italian dressing', batch_count: 4 },
-          { product_id: 'ranch', product_name: 'Ranch dressing', batch_count: 2 },
-        ],
-      }],
+      openOrders: [
+        {
+          id: 'test-order',
+          customer_name: 'Test customer',
+          needed_on: '2026-10-01',
+          reference: 'TEST',
+          items: [
+            { product_id: 'italian', product_name: 'Italian dressing', batch_count: 4 },
+            { product_id: 'ranch', product_name: 'Ranch dressing', batch_count: 2 },
+          ],
+        },
+      ],
     });
     const html = renderToStaticMarkup(await Home());
     expect(html).toContain('Italian dressing');
@@ -66,36 +68,46 @@ describe('operations dashboard', () => {
   });
   it('surfaces due work with working detail anchors while keeping future pickups separate', async () => {
     const order = {
-      id: 'due-order', customer_name: 'Today customer', needed_on: '2026-09-20', items: [],
+      id: 'due-order',
+      customer_name: 'Today customer',
+      needed_on: '2026-09-20',
+      items: [],
     };
     mocks.load.mockResolvedValue({
       ...base,
       profile: { display_name: 'Matt', preferred_locale: 'en' },
       openOrders: [order, { ...order, id: 'late-order', needed_on: '2026-09-19' }],
-      incoming: [{
-        id: 'purchase',
-        expected_on: '2026-09-20',
-        reference: 'PO-1',
-        supplier_id: 'supplier',
-        material_plan_id: 'due-order',
-        progress: { status: 'Confirmed', balances: [] },
-      }],
-      coverage: [{
-        ingredientId: 'ingredient',
-        name: 'Lemon juice',
-        uom: 'gal',
-        demand: 4,
-        usable: 2,
-        inbound: 0,
-        shortage: 2,
-        supplyDate: '2026-09-20',
-        demandByDate: 4,
-        planId: 'due-order',
-        neededOn: '2026-09-20',
-      }],
+      incoming: [
+        {
+          id: 'purchase',
+          expected_on: '2026-09-20',
+          reference: 'PO-1',
+          supplier_id: 'supplier',
+          material_plan_id: 'due-order',
+          progress: { status: 'Confirmed', balances: [] },
+        },
+      ],
+      coverage: [
+        {
+          ingredientId: 'ingredient',
+          name: 'Lemon juice',
+          uom: 'gal',
+          demand: 4,
+          usable: 2,
+          inbound: 0,
+          shortage: 2,
+          supplyDate: '2026-09-20',
+          demandByDate: 4,
+          planId: 'due-order',
+          neededOn: '2026-09-20',
+        },
+      ],
     });
     const html = renderToStaticMarkup(await Home());
-    const priorities = html.slice(html.indexOf('class="dashboard-priorities"'), html.indexOf('class="dashboard-columns"'));
+    const priorities = html.slice(
+      html.indexOf('class="dashboard-priorities"'),
+      html.indexOf('class="dashboard-columns"'),
+    );
     expect(priorities).toContain('1 due today · 1 past pickup date');
     expect(priorities).toContain('Expected today or earlier: 1');
     expect(priorities).toContain('Ingredients below demand: 1');
@@ -145,13 +157,21 @@ it('shows all future pickups in date order, excluding today and overdue orders',
   mocks.load.mockResolvedValue({
     ...base,
     profile: { display_name: 'Matt', preferred_locale: 'en' },
-    openOrders: [...orders.toReversed(),
+    openOrders: [
+      ...orders.toReversed(),
       {
-        ...orders[0], id: 'past', customer_name: 'Past customer', needed_on: '2026-09-19',
+        ...orders[0],
+        id: 'past',
+        customer_name: 'Past customer',
+        needed_on: '2026-09-19',
       },
       {
-        ...orders[0], id: 'today', customer_name: 'Today customer', needed_on: '2026-09-20',
-      }],
+        ...orders[0],
+        id: 'today',
+        customer_name: 'Today customer',
+        needed_on: '2026-09-20',
+      },
+    ],
   });
   const html = renderToStaticMarkup(await Home());
   const pickups = html.slice(html.indexOf('dashboard-pickups'), html.indexOf('SUPPLIER ARRIVALS'));

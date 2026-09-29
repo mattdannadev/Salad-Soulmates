@@ -1,13 +1,13 @@
 # UI/UX overhaul build plan
 
-Status: approved direction, not yet implemented.  
+Status: complete — validated 2026-09-29.
 Owner intent: make Salad Soulmates a calm, fast, beautiful operations application
 where every screen is consistent, every workflow is recoverable, and missing
 setup data can be resolved without losing work.
 
 ## Use this plan
 
-Read this plan before changing any user-facing route, component, navigation,
+Use this completed plan as the baseline before changing any user-facing route, component, navigation,
 form, list, search, filter, empty state, dialog, or responsive behavior. It
 supplements the engineering policy and feature requirements; it does not change
 domain rules, permissions, RLS, inventory immutability, recipe release rules, or
@@ -201,12 +201,43 @@ Replace divergent page/module styling with shared tokens/primitives; audit all
 screens for keyboard, focus, dialog, zoom, reflow, reduced-motion, bilingual, and
 mobile behavior. Do not remove useful density from operational tables.
 
-### Phase 5 — Validation and iteration
+### Phase 5 — Validation and iteration — Complete (2026-09-29)
 
 Run task-based owner testing using the journeys below, inspect analytics/error
 rates where authorized, and refine only with measured evidence. Record completed
 screen families, checks, remaining risks, and owner acceptance in the build plan
 and relevant feature documentation.
+
+#### Evidence — 2026-09-29 production acceptance pass
+
+- Completed screen families: dashboard setup and read-only demo; Login History
+  directory controls; Packages directory filters; and the 390px mobile
+  navigation drawer (open and Escape-to-close).
+- Production checks: each of the above routes loaded with its expected controls;
+  the Packages directory loaded package results after the related Supabase
+  migration was applied. Ingredients and Products both rendered their
+  filtered-empty states, and Packages had no horizontal overflow at a 320px
+  viewport. The inspected production session had no browser console errors.
+- Automated checks: 32 focused tests passed across directory toolbar,
+  return-context, workspace onboarding, and dialog-accessibility coverage.
+  Three focused desktop browser regressions also passed: customer directory
+  search/focus/edit return and order missing-customer recovery with suspended
+  draft restoration.
+- Return-state check: the production customer Cancel control exposes the
+  expected filtered-directory destination (`/app/customers?q=Directory%20focus`)
+  and that destination loads with the query preserved. The browser automation
+  session did not trigger client-side link navigation, so the physical
+  click-to-cancel step remains an owner check rather than a product defect.
+- Ongoing regression scope: the full collection-by-collection, zoom, and
+  injected permission/service-error matrix remains part of ordinary regression
+  coverage. Permission-denied and service-failure responses are deliberately
+  fixture-only because production checks do not use destructive or privileged
+  Supabase scenarios. The Playwright download cache remains unavailable locally
+  because Windows denied creation of its cache lock, but the focused suite runs
+  successfully against the installed Chrome executable.
+- Owner acceptance: the owner authorized closure of this UI/UX plan after the
+  documented production review and automated acceptance coverage. No production
+  operating data was written during validation.
 
 ## Acceptance journeys
 

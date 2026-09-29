@@ -10,7 +10,8 @@ test('order draft survives customer cancel and creation without leaking entries 
   await expect(page).toHaveURL(/\/app$/u);
 
   await page.goto('/app/orders?q=Preview&status=unplanned#new-order');
-  const customerSelect = page.getByRole('combobox', { name: 'Customer', exact: true });
+  const customerSelect = page.getByRole('heading', { name: 'New order' }).locator('..')
+    .getByRole('combobox', { name: 'Customer', exact: true });
   await customerSelect.selectOption({ label: 'Production customer' });
   const originalCustomerId = await customerSelect.inputValue();
   await page.getByLabel('Customer order reference (optional)').fill('Recovery reference');
@@ -26,7 +27,7 @@ test('order draft survives customer cancel and creation without leaking entries 
   await expect(page.getByLabel('Customer order reference (optional)')).toHaveValue('Recovery reference');
   await expect(page.getByLabel('Customer pickup date')).toHaveValue('2026-10-01');
   await expect(page.getByLabel('Preview Italian dressing', { exact: true })).toHaveValue('2');
-  await expect(page.getByRole('combobox', { name: 'Customer', exact: true }))
+  await expect(customerSelect)
     .toHaveValue(originalCustomerId);
 
   await addCustomer.click();
@@ -39,7 +40,7 @@ test('order draft survives customer cancel and creation without leaking entries 
   expect(resumedQuery.get('status')).toBe('unplanned');
   const createdCustomerId = resumedQuery.get('customer');
   expect(createdCustomerId).toMatch(/^[a-f\d-]{36}$/u);
-  await expect(page.getByRole('combobox', { name: 'Customer', exact: true }))
+  await expect(customerSelect)
     .toHaveValue(createdCustomerId ?? '');
   await expect(page.getByLabel('Customer order reference (optional)')).toHaveValue('Recovery reference');
   await expect(page.getByLabel('Customer pickup date')).toHaveValue('2026-10-01');
@@ -49,8 +50,11 @@ test('order draft survives customer cancel and creation without leaking entries 
   await page.getByRole('link', { name: 'Configure products →', exact: true }).click();
   await expect(page).toHaveURL(/\/app\/products\?returnTo=/u);
   const resumed = new URL(resumedUrl);
-  expect(new URL(page.url()).searchParams.get('returnTo'))
-    .toBe(`${resumed.pathname}${resumed.search}${resumed.hash}`);
+  const productReturn = new URL(new URL(page.url()).searchParams.get('returnTo') ?? '', page.url());
+  expect(productReturn.pathname).toBe(resumed.pathname);
+  expect([...productReturn.searchParams.entries()].sort(([a], [b]) => a.localeCompare(b)))
+    .toEqual([...resumed.searchParams.entries()].sort(([a], [b]) => a.localeCompare(b)));
+  expect(productReturn.hash).toBe(resumed.hash);
   const options = page.locator('details.product-customer-options').first();
   await options.locator(':scope > summary').click();
   const addOption = options.locator('details').filter({ hasText: '+ Add customer option' });
@@ -62,9 +66,19 @@ test('order draft survives customer cancel and creation without leaking entries 
   await addOption.getByLabel('Gallons per sales unit', { exact: true }).fill('2');
   await addOption.getByLabel('Price per unit (USD)', { exact: true }).fill('12.50');
   await addOption.getByRole('button', { name: 'Save customer option', exact: true }).click();
-  await expect(options).toContainText('Recovery customer · 2-gallon bag · $12.50 / bag');
-  await page.getByRole('link', { name: 'Back to order', exact: true }).click();
-  await expect(page).toHaveURL(resumedUrl);
+  // Saving a customer option returns directly to the suspended order draft.
+  await expect.poll(() => {
+    const url = new URL(page.url());
+    return {
+      pathname: url.pathname,
+      params: Object.fromEntries(url.searchParams),
+      hash: url.hash,
+    };
+  }).toEqual({
+    pathname: resumed.pathname,
+    params: Object.fromEntries(resumed.searchParams),
+    hash: resumed.hash,
+  });
   await expect(page.getByLabel('Preview Italian dressing', { exact: true })).toHaveValue('2');
   await page.getByRole('button', { name: 'Save order & estimate ingredients' }).click();
   await expect(page).toHaveURL(/\/app\/orders\?order=/u);

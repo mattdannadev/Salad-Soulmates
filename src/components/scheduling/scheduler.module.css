@@ -194,12 +194,35 @@
   outline: 3px solid #c8801c;
   outline-offset: 2px;
 }
-.peopleControls { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.4rem; margin-bottom: 0.7rem; }
+.peopleControls {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.4rem;
+  margin-bottom: 0.7rem;
+}
 .peopleControls input,
-.peopleControls select { min-width: 0; border: 1px solid #a9b8b0; border-radius: 0.4rem; padding: 0.4rem; font: inherit; }
-.peopleControls button { border: 1px solid #9ab3a5; border-radius: 0.4rem; background: #fff; color: #143b2c; font: inherit; }
-.personName { flex: 1; }
-.utilization { color: #4c6055; font-size: 0.78rem; white-space: nowrap; }
+.peopleControls select {
+  min-width: 0;
+  border: 1px solid #a9b8b0;
+  border-radius: 0.4rem;
+  padding: 0.4rem;
+  font: inherit;
+}
+.peopleControls button {
+  border: 1px solid #9ab3a5;
+  border-radius: 0.4rem;
+  background: #fff;
+  color: #143b2c;
+  font: inherit;
+}
+.personName {
+  flex: 1;
+}
+.utilization {
+  color: #4c6055;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
 .employeeList input {
   width: 1rem;
   height: 1rem;
@@ -224,7 +247,11 @@
   overflow: auto;
   min-height: 650px;
 }
-.calendarHint { margin: 0 0 0.65rem; color: #4c6055; font-size: 0.85rem; }
+.calendarHint {
+  margin: 0 0 0.65rem;
+  color: #4c6055;
+  font-size: 0.85rem;
+}
 .calendar > * {
   min-width: 500px;
   min-height: 620px;
