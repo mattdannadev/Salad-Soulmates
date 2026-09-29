@@ -83,3 +83,31 @@ test('Inventory groups receiving and purchase planning in the mobile drawer', as
   await expect(page.getByText('No receipts yet', { exact: true })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('receiving-navigation.png'), fullPage: true });
 });
+
+test('closed mobile drawer leaves the tab order and opens as a keyboard dialog', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/login');
+  await page.getByLabel('Email or phone number').fill('admin@example.test');
+  await page.getByLabel('Password', { exact: true }).fill('local-test-password');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page).toHaveURL(/\/app$/);
+
+  const drawer = page.locator('.sidebar');
+  const more = page.getByRole('navigation', { name: 'Mobile navigation' })
+    .getByRole('button', { name: 'More sections' });
+  await expect(drawer).toBeHidden();
+  await more.focus();
+  await page.keyboard.press('Tab');
+  await expect(drawer.getByRole('button', { name: 'Close navigation' })).not.toBeFocused();
+
+  await more.click();
+  await expect(drawer).toHaveAttribute('role', 'dialog');
+  await expect(drawer).toHaveAttribute('aria-modal', 'true');
+  const close = drawer.getByRole('button', { name: 'Close navigation' });
+  await expect(close).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(drawer.locator('a:visible, button:visible, summary:visible').last()).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(drawer).toBeHidden();
+  await expect(more).toBeFocused();
+});

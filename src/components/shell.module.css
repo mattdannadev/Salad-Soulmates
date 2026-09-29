@@ -1,0 +1,51 @@
+.shellRoot :global(.sidebar nav a),
+.shellRoot :global(.nav-group summary),
+.shellRoot :global(.nav-group-links a) {
+  min-height: var(--control-height-compact);
+  scroll-margin-block: 12px;
+}
+
+.shellRoot :global(.sidebar nav a:focus-visible),
+.shellRoot :global(.nav-group summary:focus-visible),
+.shellRoot :global(.brand:focus-visible),
+.shellRoot :global(.icon-button:focus-visible),
+.shellRoot :global(.mobile-navigation a:focus-visible),
+.shellRoot :global(.mobile-navigation button:focus-visible) {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 760px) {
+  .drawer {
+    visibility: hidden;
+  }
+
+  .drawerOpen {
+    visibility: visible;
+  }
+
+  .shellRoot :global(.mobile-navigation-toggle) {
+    min-width: var(--control-height-compact);
+    min-height: var(--control-height-compact);
+  }
+
+  .mobileBottomNavigation {
+    grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
+  }
+
+  .mobileBottomNavigation :global(a:first-child[aria-current='page']) {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer,
+  .shellRoot :global(.navigation-scrim),
+  .shellRoot :global(.nav-group summary > svg:last-child),
+  .mobileBottomNavigation :global(a) {
+    transition: none;
+    animation: none;
+  }
+}

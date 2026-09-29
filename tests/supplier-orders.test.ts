@@ -178,6 +178,7 @@ it('shows only the selected supplier’s history', async () => {
       ...fixtureRecords.suppliers ?? [], { ...fixtureRecords.suppliers?.[0], id: fixtureId(201), name: 'Other supplier' },
     ],
     packs: [],
+    ingredients: fixtureRecords.ingredients,
     requirements: [],
     canWrite: true,
     locale: 'en',

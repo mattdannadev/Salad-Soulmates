@@ -1,10 +1,22 @@
 'use client';
 
-import { useId, useState } from 'react';
+import {
+  useId, useMemo, useState, useSyncExternalStore,
+} from 'react';
 import Link from 'next/link';
+import { customerCreateHref, customerReturnContext } from '@/app/app/customers/return-context';
 import { type Customer, type CustomerOption } from '@/domain/customer-pricing';
+import {
+  clearOrderDraft, orderDraftFromForm, orderDraftSnapshot, parseOrderDraftSnapshot,
+  saveOrderDraft,
+} from '@/app/app/orders/order-draft';
 import ProductOrderLine from './product-order-line';
 import PurchasingForm from './purchasing-form';
+
+function subscribeToDraft(callback: () => void) {
+  window.addEventListener('storage', callback);
+  return () => window.removeEventListener('storage', callback);
+}
 
 export default function CustomerOrderForm({
   choices,
@@ -12,17 +24,33 @@ export default function CustomerOrderForm({
   options,
   locale,
   initialCustomerId = '',
+  draftId,
+  returnHref,
 }: {
   choices: { id: string; name: string }[];
   customers: Customer[];
   options: CustomerOption[];
   locale: 'en' | 'es';
   initialCustomerId?: string;
+  draftId: string;
+  returnHref: string;
 }) {
   const prefix = useId();
   const es = locale === 'es';
-  const [customerId, setCustomerId] = useState(initialCustomerId);
+  const serializedDraft = useSyncExternalStore(
+    subscribeToDraft,
+    () => orderDraftSnapshot(draftId),
+    () => '',
+  );
+  const draft = useMemo(() => parseOrderDraftSnapshot(serializedDraft), [serializedDraft]);
+  const [selectedCustomerId, setCustomerId] = useState<string | null>(null);
+  const [draftError, setDraftError] = useState('');
+  const restoredCustomer = draft?.customerId && customers.some(
+    (item) => item.id === draft.customerId,
+  ) ? draft.customerId : '';
+  const customerId = selectedCustomerId ?? (initialCustomerId || restoredCustomer);
   const customer = customers.find((item) => item.id === customerId);
+  const createCustomerHref = customerCreateHref(customerReturnContext(returnHref, undefined));
   if (!choices.length) {
     return (
       <p className="notice">
@@ -37,7 +65,10 @@ export default function CustomerOrderForm({
       operation="save-order"
       locale={locale}
       label={es ? 'Guardar pedido y calcular ingredientes' : 'Save order & estimate ingredients'}
-      destination={(id) => `/app/orders?order=${id}`}
+      destination={(id) => {
+        clearOrderDraft(draftId);
+        return `/app/orders?order=${id}`;
+      }}
       payload={(form, requestId) => ({
         id: requestId,
         customer_name: customer?.name ?? '',
@@ -72,18 +103,32 @@ export default function CustomerOrderForm({
           </select>
         </label>
         <div className="customer-lookup-actions">
-          <Link className="button secondary" href="/app/customers/new">
+          <Link
+            className="button secondary"
+            href={createCustomerHref}
+            onClick={(event) => {
+              const form = event.currentTarget.closest('form');
+              const snapshot = form && orderDraftFromForm(new FormData(form), customerId, choices);
+              if (!snapshot || !saveOrderDraft(draftId, snapshot)) {
+                event.preventDefault();
+                setDraftError(es
+                  ? 'Revisa los datos del pedido o habilita el almacenamiento de esta pestaña antes de crear el cliente.'
+                  : 'Check the order entries or enable tab storage before creating the customer.');
+              }
+            }}
+          >
             {es ? '+ Agregar cliente' : '+ Add customer'}
           </Link>
           <Link href="/app/customers">{es ? 'Ver clientes →' : 'View customers →'}</Link>
         </div>
+        {draftError && <p role="alert" className="error-notice">{draftError}</p>}
         <label htmlFor={`${prefix}-reference`}>
           {es ? 'Referencia del pedido (opcional)' : 'Customer order reference (optional)'}
-          <input id={`${prefix}-reference`} name="reference" maxLength={120} />
+          <input id={`${prefix}-reference`} name="reference" maxLength={120} defaultValue={draft?.reference ?? ''} key={draft ? 'restored-reference' : 'new-reference'} />
         </label>
         <label htmlFor={`${prefix}-date`}>
           {es ? 'Fecha de recogida del cliente' : 'Customer pickup date'}
-          <input id={`${prefix}-date`} type="date" name="needed_on" required />
+          <input id={`${prefix}-date`} type="date" name="needed_on" required defaultValue={draft?.neededOn ?? ''} key={draft ? 'restored-date' : 'new-date'} />
         </label>
       </div>
       {customer && (
@@ -116,12 +161,14 @@ export default function CustomerOrderForm({
             : 'Select a customer to load their package prices.'}
         </p>
       ) : (
-        <div className="form-grid" key={customer.id}>
+        <div className="form-grid" key={`${customer.id}-${draft ? 'restored' : 'new'}`}>
           {choices.map((choice) => (
             <ProductOrderLine
               key={choice.id}
               choice={choice}
               locale={locale}
+              initialBatches={draft?.products.find((line) => line.id === choice.id)?.batches}
+              initialOptionId={draft?.products.find((line) => line.id === choice.id)?.optionId}
               options={options.filter(
                 (option) => option.active
                   && option.product_id === choice.id

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import {
   Leaf,
@@ -35,6 +35,7 @@ import { signOut } from '@/app/actions';
 import FeedbackDrawer from './feedback';
 import LocaleSwitcher from './locale-switcher';
 import styles from './shell-ai-launcher.module.css';
+import shellStyles from './shell.module.css';
 
 const purchasingPermissions = [
   'orders.read',
@@ -204,6 +205,9 @@ export function Shell({
   const path = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
+  const drawerRef = useRef<HTMLElement>(null);
+  const mobileCloseRef = useRef<HTMLButtonElement>(null);
+  const mobileTriggerRef = useRef<HTMLButtonElement>(null);
   const isSpanish = locale === 'es';
   const expandLabel = isSpanish ? 'Expandir navegación' : 'Expand navigation';
   const collapseLabel = isSpanish ? 'Contraer navegación' : 'Collapse navigation';
@@ -212,10 +216,57 @@ export function Shell({
   if (mobileNavigationOpen) {
     mobileToggleLabel = isSpanish ? 'Cerrar navegación' : 'Close navigation';
   }
-  const isCurrentPath = (href: string) => {
-    if (href === '/app' || href === '/app/user-management/users') return path === href;
-    return path.startsWith(href);
+  const drawerLabel = isSpanish ? 'Navegación principal' : 'Main navigation';
+  const isCurrentPath = (href: string) => (
+    path === href || (href !== '/app' && path.startsWith(`${href}/`))
+  );
+  const closeMobileNavigation = (restoreFocus = true) => {
+    setMobileNavigationOpen(false);
+    if (restoreFocus) {
+      requestAnimationFrame(() => mobileTriggerRef.current?.focus());
+    }
   };
+  const toggleMobileNavigation = (trigger: HTMLButtonElement) => {
+    mobileTriggerRef.current = trigger;
+    if (mobileNavigationOpen) closeMobileNavigation();
+    else setMobileNavigationOpen(true);
+  };
+  useEffect(() => {
+    if (!mobileNavigationOpen) return undefined;
+    mobileCloseRef.current?.focus();
+    const handleDrawerKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeMobileNavigation();
+        return;
+      }
+      if (event.key !== 'Tab' || !drawerRef.current) return;
+      const focusable = Array.from(drawerRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), summary, [tabindex]:not([tabindex="-1"])',
+      )).filter((element) => element.getClientRects().length > 0);
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', handleDrawerKeyDown);
+    const desktopQuery = window.matchMedia('(min-width: 761px)');
+    const closeOnDesktop = () => {
+      if (desktopQuery.matches) setMobileNavigationOpen(false);
+    };
+    desktopQuery.addEventListener('change', closeOnDesktop);
+    closeOnDesktop();
+    return () => {
+      document.removeEventListener('keydown', handleDrawerKeyDown);
+      desktopQuery.removeEventListener('change', closeOnDesktop);
+    };
+  }, [mobileNavigationOpen]);
   const canSee = (required: string[]) => required.every(
     (permission) => permissions.includes(permission),
   );
@@ -233,15 +284,22 @@ export function Shell({
     .filter(canSeeItem);
   return (
     <div
-      className={`app-shell${collapsed ? ' sidebar-collapsed' : ''}${mobileNavigationOpen ? ' mobile-navigation-open' : ''}`}
+      className={`app-shell ${shellStyles.shellRoot}${collapsed ? ' sidebar-collapsed' : ''}${mobileNavigationOpen ? ' mobile-navigation-open' : ''}`}
       lang={locale}
     >
-      <aside className="sidebar">
+      <aside
+        ref={drawerRef}
+        className={`sidebar ${shellStyles.drawer}${mobileNavigationOpen ? ` ${shellStyles.drawerOpen}` : ''}`}
+        role={mobileNavigationOpen ? 'dialog' : 'complementary'}
+        aria-modal={mobileNavigationOpen ? true : undefined}
+        aria-label={mobileNavigationOpen ? drawerLabel : undefined}
+      >
         <button
           type="button"
           className="icon-button mobile-drawer-close"
+          ref={mobileCloseRef}
           aria-label={isSpanish ? 'Cerrar navegación' : 'Close navigation'}
-          onClick={() => setMobileNavigationOpen(false)}
+          onClick={() => closeMobileNavigation()}
         >
           <X size={21} aria-hidden />
         </button>
@@ -288,7 +346,7 @@ export function Shell({
                 aria-label={label}
                 title={label}
                 aria-current={isCurrentPath(href) ? 'page' : undefined}
-                onClick={() => setMobileNavigationOpen(false)}
+                onClick={() => closeMobileNavigation(false)}
               >
                 <Icon size={20} aria-hidden />
                 <span className="nav-label">{label}</span>
@@ -297,7 +355,8 @@ export function Shell({
           })}
           {navigationGroups.map((group) => {
             const visibleItems = group.items.filter(canSeeItem);
-            const hasCurrentPage = visibleItems.some((item) => isCurrentPath(item.href));
+            const hasCurrentPage = visibleItems.some((item) => isCurrentPath(item.href)
+              && !(group.id === 'administration' && ['/app/customers', '/app/suppliers'].includes(item.href)));
 
             if (visibleItems.length === 0) return null;
 
@@ -316,7 +375,8 @@ export function Shell({
                     href, en, es, icon: Icon,
                   }) => {
                     const label = isSpanish ? es : en;
-                    const isCurrentPage = isCurrentPath(href);
+                    const isCurrentPage = isCurrentPath(href)
+                      && !(group.id === 'administration' && ['/app/customers', '/app/suppliers'].includes(href));
                     return (
                       <Link
                         key={href}
@@ -324,7 +384,7 @@ export function Shell({
                         aria-label={label}
                         title={label}
                         aria-current={isCurrentPage ? 'page' : undefined}
-                        onClick={() => setMobileNavigationOpen(false)}
+                        onClick={() => closeMobileNavigation(false)}
                       >
                         <Icon size={20} aria-hidden />
                         <span className="nav-label">{label}</span>
@@ -353,11 +413,11 @@ export function Shell({
         type="button"
         className="navigation-scrim"
         aria-label={isSpanish ? 'Cerrar navegación' : 'Close navigation'}
-        aria-hidden={!mobileNavigationOpen}
-        tabIndex={mobileNavigationOpen ? 0 : -1}
-        onClick={() => setMobileNavigationOpen(false)}
+        aria-hidden="true"
+        tabIndex={-1}
+        onClick={() => closeMobileNavigation()}
       />
-      <div className="app-main">
+      <div className="app-main" inert={mobileNavigationOpen}>
         <header className="topbar">
           <button
             type="button"
@@ -365,7 +425,7 @@ export function Shell({
             aria-label={mobileToggleLabel}
             aria-expanded={mobileNavigationOpen}
             aria-controls="main-navigation"
-            onClick={() => setMobileNavigationOpen((value) => !value)}
+            onClick={(event) => toggleMobileNavigation(event.currentTarget)}
           >
             {mobileNavigationOpen ? <X size={21} aria-hidden /> : <Menu size={21} aria-hidden />}
           </button>
@@ -427,8 +487,9 @@ export function Shell({
         </footer>
       </div>
       <nav
-        className="mobile-navigation"
+        className={`mobile-navigation ${shellStyles.mobileBottomNavigation}`}
         aria-label={isSpanish ? 'Navegación móvil' : 'Mobile navigation'}
+        inert={mobileNavigationOpen}
       >
         {mobileDestinations.map(({
           href, en, es, icon: Icon,
@@ -437,7 +498,7 @@ export function Shell({
             key={href}
             href={href}
             aria-current={isCurrentPath(href) ? 'page' : undefined}
-            onClick={() => setMobileNavigationOpen(false)}
+            onClick={() => closeMobileNavigation(false)}
           >
             <Icon size={20} aria-hidden />
             <span>{isSpanish ? es : en}</span>
@@ -448,7 +509,7 @@ export function Shell({
           aria-label={isSpanish ? 'Más secciones' : 'More sections'}
           aria-expanded={mobileNavigationOpen}
           aria-controls="main-navigation"
-          onClick={() => setMobileNavigationOpen((value) => !value)}
+          onClick={(event) => toggleMobileNavigation(event.currentTarget)}
         >
           <Menu size={20} aria-hidden />
           <span>{isSpanish ? 'Más' : 'More'}</span>
@@ -459,20 +520,20 @@ export function Shell({
   );
 }
 export function PageHeader({
-  eyebrow,
+  eyebrow = undefined,
   title,
   description,
   action = undefined,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   description: string;
   action?: React.ReactNode;
 }) {
   return (
-    <section className="page-heading">
+    <header className="page-heading">
       <div>
-        <p className="eyebrow">{eyebrow}</p>
+        {eyebrow && <p className="eyebrow">{eyebrow}</p>}
         <h1>
           {title}
           <Leaf aria-hidden size={34} />
@@ -480,6 +541,6 @@ export function PageHeader({
         <p>{description}</p>
       </div>
       {action}
-    </section>
+    </header>
   );
 }

@@ -5,6 +5,8 @@ import {
 import Inventory from '@/app/app/inventory/page';
 import { fixtureId, fixtureRecords } from './browser/fixture-data';
 
+const activeInventorySearch = { searchParams: Promise.resolve({ status: 'active' }) };
+
 const mocks = vi.hoisted(() => ({
   context: vi.fn(),
   permission: vi.fn(),
@@ -42,7 +44,7 @@ beforeEach(() => {
 });
 
 it('starts a purchase from an active inventory ingredient when purchase access is complete', async () => {
-  const html = renderToStaticMarkup(await Inventory());
+  const html = renderToStaticMarkup(await Inventory(activeInventorySearch));
   expect(html).toContain(`href="/app/purchasing?ingredient=${fixtureId(100)}"`);
   expect(html).toContain(`href="/app/purchasing?ingredient=${fixtureId(100)}">Purchase</a>`);
   expect(html).toContain('<th scope="col">Reorder point</th>');
@@ -50,7 +52,7 @@ it('starts a purchase from an active inventory ingredient when purchase access i
   expect(html).toContain('Not set');
   expect(html).not.toContain('At or below reorder point');
   expect(html).not.toContain('<th scope="col">Status</th>');
-  expect(html).toContain('aria-label="Clear inventory filters"');
+  expect(html).not.toContain('Search this table');
   expect(html).toContain('<button type="button">Record inventory adjustment</button>');
 });
 
@@ -58,7 +60,7 @@ it('does not offer purchase initiation when any required permission is missing',
   mocks.permission.mockImplementation((_db: unknown, permission: string) => Promise.resolve(
     permission !== 'planning.write',
   ));
-  const html = renderToStaticMarkup(await Inventory());
+  const html = renderToStaticMarkup(await Inventory(activeInventorySearch));
   expect(html).not.toContain('/app/purchasing?ingredient=');
   expect(html).not.toContain('<th scope="col">Purchase</th>');
 });
@@ -71,7 +73,7 @@ it('shows a zero reorder point while treating missing legacy thresholds as unset
       ? [{ ...garlic, reorder_point: 0, par_level: 5 }, lemon]
       : [],
   ));
-  const html = renderToStaticMarkup(await Inventory());
+  const html = renderToStaticMarkup(await Inventory(activeInventorySearch));
   expect(html).toContain('0 lb');
   expect(html).toContain('5 lb');
   expect(html).toContain('At or below reorder point');

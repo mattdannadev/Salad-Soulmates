@@ -14,6 +14,7 @@ import { requireRecipeAccess } from '@/lib/recipe-catalog';
 import { readResult, rows } from '@/lib/data';
 import loadIngredientStock from '@/lib/ingredient-stock';
 import IngredientStock from '@/components/ingredient-stock';
+import { resolveReturnContext, returnContextSearchParams } from '@/lib/return-context';
 
 type RecipeLine = z.infer<typeof recipeLineRowSchema>;
 
@@ -81,12 +82,13 @@ function RecipeIngredientGroup({
 
 export default async function RecipeDetails({ params, searchParams }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ version?: string }>;
+  searchParams: Promise<{ version?: string; returnTo?: string }>;
 }) {
   const { db, profile } = await requireRecipeAccess();
   const locale = profile.preferred_locale;
   const route = z.object({ id: z.uuid() }).safeParse(await params);
-  const query = z.object({ version: z.uuid().optional() }).safeParse(await searchParams);
+  const rawQuery = await searchParams;
+  const query = z.object({ version: z.uuid().optional() }).safeParse(rawQuery);
   if (!route.success || !query.success) notFound();
   const recipe = readResult(
     await db.from('recipes').select('*').eq('id', route.data.id).maybeSingle(),
@@ -94,6 +96,14 @@ export default async function RecipeDetails({ params, searchParams }: {
     'recipe_details',
   );
   if (!recipe) notFound();
+  const returnContext = resolveReturnContext(rawQuery.returnTo, undefined, {
+    fallbackHref: '/app/recipes',
+    isAllowedPathname: (pathname) => pathname === '/app/recipes' || pathname === '/app/products',
+  });
+  const returnUrl = new URL(returnContext.href, 'https://return-context.invalid');
+  const fromProducts = returnUrl.pathname === '/app/products';
+  returnUrl.hash = fromProducts ? `product-${recipe.product_id}` : `recipe-${recipe.id}`;
+  const backHref = `${returnUrl.pathname}${returnUrl.search}${returnUrl.hash}`;
   const versions = (await rows(db, 'recipe_versions', recipeVersionRowSchema))
     .filter((version) => version.recipe_id === recipe.id)
     .sort((left, right) => right.version_number - left.version_number);
@@ -117,7 +127,11 @@ export default async function RecipeDetails({ params, searchParams }: {
         eyebrow={recipeText(locale, 'RECIPE DETAILS')}
         title={recipe.name}
         description={recipeText(locale, 'Recorded quantities and instructions for this recipe version.')}
-        action={<Link className="button secondary" href="/app/recipes">{recipeText(locale, 'All recipes')}</Link>}
+        action={(
+          <Link className="button secondary" href={backHref}>
+            {recipeText(locale, fromProducts ? 'View products' : 'All recipes')}
+          </Link>
+)}
       />
       <section className="panel">
         <h2>{recipeText(locale, 'Version history')}</h2>
@@ -125,7 +139,7 @@ export default async function RecipeDetails({ params, searchParams }: {
           {versions.map((item) => (
             <Link
               key={item.id}
-              href={`/app/recipes/${recipe.id}?version=${item.id}`}
+              href={`/app/recipes/${recipe.id}?version=${item.id}&${returnContextSearchParams(returnContext)}`}
               aria-current={version?.id === item.id ? 'page' : undefined}
               className="badge"
             >

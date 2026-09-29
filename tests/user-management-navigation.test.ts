@@ -52,4 +52,19 @@ describe('User Management navigation', () => {
     expect(html).toContain('Historial de inicio de sesión');
     expect(html).not.toContain('Administración de perfiles');
   });
+
+  it('marks one matching desktop link current on a customer detail route', () => {
+    mocks.pathname = '/app/customers/123';
+    const props = {
+      name: 'Admin User',
+      role: 'admin',
+      locale: 'en' as const,
+      permissions: ['orders.read'],
+      children: createElement('p', null, 'Content'),
+    };
+    const html = renderToStaticMarkup(createElement(Shell, props));
+    const desktopNavigation = html.match(/<nav id="main-navigation"[\s\S]*?<\/nav>/)?.[0] ?? '';
+    expect(desktopNavigation.match(/aria-current="page"/g)).toHaveLength(1);
+    expect(desktopNavigation).toMatch(/aria-current="page"[^>]*href="\/app\/customers"/);
+  });
 });

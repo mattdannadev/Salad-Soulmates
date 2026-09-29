@@ -1,0 +1,41 @@
+.dialog {
+  width: min(100% - 32px, 480px);
+  max-height: min(80vh, 720px);
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--elevation-panel);
+}
+
+.dialog::backdrop {
+  background: rgb(18 32 22 / 60%);
+}
+
+.dialog h2 {
+  margin-bottom: var(--space-3);
+}
+
+.dialog p {
+  margin-bottom: var(--space-6);
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+@media (max-width: 480px) {
+  .actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .actions > * {
+    width: 100%;
+  }
+}

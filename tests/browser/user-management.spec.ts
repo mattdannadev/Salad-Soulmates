@@ -27,10 +27,16 @@ test('access managers can search the responsive user directory and inspect a pro
   await expect(page).toHaveURL(/q=local(?:\+|%20)test(?:\+|%20)facility&sort=first_name/);
   await expect(page.getByText('1 of 1 users match “local test facility”.')).toBeVisible();
 
-  await page.getByRole('link', { name: 'View profile' }).click();
+  await page.getByRole('link', { name: 'Test Administrator', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Test Administrator' })).toBeVisible();
+  await page.getByRole('link', { name: 'Back to users' }).click();
+  await expect(page).toHaveURL(/q=local(?:\+|%20)test(?:\+|%20)facility&sort=first_name&focusRow=/);
+  await expect(page.getByLabel('Search users')).toHaveValue('local test facility');
+  await expect(page.getByLabel('Sort by')).toHaveValue('first_name');
+  await expect(page.locator('.ag-row[row-id] a[href]').first()).toBeFocused();
+  await page.getByRole('link', { name: 'Test Administrator', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'User profile' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Delete user', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Deactivate user', exact: true })).toBeDisabled();
   await expect(page.getByText('You cannot deactivate your own access.')).toBeVisible();
   const fits = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
   expect(fits).toBe(true);

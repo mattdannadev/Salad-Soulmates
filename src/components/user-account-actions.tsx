@@ -12,9 +12,19 @@ import {
 } from '@/app/user-management-actions';
 import { useRouter } from 'next/navigation';
 import type { AccessProfileOption } from '@/lib/user-management-data';
+import ActionButton from './action-button';
+import FormFooter from './form-footer';
 import styles from './user-management.module.css';
 
 const initialState: UserManagementActionResult = { ok: false, message: '' };
+
+/** Keep a submitted deactivation dialog open until the server action settles. */
+export function preventPendingDeactivationCancel(
+  event: { preventDefault: () => void },
+  pending: boolean,
+): void {
+  if (pending) event.preventDefault();
+}
 
 export default function UserAccountActions({
   userId,
@@ -23,6 +33,7 @@ export default function UserAccountActions({
   isCurrentUser,
   currentAccessProfileId,
   accessProfiles,
+  returnHref,
 }: {
   userId: string;
   userName: string;
@@ -30,6 +41,7 @@ export default function UserAccountActions({
   isCurrentUser: boolean;
   currentAccessProfileId: string;
   accessProfiles: AccessProfileOption[];
+  returnHref: string;
 }) {
   const router = useRouter();
   const hasCurrentAccessProfile = accessProfiles.some(
@@ -56,24 +68,25 @@ export default function UserAccountActions({
 
   useEffect(() => {
     if (reactivationState.ok) {
+      router.replace(returnHref);
       router.refresh();
     }
-  }, [reactivationState.ok, router]);
+  }, [reactivationState.ok, returnHref, router]);
 
   useEffect(() => {
     if (deactivationState.ok) {
       confirmation.current?.close();
-      router.push('/app/user-management/users');
+      router.replace(returnHref);
       router.refresh();
     }
-  }, [deactivationState.ok, router]);
+  }, [deactivationState.ok, returnHref, router]);
 
   useEffect(() => {
     if (accessProfileState.ok) {
-      router.push('/app/user-management/users');
+      router.replace(returnHref);
       router.refresh();
     }
-  }, [accessProfileState.ok, router]);
+  }, [accessProfileState.ok, returnHref, router]);
 
   async function copyResetLink() {
     if (!resetState.resetLink) return;
@@ -111,12 +124,16 @@ export default function UserAccountActions({
               ))}
             </select>
           </label>
-          <button type="submit" className="secondary" disabled={changingAccessProfile}>
-            {changingAccessProfile ? 'Saving…' : 'Save access profile'}
-          </button>
-          {!accessProfileState.ok && accessProfileState.message ? (
-            <p className="error-notice" role="alert">{accessProfileState.message}</p>
-          ) : null}
+          <FormFooter
+            submitLabel="Save access profile"
+            cancelLabel="Cancel"
+            cancelHref={returnHref}
+            pending={changingAccessProfile}
+            pendingLabel="Saving…"
+            feedback={!accessProfileState.ok && accessProfileState.message
+              ? { kind: 'error', message: accessProfileState.message }
+              : undefined}
+          />
         </form>
       ) : null}
       {active ? (
@@ -127,9 +144,14 @@ export default function UserAccountActions({
               <h3>Password reset</h3>
               <p>Create a one-time password-reset link for this user.</p>
             </div>
-            <button type="submit" className="secondary" disabled={resetting}>
-              {resetting ? 'Creating link…' : 'Create password-reset link'}
-            </button>
+            <ActionButton
+              type="submit"
+              variant="secondary"
+              pending={resetting}
+              pendingLabel="Creating link…"
+            >
+              Create password-reset link
+            </ActionButton>
           </form>
           {resetState.message ? (
             <div
@@ -145,9 +167,9 @@ export default function UserAccountActions({
                     value={resetState.resetLink}
                     onFocus={(event) => event.currentTarget.select()}
                   />
-                  <button
+                  <ActionButton
                     type="button"
-                    className="secondary"
+                    variant="secondary"
                     onClick={() => {
                       copyResetLink().catch(() => {
                         setCopyMessage('Copy failed. Select and copy the link manually.');
@@ -155,7 +177,7 @@ export default function UserAccountActions({
                     }}
                   >
                     Copy link
-                  </button>
+                  </ActionButton>
                 </div>
               ) : null}
               {copyMessage ? <small role="status">{copyMessage}</small> : null}
@@ -163,17 +185,17 @@ export default function UserAccountActions({
           ) : null}
           <div className={`${styles.actionBlock} ${styles.dangerBlock}`}>
             <div>
-              <h3>Delete user</h3>
+              <h3>Deactivate user</h3>
               <p>Remove app access while retaining the account and historical records.</p>
             </div>
-            <button
+            <ActionButton
               type="button"
-              className={styles.dangerButton}
+              variant="destructive"
               disabled={isCurrentUser}
               onClick={() => confirmation.current?.showModal()}
             >
-              Delete user
-            </button>
+              Deactivate user
+            </ActionButton>
             {isCurrentUser ? <small>You cannot deactivate your own access.</small> : null}
           </div>
         </>
@@ -187,9 +209,14 @@ export default function UserAccountActions({
               history.
             </p>
           </div>
-          <button type="submit" className="secondary" disabled={reactivating}>
-            {reactivating ? 'Reactivating…' : 'Reactivate user'}
-          </button>
+          <ActionButton
+            type="submit"
+            variant="secondary"
+            pending={reactivating}
+            pendingLabel="Reactivating…"
+          >
+            Reactivate user
+          </ActionButton>
           {reactivationState.message ? (
             <p className={reactivationState.ok ? 'notice' : 'error-notice'} role={reactivationState.ok ? 'status' : 'alert'}>
               {reactivationState.message}
@@ -205,40 +232,49 @@ export default function UserAccountActions({
           {deactivationState.message}
         </p>
       ) : null}
-      <dialog
-        ref={confirmation}
-        className={styles.confirmation}
-        aria-labelledby="delete-user-heading"
-      >
-        <form action={deactivateAction}>
-          <input type="hidden" name="user_id" value={userId} />
-          <h2 id="delete-user-heading">{`Delete ${userName}?`}</h2>
-          <p>
-            This deactivates and revokes Salad Soulmates access. It does not hard-delete the
-            authentication account or historical work.
-          </p>
-          <label>
-            Reason for deactivation
-            <textarea name="reason" required minLength={3} maxLength={500} />
-          </label>
-          {!deactivationState.ok && deactivationState.message ? (
-            <p className="error-notice" role="alert">{deactivationState.message}</p>
-          ) : null}
-          <div className={styles.dialogActions}>
-            <button
-              type="button"
-              className="secondary"
-              disabled={deactivating}
-              onClick={() => confirmation.current?.close()}
-            >
-              Cancel
-            </button>
-            <button type="submit" className={styles.dangerButton} disabled={deactivating}>
-              {deactivating ? 'Deactivating…' : 'Confirm delete'}
-            </button>
-          </div>
-        </form>
-      </dialog>
+      {active && !isCurrentUser ? (
+        <dialog
+          ref={confirmation}
+          className={styles.confirmation}
+          aria-labelledby="deactivate-user-heading"
+          aria-describedby="deactivate-user-description"
+          onCancel={(event) => preventPendingDeactivationCancel(event, deactivating)}
+        >
+          <form action={deactivateAction}>
+            <input type="hidden" name="user_id" value={userId} />
+            <h2 id="deactivate-user-heading">{`Deactivate ${userName}?`}</h2>
+            <p id="deactivate-user-description">
+              This deactivates and revokes Salad Soulmates access. It does not hard-delete the
+              authentication account or historical work.
+            </p>
+            <label>
+              Reason for deactivation
+              <textarea name="reason" required minLength={3} maxLength={500} />
+            </label>
+            {!deactivationState.ok && deactivationState.message ? (
+              <p className="error-notice" role="alert">{deactivationState.message}</p>
+            ) : null}
+            <div className={styles.dialogActions}>
+              <button
+                type="button"
+                className="secondary"
+                disabled={deactivating}
+                onClick={() => confirmation.current?.close()}
+              >
+                Cancel
+              </button>
+              <ActionButton
+                type="submit"
+                variant="destructive"
+                pending={deactivating}
+                pendingLabel="Deactivating…"
+              >
+                Deactivate user
+              </ActionButton>
+            </div>
+          </form>
+        </dialog>
+      ) : null}
     </section>
   );
 }

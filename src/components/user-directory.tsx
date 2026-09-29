@@ -1,11 +1,14 @@
 import type { ManagedUser } from '@/lib/user-management-data';
+import { userDetailHref } from '@/app/app/user-management/users/return-context';
 import ListGrid from './list-grid';
 
 function initials(user: ManagedUser) {
   return `${user.firstName.at(0) ?? ''}${user.lastName.at(0) ?? ''}`.toLocaleUpperCase();
 }
 
-export default function UserDirectory({ users }: { users: ManagedUser[] }) {
+export default function UserDirectory({
+  users, directoryHref, focusRowId = undefined,
+}: { users: ManagedUser[]; directoryHref: string; focusRowId?: string }) {
   if (!users.length) {
     return (
       <div className="empty">
@@ -23,25 +26,23 @@ export default function UserDirectory({ users }: { users: ManagedUser[] }) {
         { key: 'facility', label: 'Facility' },
         { key: 'access', label: 'Access' },
         { key: 'status', label: 'Status' },
-        {
-          key: 'profile', label: 'Profile', sortable: false, filterable: false,
-        },
       ]}
       rows={users.map((user) => ({
         id: user.id,
         cells: {
           user: {
             text: `${user.firstName} ${user.lastName}`,
-            href: `/app/user-management/users/${user.id}`,
+            href: userDetailHref(user.id, directoryHref),
             secondary: initials(user),
           },
           email: { text: user.workEmail ?? '—' },
           facility: { text: user.facilityName },
           access: { text: user.accessProfileName },
           status: { text: user.active ? 'Active' : 'Inactive', badge: user.active ? 'default' as const : 'muted' as const },
-          profile: { text: 'View profile →', href: `/app/user-management/users/${user.id}` },
         },
       }))}
+      searchable={false}
+      focusRowId={focusRowId}
     />
   );
 }

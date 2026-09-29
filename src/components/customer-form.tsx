@@ -1,18 +1,41 @@
 'use client';
 
-import { useId } from 'react';
+import { useId, useSyncExternalStore } from 'react';
 import type { Customer } from '@/domain/customer-pricing';
+import type { ReturnContext } from '@/lib/return-context';
+import { customerReturnContext, customerReturnHref } from '@/app/app/customers/return-context';
 import PurchasingForm from './purchasing-form';
+
+function subscribeToFragment(callback: () => void) {
+  window.addEventListener('hashchange', callback);
+  return () => window.removeEventListener('hashchange', callback);
+}
 
 export default function CustomerForm({
   customer = undefined,
   locale,
+  returnContext,
 }: {
   customer?: Customer;
   locale: 'en' | 'es';
+  returnContext: ReturnContext;
 }) {
   const prefix = useId();
   const es = locale === 'es';
+  const fragment = useSyncExternalStore(
+    subscribeToFragment,
+    () => window.location.hash,
+    () => '',
+  );
+  let returnHref = returnContext.href;
+  if (customer && fragment) {
+    const url = new URL(returnContext.href, window.location.origin);
+    url.hash = fragment;
+    returnHref = `${url.pathname}${url.search}${url.hash}`;
+  }
+  const origin = customerReturnContext(returnHref, returnContext.focusRow);
+  let submitLabel = es ? 'Crear cliente' : 'Create customer';
+  if (customer) submitLabel = es ? 'Guardar cambios' : 'Save changes';
   const fields = [
     { name: 'name', label: es ? 'Cliente' : 'Customer name', max: 120 },
     { name: 'contact_name', label: es ? 'Contacto' : 'Contact name', max: 120 },
@@ -25,8 +48,10 @@ export default function CustomerForm({
     <PurchasingForm
       operation="save-customer"
       locale={locale}
-      label={es ? 'Guardar cliente' : 'Save customer'}
-      destination={(id) => `/app/customers?customer=${id}`}
+      label={submitLabel}
+      destination={(id) => customerReturnHref(origin, id)}
+      cancelHref={customerReturnHref(origin)}
+      replaceOnSuccess
       payload={(form, id) => ({
         id: customer?.id ?? id,
         revision: customer?.revision ?? 0,

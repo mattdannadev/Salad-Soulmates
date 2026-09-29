@@ -1,9 +1,10 @@
-import Link from 'next/link';
 import { PageHeader } from '@/components/shell';
+import BackButton from '@/components/back-button';
 import UserAccountActions from '@/components/user-account-actions';
 import { CopilotUserAccess } from '@/components/operations-copilot-access';
 import { loadManagedUser } from '@/lib/user-management-data';
 import styles from '@/components/user-management.module.css';
+import { userReturnContext, userReturnHref } from '../return-context';
 
 function formatTimestamp(timestamp: string) {
   return new Intl.DateTimeFormat('en-US', {
@@ -13,11 +14,15 @@ function formatTimestamp(timestamp: string) {
 }
 
 export default async function UserDetail({
-  params,
+  params, searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ returnTo?: string | string[]; focusRow?: string | string[] }>;
 }) {
   const { id } = await params;
+  const query = await searchParams;
+  const returnContext = userReturnContext(query.returnTo, query.focusRow);
+  const returnHref = userReturnHref(returnContext, id);
   const { user, actorUserId, accessProfiles } = await loadManagedUser(id);
   const fullName = `${user.firstName} ${user.lastName}`;
   let activity = <p>Login history requires audit access.</p>;
@@ -35,15 +40,11 @@ export default async function UserDetail({
   }
   return (
     <>
+      <BackButton href={returnHref} label="Back to users" />
       <PageHeader
         eyebrow="USER MANAGEMENT"
         title={fullName}
         description="Review this user’s profile, access, and account security."
-        action={(
-          <Link className="button secondary" href="/app/user-management/users">
-            ← Back to users
-          </Link>
-        )}
       />
       <div className={styles.detailGrid}>
         <section className="panel" aria-labelledby="profile-heading">
@@ -113,6 +114,7 @@ export default async function UserDetail({
         isCurrentUser={user.id === actorUserId}
         currentAccessProfileId={user.accessProfileId}
         accessProfiles={accessProfiles}
+        returnHref={returnHref}
       />
     </>
   );

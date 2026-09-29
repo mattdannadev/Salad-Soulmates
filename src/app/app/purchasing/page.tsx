@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 import { z } from 'zod';
+import DirectoryToolbar from '@/components/directory-toolbar';
 import loadPurchasingWorkspace from '@/lib/purchasing-data';
 import { PageHeader } from '@/components/shell';
 import PurchaseComposer from '@/components/purchase-composer';
@@ -9,22 +11,23 @@ import StandalonePurchaseComposer from '@/components/standalone-purchase-compose
 import { formatDate, formatNumber } from '@/domain/format';
 import ListGrid from '@/components/list-grid';
 import { customerOrderLabel } from '@/domain/customer-orders';
+import {
+  PURCHASING_PAGE_SIZE, parsePurchasingDirectoryQuery, purchasingDirectorySorts,
+  selectPurchaseDrafts, type PurchasingSearchParams,
+} from './directory-query';
 
 export default async function Purchasing({
   searchParams,
 }: {
-  searchParams: Promise<{
-    plan?: string | string[];
-    supplier?: string | string[];
-    ingredient?: string | string[];
-  }>;
+  searchParams: Promise<PurchasingSearchParams>;
 }) {
+  const rawQuery = await searchParams;
   const query = z.object({
     plan: z.uuid().optional(),
     supplier: z.uuid().optional(),
     ingredient: z.uuid().optional(),
   })
-    .safeParse(await searchParams);
+    .safeParse(rawQuery);
   if (!query.success) notFound();
   const { plan, supplier, ingredient } = query.data;
   if (plan && ingredient) notFound();
@@ -56,12 +59,58 @@ export default async function Purchasing({
     return order ? customerOrderLabel(order)
       : `${es ? 'Estimación anterior' : 'Earlier estimate'} · ${workspace.plans.find((item) => item.id === id)?.name ?? ''}`;
   };
-  const drafts = workspace.drafts
+  const scopedDrafts = workspace.drafts
     .filter((draft) => (!plan || draft.material_plan_id === plan)
       && (!supplier || draft.supplier_id === supplier)
       && (!ingredient || workspace.lines.some((line) => line.purchase_draft_id === draft.id
-        && line.ingredient_id === ingredient)))
-    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+        && line.ingredient_id === ingredient)));
+  const scopedDraftIds = new Set(scopedDrafts.map((draft) => draft.id));
+  const scopedLines = workspace.lines.filter((line) => scopedDraftIds.has(line.purchase_draft_id));
+  const supplierNames = new Map(workspace.suppliers.map((item) => [item.id, item.name]));
+  const orderNames = new Map(workspace.plans.map((item) => [item.id, planLabel(item.id)]));
+  const ingredientNames = new Map(workspace.ingredients.map((item) => [item.id, item.name]));
+  const directoryQuery = parsePurchasingDirectoryQuery(
+    rawQuery,
+    [...new Set(scopedDrafts.map((draft) => draft.supplier_id))],
+    [...new Set(scopedDrafts.flatMap((draft) => (
+      draft.material_plan_id ? [draft.material_plan_id] : []
+    )))],
+    [...new Set(scopedLines.map((line) => line.ingredient_id))],
+    [...new Set(scopedDrafts.map((draft) => draft.expected_on))],
+  );
+  const drafts = selectPurchaseDrafts(
+    scopedDrafts,
+    scopedLines,
+    directoryQuery,
+    supplierNames,
+    orderNames,
+    ingredientNames,
+    locale,
+  );
+  const pageCount = Math.max(1, Math.ceil(drafts.length / PURCHASING_PAGE_SIZE));
+  const visibleDrafts = drafts.slice(
+    (directoryQuery.page - 1) * PURCHASING_PAGE_SIZE,
+    directoryQuery.page * PURCHASING_PAGE_SIZE,
+  );
+  const toolbarFilters = [
+    { key: 'supplierFilter', label: es ? 'Proveedor' : 'Supplier', options: [...new Set(scopedDrafts.map((draft) => draft.supplier_id))].map((id) => ({ value: id, label: supplierNames.get(id) ?? id })) },
+    {
+      key: 'status',
+      label: es ? 'Estado' : 'Status',
+      options: [
+        { value: 'Draft', label: es ? 'Borrador' : 'Draft' },
+        { value: 'Confirmed', label: es ? 'Confirmado' : 'Confirmed' },
+        { value: 'Cancelled', label: es ? 'Cancelado' : 'Cancelled' },
+      ],
+    },
+    { key: 'orderFilter', label: es ? 'Pedido de cliente' : 'Customer order', options: [...new Set(scopedDrafts.flatMap((draft) => (draft.material_plan_id ? [draft.material_plan_id] : [])))].map((id) => ({ value: id, label: orderNames.get(id) ?? id })) },
+    { key: 'ingredientFilter', label: es ? 'Ingrediente' : 'Ingredient', options: [...new Set(scopedLines.map((line) => line.ingredient_id))].map((id) => ({ value: id, label: ingredientNames.get(id) ?? id })) },
+    { key: 'due', label: es ? 'Fecha esperada' : 'Expected date', options: [...new Set(scopedDrafts.map((draft) => draft.expected_on))].sort().map((date) => ({ value: date, label: formatDate(date) })) },
+  ];
+  const sortOptions = purchasingDirectorySorts.map((option) => ({
+    ...option,
+    label: es ? ({ recent: 'Guardados recientemente', 'due-soon': 'Fecha más próxima', 'due-late': 'Fecha más lejana' })[option.value] : option.label,
+  }));
   const supplierBack = es ? 'Volver a proveedores' : 'Back to suppliers';
   const inventoryBack = es ? 'Volver al inventario' : 'Back to inventory';
   const ordersBack = es ? 'Pedidos de clientes' : 'Customer orders';
@@ -208,7 +257,7 @@ export default async function Purchasing({
               requirements={requirements}
               packs={packs}
               suppliers={suppliers}
-              existingSuppliers={drafts.filter((draft) => draft.status === 'Draft').map((draft) => draft.supplier_id)}
+              existingSuppliers={scopedDrafts.filter((draft) => draft.status === 'Draft').map((draft) => draft.supplier_id)}
               locale={locale}
             />
           )}
@@ -216,8 +265,12 @@ export default async function Purchasing({
       )}
       <section className="panel">
         <h2>{es ? 'Borradores y pedidos registrados' : 'Purchase drafts & recorded orders'}</h2>
-        {!drafts.length && <p className="empty">{es ? 'Aún no hay compras guardadas.' : 'No saved purchases yet.'}</p>}
-        {drafts.map((draft) => (
+        <Suspense fallback={null}>
+          <DirectoryToolbar label={es ? 'Buscar compras guardadas' : 'Search saved purchases'} resultCount={drafts.length} filters={toolbarFilters} sortOptions={sortOptions} locale={locale} pageCount={pageCount} mobileFilters />
+        </Suspense>
+        {!scopedDrafts.length && <p className="empty">{es ? 'Aún no hay compras guardadas. Selecciona un pedido o proveedor para comenzar.' : 'No saved purchases yet. Select an order or supplier to begin.'}</p>}
+        {scopedDrafts.length > 0 && !visibleDrafts.length && <p className="empty">{es ? 'No hay compras en esta vista. Cambia o borra los filtros.' : 'No purchases in this view. Change or clear the filters.'}</p>}
+        {visibleDrafts.map((draft) => (
           <PurchaseOrderCard
             key={draft.id}
             draft={draft}

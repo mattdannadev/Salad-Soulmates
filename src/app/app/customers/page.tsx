@@ -1,20 +1,32 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { z } from 'zod';
+import { Suspense } from 'react';
 import { PageHeader } from '@/components/shell';
 import CustomerForm from '@/components/customer-form';
 import loadCustomerWorkspace from '@/lib/customer-data';
 import { formatDate } from '@/domain/format';
 import { formatPrice } from '@/domain/customer-pricing';
 import ListGrid from '@/components/list-grid';
+import DirectoryToolbar from '@/components/directory-toolbar';
+import {
+  customerDirectoryConfig, customerDirectorySearchParams, customerDirectoryView,
+} from './customer-directory';
+import CustomerCreateLink from './customer-create-link';
+import CustomerFocus from './customer-focus';
+import { customerDirectoryHref, customerReturnContext, customerReturnHref } from './return-context';
 
 export default async function Customers({
   searchParams,
 }: {
-  searchParams: Promise<{ customer?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const query = z.object({ customer: z.uuid().optional() }).safeParse(await searchParams);
+  const params = await searchParams;
+  const query = z.object({ customer: z.uuid().optional() }).safeParse(params);
   if (!query.success) notFound();
+  const directoryHref = customerDirectoryHref(params);
+  const origin = customerReturnContext(directoryHref, params.focusRow);
+  const focusRow = z.uuid().safeParse(params.focusRow);
   const workspace = await loadCustomerWorkspace();
   const {
     customers, orders, plans, options, products, locale, canEdit, canReadOrders,
@@ -22,7 +34,42 @@ export default async function Customers({
   const es = locale === 'es';
   const selected = customers.find((customer) => customer.id === query.data.customer);
   if (query.data.customer && !selected) notFound();
-  const openOrders = orders.filter((order) => plans.some((plan) => plan.id === order.id && plan.status === 'Active'));
+  const activePlanIds = new Set(plans.filter((plan) => plan.status === 'Active')
+    .map((plan) => plan.id));
+  const openOrders = orders.filter((order) => activePlanIds.has(order.id));
+  const directoryConfig = customerDirectoryConfig(locale, canReadOrders);
+  const directoryParams = customerDirectorySearchParams(params);
+  const directory = customerDirectoryView(
+    customers,
+    openOrders,
+    canReadOrders,
+    directoryParams,
+    directoryConfig,
+    focusRow.success ? focusRow.data : undefined,
+  );
+  const canonicalParams = new URLSearchParams(directoryParams);
+  ['q', 'activity', 'sort', 'page'].forEach((key) => canonicalParams.delete(key));
+  if (directory.query.q) canonicalParams.set('q', directory.query.q);
+  if (directory.query.filters.activity) canonicalParams.set('activity', directory.query.filters.activity);
+  if (directory.query.sort) canonicalParams.set('sort', directory.query.sort);
+  const targetPage = directory.focusPage ?? directory.page;
+  if (targetPage > 1) canonicalParams.set('page', String(targetPage));
+  if (directoryParams.toString() !== canonicalParams.toString()) {
+    redirect(`/app/customers?${canonicalParams}`);
+  }
+  const clearParams = new URLSearchParams(canonicalParams);
+  ['q', 'activity', 'sort', 'page'].forEach((key) => clearParams.delete(key));
+  const clearHref = `/app/customers${clearParams.size ? `?${clearParams}` : ''}`;
+  const hasCriteria = Boolean(directory.query.q
+    || directory.query.filters.activity || directory.query.sort);
+  const focusedCustomer = focusRow.success
+    ? customers.find((customer) => customer.id === focusRow.data) : undefined;
+  const focusIsVisible = directory.focusPage === directory.page;
+  let sortKey = 'name';
+  if (directory.query.sort === 'orders-desc') sortKey = 'orders';
+  if (directory.query.sort === 'pickup-asc') sortKey = 'pickup';
+  const sortDirection = directory.query.sort === 'name-desc'
+    || directory.query.sort === 'orders-desc' ? 'desc' : 'asc';
   return (
     <>
       <PageHeader
@@ -34,34 +81,71 @@ export default async function Customers({
             : 'Contacts, agreed prices, and open orders by pickup date.'
         }
         action={
-          canEdit && (
-            <Link className="button" href="/app/customers/new">
-              {es ? '+ Agregar cliente' : '+ Add customer'}
-            </Link>
+          canEdit && customers.length > 0 && (
+            <CustomerCreateLink
+              label={es ? '+ Agregar cliente' : '+ Add customer'}
+              directoryHref={directoryHref}
+            />
           )
         }
       />
       <section className="panel">
+        {focusIsVisible && focusRow.success && <CustomerFocus rowId={focusRow.data} />}
+        <Suspense fallback={null}>
+          <DirectoryToolbar
+            label={es ? 'Buscar y filtrar clientes' : 'Search and filter customers'}
+            locale={locale}
+            resultCount={directory.resultCount}
+            filters={directoryConfig.filters}
+            sortOptions={directoryConfig.sortOptions}
+            pageCount={directory.pageCount}
+            mobileFilters
+          />
+        </Suspense>
+        {focusedCustomer && !focusIsVisible && (
+          <p role="status">
+            {es
+              ? `El cliente guardado, ${focusedCustomer.name}, está fuera de esta vista. `
+              : `The saved customer, ${focusedCustomer.name}, is outside this view. `}
+            <Link href={clearHref}>{es ? 'Borrar filtros para encontrarlo' : 'Clear filters to find it'}</Link>
+          </p>
+        )}
+        {directory.resultCount > 0 && (
         <ListGrid
           label={es ? 'Directorio de clientes' : 'Customer directory'}
           locale={locale}
+          searchable={false}
+          controlled={{
+            page: directory.page,
+            pageSize: directory.pageSize,
+            totalCount: directory.resultCount,
+            sort: { key: sortKey, direction: sortDirection },
+          }}
+          focusRowId={focusIsVisible && focusRow.success ? focusRow.data : undefined}
           columns={[
-            { key: 'name', label: es ? 'Cliente' : 'Customer' },
-            { key: 'contact', label: es ? 'Contacto' : 'Contact', minWidth: 220 },
-            { key: 'orders', label: es ? 'Pedidos abiertos' : 'Open orders' },
-            { key: 'pickup', label: es ? 'Próxima recogida' : 'Next pickup' },
+            {
+              key: 'name', label: es ? 'Cliente' : 'Customer', sortable: false, filterable: false,
+            },
+            {
+              key: 'contact', label: es ? 'Contacto' : 'Contact', minWidth: 220, sortable: false, filterable: false,
+            },
+            {
+              key: 'orders', label: es ? 'Pedidos abiertos' : 'Open orders', sortable: false, filterable: false,
+            },
+            {
+              key: 'pickup', label: es ? 'Próxima recogida' : 'Next pickup', sortable: false, filterable: false,
+            },
             {
               key: 'action', label: es ? 'Acciones' : 'Actions', sortable: false, filterable: false,
             },
           ]}
-          rows={customers.toSorted((a, b) => a.name.localeCompare(b.name)).map((customer) => {
-            const own = openOrders
-              .filter((order) => order.customer_id === customer.id)
+          rows={directory.customers.map((customer) => {
+            const own = (directory.ordersByCustomer.get(customer.id) ?? [])
               .toSorted((a, b) => a.needed_on.localeCompare(b.needed_on));
             return {
               id: customer.id,
               cells: {
-                name: { text: customer.name, href: `/app/customers?customer=${customer.id}` },
+                name: { text: customer.name, href: customerReturnHref(origin, customer.id) },
                 contact: { text: customer.contact_name || '—', secondary: [customer.email, customer.phone].filter(Boolean).join('\n') },
                 orders: { text: canReadOrders ? String(own.length) : '—', sortValue: canReadOrders ? own.length : -1 },
                 pickup: { text: own[0] ? formatDate(own[0].needed_on) : '—', sortValue: own[0]?.needed_on ?? '' },
@@ -73,8 +157,19 @@ export default async function Customers({
             };
           })}
         />
-        {!customers.length && (
-          <p className="empty">{es ? 'Aún no hay clientes.' : 'No customers yet.'}</p>
+        )}
+        {customers.length === 0 && (
+          <div className="empty">
+            <p>{es ? 'Aún no hay clientes. Crea uno para registrar sus datos y preparar pedidos.' : 'No customers yet. Create one to keep contact details and prepare orders.'}</p>
+            {canEdit && <CustomerCreateLink label={es ? 'Crear cliente' : 'Create customer'} directoryHref={directoryHref} />}
+            {!canEdit && <p>{es ? 'Pide a un administrador que agregue el primer cliente.' : 'Ask an administrator to add the first customer.'}</p>}
+          </div>
+        )}
+        {customers.length > 0 && directory.resultCount === 0 && (
+          <div className="empty">
+            <p>{es ? 'Ningún cliente coincide con los criterios actuales.' : 'No customers match the current criteria.'}</p>
+            {hasCriteria && <Link href={clearHref}>{es ? 'Borrar todos los filtros' : 'Clear all filters'}</Link>}
+          </div>
         )}
       </section>
       {selected && (
@@ -134,6 +229,7 @@ export default async function Customers({
               key={`${selected.id}-${selected.revision}`}
               customer={selected}
               locale={locale}
+              returnContext={origin}
             />
           ) : (
             <p>

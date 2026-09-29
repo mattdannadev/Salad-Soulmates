@@ -4,6 +4,9 @@ import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveRecord } from '@/app/actions';
 import type { Ingredient, ActionResult } from '@/domain/master-data';
+import type { ReturnContext } from '@/lib/return-context';
+import FormFooter from '@/components/form-footer';
+import { ingredientReturnHref } from '@/app/app/ingredients/return-context';
 
 export default function IngredientForm({
   ingredient = undefined,
@@ -13,6 +16,8 @@ export default function IngredientForm({
   categories = [],
   baseUnits = [],
   locale = 'en',
+  returnContext,
+  directEntry = false,
 }: {
   ingredient?: Ingredient;
   spanish?: string;
@@ -27,6 +32,8 @@ export default function IngredientForm({
     measurement_system: string;
   }[];
   locale?: 'en' | 'es';
+  returnContext: ReturnContext;
+  directEntry?: boolean;
 }) {
   const [pending, start] = useTransition();
   const [result, setResult] = useState<ActionResult>();
@@ -55,7 +62,10 @@ export default function IngredientForm({
         });
         setResult(response);
         if (response.ok) {
-          router.push(`/app/ingredients/${response.id}`);
+          const destination = directEntry && !ingredient
+            ? `/app/ingredients/${response.id}`
+            : ingredientReturnHref(returnContext, response.id);
+          router.replace(destination);
           router.refresh();
         }
       } catch {
@@ -195,14 +205,14 @@ export default function IngredientForm({
         <input type="checkbox" name="active" defaultChecked={ingredient?.active ?? true} />
         Active ingredient
       </label>
-      {result && (
-        <p role={result.ok ? 'status' : 'alert'} className={result.ok ? 'notice' : 'error-notice'}>
-          {result.message}
-        </p>
-      )}
-      <button type="submit" disabled={pending}>
-        {pending ? 'Saving…' : 'Save ingredient'}
-      </button>
+      <FormFooter
+        submitLabel={ingredient ? 'Save changes' : 'Create ingredient'}
+        cancelLabel="Cancel"
+        cancelHref={directEntry && ingredient ? '/app/ingredients' : ingredientReturnHref(returnContext)}
+        pending={pending}
+        pendingLabel="Saving…"
+        feedback={result ? { kind: result.ok ? 'success' : 'error', message: result.message } : undefined}
+      />
     </form>
   );
 }

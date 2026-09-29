@@ -1,0 +1,167 @@
+.button,
+.cancelLink {
+  min-height: 44px;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 9px 18px;
+}
+
+.button:focus-visible,
+.cancelLink:focus-visible,
+.backLink:focus-visible {
+  outline: 3px solid #477b54;
+  outline-offset: 3px;
+}
+
+.primary,
+.iconOnly {
+  background: var(--green);
+  border-color: var(--green);
+  color: white;
+}
+
+.primary:hover,
+.iconOnly:hover {
+  background: #1d432e;
+}
+
+.secondary {
+  background: white;
+  border-color: #b9c6b6;
+  color: var(--green);
+}
+
+.secondary:hover {
+  background: var(--soft);
+}
+
+.tertiary {
+  background: transparent;
+  border-color: transparent;
+  color: var(--green);
+}
+
+.tertiary:hover {
+  background: var(--soft);
+}
+
+.destructive {
+  background: #9f3f35;
+  border-color: #9f3f35;
+  color: white;
+}
+
+.destructive:hover {
+  background: #7f3029;
+}
+
+.iconOnly {
+  width: 44px;
+  padding: 9px;
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: action-spinner 0.7s linear infinite;
+}
+
+@keyframes action-spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-right-color: currentColor;
+  }
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  color: var(--green);
+  font-weight: 600;
+}
+
+.footer {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.footerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.cancelLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 18px;
+  border: 1px solid #b9c6b6;
+  background: white;
+  color: var(--green);
+}
+
+.cancelLink:hover {
+  background: var(--soft);
+}
+
+.cancelLink[aria-disabled='true'] {
+  opacity: 0.55;
+}
+
+.error,
+.success {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+}
+
+.error {
+  background: #fff1ef;
+  color: #8b3028;
+}
+
+.success {
+  background: #eaf0e5;
+  color: #244c33;
+}
+
+@media (max-width: 480px) {
+  .footerActions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .footerActions > * {
+    width: 100%;
+  }
+}

@@ -40,16 +40,18 @@ beforeEach(() => {
   ));
   mocks.single.mockResolvedValue({ data: fixtureRecords.recipes?.[0], error: null });
 });
-const details = (id = fixtureId(400), version?: string) => RecipeDetails({
-  params: Promise.resolve({ id }), searchParams: Promise.resolve({ version }),
+const details = (id = fixtureId(400), version?: string, returnTo?: string) => RecipeDetails({
+  params: Promise.resolve({ id }), searchParams: Promise.resolve({ version, returnTo }),
 });
 
 describe('recipe and product screens', () => {
   it('links products to recipes and preserves the active released version', async () => {
-    const products = renderToStaticMarkup(await Products());
+    const products = renderToStaticMarkup(await Products({
+      searchParams: Promise.resolve({ q: 'Italian' }),
+    }));
     expect(products).toContain('Preview Italian recipe · v1');
-    expect(products).toContain(`/app/recipes/${fixtureId(400)}?version=${fixtureId(401)}`);
-    expect(products).toContain('<th>Packaging</th>');
+    expect(products).toContain(`/app/recipes/${fixtureId(400)}?returnTo=%2Fapp%2Fproducts%3Fq%3DItalian&amp;version=${fixtureId(401)}`);
+    expect(products).toContain('<th scope="col">Packaging</th>');
     expect(products).toContain('Customer pricing &amp; packaging');
     expect(products).toContain('<details class="product-customer-options">');
     expect(products).toContain('<details class="product-recipe-details">');
@@ -67,7 +69,7 @@ describe('recipe and product screens', () => {
     const products = renderToStaticMarkup(await Products());
     expect(products).toContain('Preview Italian recipe');
     expect(products).not.toContain('Preview Italian recipe · v');
-    expect(products).toContain(`href="/app/recipes/${fixtureId(400)}"`);
+    expect(products).toContain(`href="/app/recipes/${fixtureId(400)}?returnTo=%2Fapp%2Fproducts"`);
   });
   it('groups recorded ingredients by dry and liquid category without changing their quantities', async () => {
     const html = renderToStaticMarkup(await details());
@@ -144,6 +146,22 @@ describe('recipe and product screens', () => {
     expect(html).toContain('Draft — not released for production.');
     expect(html).toContain('No preparation sections recorded.');
     expect(html).not.toContain('Preview garlic powder');
+  });
+  it('preserves safe directory context across version links and focuses the return row', async () => {
+    const directory = '/app/recipes?q=Italian&sort=product&page=2';
+    const html = renderToStaticMarkup(await details(fixtureId(400), undefined, directory));
+    expect(html).toContain(`href="${directory.replaceAll('&', '&amp;')}#recipe-${fixtureId(400)}"`);
+    expect(html).toContain(`version=${fixtureId(402)}&amp;returnTo=`);
+    const productDirectory = '/app/products?q=Italian&page=2';
+    const fromProduct = renderToStaticMarkup(
+      await details(fixtureId(400), undefined, productDirectory),
+    );
+    expect(fromProduct).toContain(
+      `href="/app/products?q=Italian&amp;page=2#product-${fixtureId(300)}"`,
+    );
+    expect(fromProduct).toContain('>View products</a>');
+    const unsafe = renderToStaticMarkup(await details(fixtureId(400), undefined, 'https://evil.example/'));
+    expect(unsafe).toContain(`href="/app/recipes#recipe-${fixtureId(400)}"`);
   });
   it('preserves Spanish labels without translating approved formulation content', async () => {
     const context: unknown = await mocks.context();

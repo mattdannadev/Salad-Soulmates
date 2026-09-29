@@ -451,14 +451,49 @@
   --soft: #eaf0e5;
   --white: #fff;
   --shadow: 0 6px 28px #283f2710;
+
+  --color-canvas: var(--cream);
+  --color-surface: var(--white);
+  --color-surface-muted: #fbfcf8;
+  --color-surface-field: #fdfefb;
+  --color-text: var(--ink);
+  --color-text-muted: var(--muted);
+  --color-border: var(--line);
+  --color-border-control: #d8ded2;
+  --color-action: var(--green);
+  --color-action-hover: #1d432e;
+  --color-status-success-bg: #edf4e8;
+  --color-status-success-text: #34563a;
+  --color-status-warning-bg: #fff0d7;
+  --color-status-warning-text: #805518;
+  --color-status-error-bg: #fff0ec;
+  --color-status-error-text: #913b2a;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --radius-sm: 6px;
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-panel: 14px;
+  --elevation-panel: var(--shadow);
+  --control-height-compact: 44px;
+  --control-height-default: 48px;
+  --focus-ring: 3px solid #a87919;
+  --focus-ring-offset: 3px;
 }
 * {
   box-sizing: border-box;
 }
 body {
   margin: 0;
-  background: var(--cream);
-  color: var(--ink);
+  background: var(--color-canvas);
+  color: var(--color-text);
   font-family: 'DM Sans', Arial, sans-serif;
   font-size: 15px;
   line-height: 1.6;
@@ -482,11 +517,11 @@ button,
   align-items: center;
   justify-content: center;
   gap: 9px;
-  min-height: 48px;
+  min-height: var(--control-height-default);
   padding: 11px 22px;
-  border: 1px solid var(--green);
-  border-radius: 8px;
-  background: var(--green);
+  border: 1px solid var(--color-action);
+  border-radius: var(--radius-control);
+  background: var(--color-action);
   color: white;
   font-weight: 600;
   cursor: pointer;
@@ -495,7 +530,7 @@ button,
 }
 button:hover,
 .button:hover {
-  background: #1d432e;
+  background: var(--color-action-hover);
   text-decoration: none;
 }
 button:disabled {
@@ -538,8 +573,8 @@ small,
   color: var(--muted);
 }
 :focus-visible {
-  outline: 3px solid #a87919;
-  outline-offset: 3px;
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
 }
 .app-shell {
   display: flex;
@@ -559,7 +594,7 @@ small,
   position: fixed;
   inset: 0 auto 0 0;
   padding: 35px 20px 24px;
-  background: #fbfcf8;
+  background: var(--color-surface-muted);
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
@@ -593,7 +628,7 @@ small,
   align-items: center;
   justify-content: center;
   gap: 10px;
-  min-height: 44px;
+  min-height: var(--control-height-compact);
   margin: 0 8px 18px;
   padding: 10px 14px;
   border-radius: 8px;
@@ -795,11 +830,11 @@ small,
 }
 .panel {
   padding: 28px;
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
   margin-bottom: 22px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--elevation-panel);
 }
 .panel.soft {
   background: #edf2e8;
@@ -1072,8 +1107,8 @@ tr:last-child td {
   color: #71786d;
 }
 .badge.warning {
-  background: #fff0d7;
-  color: #805518;
+  background: var(--color-status-warning-bg);
+  color: var(--color-status-warning-text);
 }
 .empty {
   text-align: center;
@@ -1108,11 +1143,11 @@ select,
 textarea {
   width: 100%;
   padding: 12px 13px;
-  border: 1px solid #d8ded2;
+  border: 1px solid var(--color-border-control);
   border-radius: 7px;
-  background: #fdfefb;
+  background: var(--color-surface-field);
   color: var(--ink);
-  min-height: 48px;
+  min-height: var(--control-height-default);
 }
 textarea {
   resize: vertical;
@@ -1160,14 +1195,14 @@ legend {
 .notice,
 .error-notice {
   padding: 14px 18px;
-  border-radius: 8px;
-  background: #edf4e8;
+  border-radius: var(--radius-control);
+  background: var(--color-status-success-bg);
   margin: 15px 0;
-  color: #34563a;
+  color: var(--color-status-success-text);
 }
 .error-notice {
-  background: #fff0ec;
-  color: #913b2a;
+  background: var(--color-status-error-bg);
+  color: var(--color-status-error-text);
 }
 .back-link {
   font-size: 13px;

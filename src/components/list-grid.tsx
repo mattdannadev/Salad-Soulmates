@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { AG_GRID_LOCALE_ES } from '@ag-grid-community/locale';
 import {
-  useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode,
+  useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type ReactNode,
 } from 'react';
 import {
   ClientSideRowModelModule, LocaleModule, PaginationModule, QuickFilterModule,
@@ -38,6 +38,14 @@ export interface ListGridColumn {
   filterable?: boolean;
 }
 
+/** In controlled mode the caller supplies one already filtered, sorted, and paged result page. */
+export interface ListGridControlledState {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  sort?: { key: string; direction: 'asc' | 'desc' };
+}
+
 export interface ListGridProps {
   label: string;
   columns: ListGridColumn[];
@@ -48,6 +56,8 @@ export interface ListGridProps {
   searchable?: boolean;
   loading?: boolean;
   emptyMessage?: string;
+  focusRowId?: string;
+  controlled?: ListGridControlledState;
 }
 
 const modules = [
@@ -62,6 +72,20 @@ const modules = [
 ];
 const emptyCellSlots: Record<string, ReactNode> = {};
 const subscribe = () => () => {};
+
+interface FocusPageApi {
+  getRowNode: (rowId: string) => { rowIndex: number | null } | undefined;
+  paginationGetCurrentPage: () => number;
+  paginationGoToPage: (page: number) => void;
+}
+
+/** Reveal a focused row on its sorted grid page before an owner restores DOM focus. */
+export function revealFocusRowPage(api: FocusPageApi, rowId: string, pageSize: number): void {
+  const rowIndex = api.getRowNode(rowId)?.rowIndex;
+  if (rowIndex === null || rowIndex === undefined || rowIndex < 0) return;
+  const targetPage = Math.floor(rowIndex / pageSize);
+  if (api.paginationGetCurrentPage() !== targetPage) api.paginationGoToPage(targetPage);
+}
 const gridTheme = themeQuartz.withParams({
   accentColor: '#386443',
   backgroundColor: '#ffffff',
@@ -109,11 +133,11 @@ function cellContent(value: ListGridCell | undefined, cellSlots: Record<string, 
 }
 
 function StaticTable({
-  label, columns, rows, cellSlots, loading, emptyMessage, locale, pageSize = 20,
-}: Pick<ListGridProps, 'label' | 'columns' | 'rows' | 'cellSlots' | 'loading' | 'emptyMessage' | 'locale' | 'pageSize'>) {
+  label, columns, rows, cellSlots, loading, emptyMessage, locale, pageSize = 20, controlled,
+}: Pick<ListGridProps, 'label' | 'columns' | 'rows' | 'cellSlots' | 'loading' | 'emptyMessage' | 'locale' | 'pageSize' | 'controlled'>) {
   let statusText = emptyMessage;
   if (loading) statusText = locale === 'es' ? 'Cargando…' : 'Loading…';
-  const initialRows = rows.slice(0, pageSize);
+  const initialRows = controlled ? rows : rows.slice(0, pageSize);
   const pageSummary = locale === 'es'
     ? `Mostrando los primeros ${initialRows.length} de ${rows.length} registros.`
     : `Showing the first ${initialRows.length} of ${rows.length} records.`;
@@ -142,16 +166,19 @@ function StaticTable({
   );
 }
 
-/** Client-side sorting, column filters, search, and pagination over caller-provided rows. */
+/** Client-side grid by default; controlled callers own the complete directory query. */
 export default function ListGrid({
   label, columns, rows, locale = 'en', pageSize = 20, cellSlots = emptyCellSlots,
   searchable = true, loading = false, emptyMessage = undefined,
+  focusRowId = undefined, controlled = undefined,
 }: ListGridProps) {
   const mounted = useSyncExternalStore(subscribe, () => true, () => false);
+  const descriptionId = useId();
   const gridApiRef = useRef<GridApi<ListGridRow> | null>(null);
   const [search, setSearch] = useState('');
   const [displayedCount, setDisplayedCount] = useState<number | null>(null);
   const effectivePageSize = Number.isFinite(pageSize) ? Math.max(1, Math.floor(pageSize)) : 20;
+  const externallyControlled = controlled !== undefined;
   useEffect(() => {
     const api = gridApiRef.current;
     if (api && !api.isDestroyed()) api.setGridAriaProperty('label', label);
@@ -163,8 +190,8 @@ export default function ListGrid({
     headerName: column.label,
     minWidth: column.minWidth ?? 140,
     flex: column.flex ?? 1,
-    sortable: column.sortable ?? true,
-    filter: column.filterable === false ? false : 'agTextColumnFilter',
+    sortable: !externallyControlled && (column.sortable ?? true),
+    filter: externallyControlled || column.filterable === false ? false : 'agTextColumnFilter',
     valueGetter: (params) => params.data?.cells[column.key],
     filterValueGetter: (params) => cellText(params.data?.cells[column.key]),
     getQuickFilterText: (params) => cellText(params.value ?? undefined),
@@ -179,9 +206,9 @@ export default function ListGrid({
     ),
     autoHeight: true,
     wrapText: true,
-  })), [cellSlots, columns, locale]);
+  })), [cellSlots, columns, externallyControlled, locale]);
 
-  const shown = displayedCount ?? rows.length;
+  const shown = externallyControlled ? rows.length : (displayedCount ?? rows.length);
   let countText = es ? `${rows.length} registros` : `${rows.length} records`;
   if (shown !== rows.length) {
     countText = es ? `${shown} de ${rows.length} registros` : `${shown} of ${rows.length} records`;
@@ -193,26 +220,57 @@ export default function ListGrid({
       ? 'No se encontraron resultados. Prueba otra búsqueda o filtro.'
       : 'No matching results. Try another search or filter.';
   }
+  const controlledPage = controlled && Number.isSafeInteger(controlled.page) && controlled.page > 0
+    ? controlled.page : 1;
+  const controlledPageSize = controlled && Number.isSafeInteger(controlled.pageSize)
+    && controlled.pageSize > 0 ? controlled.pageSize : effectivePageSize;
+  const controlledTotal = controlled && Number.isSafeInteger(controlled.totalCount)
+    && controlled.totalCount >= 0 ? controlled.totalCount : rows.length;
+  const start = rows.length === 0 ? 0 : (controlledPage - 1) * controlledPageSize + 1;
+  const end = rows.length === 0 ? 0 : start + rows.length - 1;
+  const sortColumn = columns.find((column) => column.key === controlled?.sort?.key);
+  let sortDescription = '';
+  if (sortColumn && controlled?.sort) {
+    let direction = es ? 'ascendente' : 'ascending';
+    if (controlled.sort.direction === 'desc') direction = es ? 'descendente' : 'descending';
+    sortDescription = `${es ? 'Ordenado por' : 'Sorted by'} ${sortColumn.label} ${direction}.`;
+  }
+  const pageDescription = `${es ? 'Página' : 'Page'} ${controlledPage}.`;
+  const rangeDescription = `${es ? 'Mostrando' : 'Showing'} ${start}–${end} ${es ? 'de' : 'of'} ${controlledTotal} ${es ? 'registros' : 'records'}.`;
+  const controlledDescription = externallyControlled
+    ? `${pageDescription} ${rangeDescription} ${sortDescription}`.trim()
+    : undefined;
 
   return (
-    <div className={styles.wrap} role="region" aria-label={label} aria-busy={loading}>
-      <div className={styles.toolbar}>
-        <span className={styles.count} role="status" aria-live="polite">{countText}</span>
-        {searchable && (
-          <div className={styles.searchBox}>
-            <span className={styles.searchIcon} aria-hidden="true" />
-            <input
-              className={styles.search}
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={es ? 'Buscar en la tabla' : 'Search this table'}
-              aria-label={es ? `Buscar en ${label}` : `Search ${label}`}
-              disabled={loading}
-            />
-          </div>
-        )}
-      </div>
+    <div
+      className={styles.wrap}
+      role="region"
+      aria-label={label}
+      aria-describedby={externallyControlled ? descriptionId : undefined}
+      aria-busy={loading}
+    >
+      {controlledDescription && (
+        <span id={descriptionId} className={styles.visuallyHidden}>{controlledDescription}</span>
+      )}
+      {!externallyControlled && (
+        <div className={styles.toolbar}>
+          <span className={styles.count} role="status" aria-live="polite">{countText}</span>
+          {searchable && (
+            <div className={styles.searchBox}>
+              <span className={styles.searchIcon} aria-hidden="true" />
+              <input
+                className={styles.search}
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={es ? 'Buscar en la tabla' : 'Search this table'}
+                aria-label={es ? `Buscar en ${label}` : `Search ${label}`}
+                disabled={loading}
+              />
+            </div>
+          )}
+        </div>
+      )}
       <div className={styles.tableScroll}>
         {mounted ? (
           <AgGridProvider modules={modules}>
@@ -231,11 +289,15 @@ export default function ListGrid({
               onGridPreDestroyed={() => {
                 gridApiRef.current = null;
               }}
-              onModelUpdated={(event) => setDisplayedCount(event.api.getDisplayedRowCount())}
-              pagination={rows.length > effectivePageSize}
+              onModelUpdated={(event) => {
+                if (!externallyControlled) setDisplayedCount(event.api.getDisplayedRowCount());
+                if (!focusRowId || externallyControlled) return;
+                revealFocusRowPage(event.api, focusRowId, effectivePageSize);
+              }}
+              pagination={!externallyControlled && rows.length > effectivePageSize}
               paginationPageSize={effectivePageSize}
               paginationPageSizeSelector={false}
-              quickFilterText={searchable ? search : ''}
+              quickFilterText={!externallyControlled && searchable ? search : ''}
               rowData={rows}
               suppressNoRowsOverlay
               theme={gridTheme}
@@ -251,6 +313,7 @@ export default function ListGrid({
             emptyMessage={emptyText}
             locale={locale}
             pageSize={effectivePageSize}
+            controlled={controlled}
           />
         )}
       </div>

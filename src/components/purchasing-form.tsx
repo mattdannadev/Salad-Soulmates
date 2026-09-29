@@ -6,6 +6,7 @@ import {
 import { useRouter } from 'next/navigation';
 import type { ActionResult } from '@/domain/master-data';
 import savePurchasing from '@/app/purchasing-actions';
+import FormFooter from './form-footer';
 
 /** Preserve values and the request token until success, including lost-response retries. */
 export default function PurchasingForm({
@@ -15,6 +16,8 @@ export default function PurchasingForm({
   label,
   locale,
   destination = undefined,
+  cancelHref = undefined,
+  replaceOnSuccess = false,
 }: {
   children: React.ReactNode;
   operation: 'save-customer' | 'save-option' | 'save-order' | 'change-pickup-date' | 'cancel-order' | 'create-draft' | 'change-status' | 'cancel-plan';
@@ -22,6 +25,8 @@ export default function PurchasingForm({
   label: string;
   locale: 'en' | 'es';
   destination?: (id: string) => string;
+  cancelHref?: string;
+  replaceOnSuccess?: boolean;
 }) {
   const [pending, start] = useTransition();
   const [result, setResult] = useState<ActionResult>();
@@ -42,7 +47,10 @@ export default function PurchasingForm({
             const response = await savePurchasing(operation, values);
             setResult(response);
             if (response.ok && response.id) {
-              if (destination) router.push(destination(response.id));
+              if (destination) {
+                if (replaceOnSuccess) router.replace(destination(response.id));
+                else router.push(destination(response.id));
+              }
               router.refresh();
             }
           } catch {
@@ -59,11 +67,23 @@ export default function PurchasingForm({
     >
       <fieldset disabled={pending || result?.ok} className="purchasing-fields">
         {children}
-        <button type="submit" aria-describedby={result ? messageId : undefined}>
-          {pending ? savingLabel : label}
-        </button>
+        {cancelHref ? (
+          <FormFooter
+            submitLabel={label}
+            cancelLabel={locale === 'es' ? 'Cancelar' : 'Cancel'}
+            cancelHref={cancelHref}
+            pending={pending}
+            pendingLabel={savingLabel}
+            disabled={result?.ok}
+            feedback={result ? { kind: result.ok ? 'success' : 'error', message: result.message } : undefined}
+          />
+        ) : (
+          <button type="submit" aria-describedby={result ? messageId : undefined}>
+            {pending ? savingLabel : label}
+          </button>
+        )}
       </fieldset>
-      {result && (
+      {result && !cancelHref && (
         <p
           id={messageId}
           role={result.ok ? 'status' : 'alert'}

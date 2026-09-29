@@ -1,30 +1,51 @@
 import type { Supplier, SupplierItem } from '@/domain/master-data';
+import { resolveReturnContext } from '@/lib/return-context';
 import { RecordForm, type Field } from './record-form';
 
-export function SupplierForm({ supplier = undefined }: { supplier?: Supplier }) {
+export function SupplierForm({
+  supplier = undefined,
+  returnHref = '/app/suppliers',
+  locale = 'en',
+}: {
+  supplier?: Supplier;
+  returnHref?: string;
+  locale?: 'en' | 'es';
+}) {
+  const { href } = resolveReturnContext(returnHref, undefined, {
+    fallbackHref: '/app/suppliers',
+    isAllowedPathname: (pathname) => pathname === '/app/suppliers',
+  });
+  const cancelHref = supplier ? `${href.split('#', 1)[0]}#supplier-${supplier.id}` : href;
+  let submitLabel = locale === 'es' ? 'Crear proveedor' : 'Create supplier';
+  if (supplier) submitLabel = locale === 'es' ? 'Guardar cambios' : 'Save changes';
   return (
     <RecordForm
       kind="supplier"
       hidden={supplier ? { id: supplier.id } : {}}
-      afterSave="/app/suppliers"
+      afterSave={href}
+      afterSaveRecordHashPrefix="supplier-"
+      replaceAfterSave
+      cancelHref={cancelHref}
+      submit={submitLabel}
+      locale={locale}
       fields={[
         {
           name: 'name',
-          label: 'Supplier name',
+          label: locale === 'es' ? 'Nombre del proveedor' : 'Supplier name',
           required: true,
           value: supplier?.name,
         },
-        { name: 'contact_name', label: 'Contact name', value: supplier?.contact_name },
+        { name: 'contact_name', label: locale === 'es' ? 'Nombre de contacto' : 'Contact name', value: supplier?.contact_name },
         {
           name: 'email',
-          label: 'Email',
+          label: locale === 'es' ? 'Correo electrónico' : 'Email',
           type: 'email',
           value: supplier?.email,
         },
-        { name: 'phone', label: 'Phone', value: supplier?.phone },
+        { name: 'phone', label: locale === 'es' ? 'Teléfono' : 'Phone', value: supplier?.phone },
         {
           name: 'lead_time_days',
-          label: 'Lead time (days)',
+          label: locale === 'es' ? 'Plazo de entrega (días)' : 'Lead time (days)',
           type: 'number',
           min: 0,
           step: '1',
@@ -33,7 +54,7 @@ export function SupplierForm({ supplier = undefined }: { supplier?: Supplier }) 
         },
         {
           name: 'active',
-          label: 'Active supplier',
+          label: locale === 'es' ? 'Proveedor activo' : 'Active supplier',
           type: 'checkbox',
           value: supplier?.active ?? true,
         },

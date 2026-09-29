@@ -6,15 +6,86 @@ import SupplierPurchases from '@/components/supplier-purchases';
 import Link from 'next/link';
 import ListGrid from '@/components/list-grid';
 import { SupplierHashDetails } from '@/components/supplier-detail-link';
+import { returnContextSearchParams } from '@/lib/return-context';
+import { Suspense } from 'react';
+import DirectoryToolbar from '@/components/directory-toolbar';
+import {
+  parseSupplierDirectoryQuery, supplierDirectoryFilters, supplierDirectorySorts,
+  supplierDirectoryHref, type SupplierSearchParams,
+} from './directory-query';
+import SupplierReturnFocus from './supplier-return-focus';
 
-export default async function Suppliers() {
+const PAGE_SIZE = 20;
+
+export default async function Suppliers({
+  searchParams,
+}: {
+  searchParams?: Promise<SupplierSearchParams>;
+} = {}) {
+  const rawQuery = await searchParams ?? {};
+  const directoryQuery = parseSupplierDirectoryQuery(rawQuery);
   const workspace = await loadSupplierWorkspace();
   const {
     suppliers, locale, canEdit, canReadPurchases,
   } = workspace;
+  const returnHref = supplierDirectoryHref(rawQuery, canReadPurchases);
+  const addSupplierHref = `/app/suppliers/new?${returnContextSearchParams({ href: returnHref })}`;
   const es = locale === 'es';
   const activeLabel = es ? 'Activo' : 'Active';
   const inactiveLabel = es ? 'Inactivo' : 'Inactive';
+  const filters = supplierDirectoryFilters.map((filter) => ({
+    ...filter,
+    label: es ? 'Estado' : filter.label,
+    options: filter.options.map((option) => ({
+      ...option,
+      label: option.value === 'active' ? activeLabel : inactiveLabel,
+    })),
+  }));
+  const sortOptions = supplierDirectorySorts
+    .filter((option) => canReadPurchases || option.value !== 'open-purchases')
+    .map((option) => ({
+      ...option,
+      label: es ? ({
+        name: 'Nombre A–Z',
+        'name-desc': 'Nombre Z–A',
+        'open-purchases': 'Más compras abiertas',
+      })[option.value] : option.label,
+    }));
+  const suppliersWithPurchases = suppliers.map((supplier) => ({
+    supplier,
+    openCount: canReadPurchases ? workspace.drafts.filter(
+      (draft) => draft.supplier_id === supplier.id
+        && purchaseProgress(draft, workspace.lines, workspace.receipts).open,
+    ).length : 0,
+  }));
+  const filteredSuppliers = suppliersWithPurchases
+    .filter(({ supplier }) => {
+      const q = directoryQuery.q.toLocaleLowerCase(locale);
+      return !q || [supplier.name, supplier.contact_name, supplier.email, supplier.phone]
+        .some((value) => value?.toLocaleLowerCase(locale).includes(q));
+    })
+    .filter(({ supplier }) => !directoryQuery.status
+      || supplier.active === (directoryQuery.status === 'active'))
+    .sort((left, right) => {
+      if (directoryQuery.sort === 'open-purchases' && canReadPurchases) {
+        const countOrder = right.openCount - left.openCount;
+        if (countOrder !== 0) return countOrder;
+      }
+      const nameOrder = left.supplier.name.localeCompare(right.supplier.name, locale);
+      return directoryQuery.sort === 'name-desc' ? -nameOrder : nameOrder;
+    });
+  const pageCount = Math.max(1, Math.ceil(filteredSuppliers.length / PAGE_SIZE));
+  const visibleSuppliers = filteredSuppliers.slice(
+    (directoryQuery.page - 1) * PAGE_SIZE,
+    directoryQuery.page * PAGE_SIZE,
+  );
+  let emptyDescription = es
+    ? 'Ajusta los filtros para encontrar un proveedor.'
+    : 'Adjust the filters to find a supplier.';
+  if (directoryQuery.page > pageCount) {
+    emptyDescription = es
+      ? 'Esta página ya no tiene resultados.' : 'This page no longer has results.';
+  }
   return (
     <>
       <PageHeader
@@ -22,7 +93,7 @@ export default async function Suppliers() {
         title={es ? 'Proveedores' : 'Suppliers'}
         action={
           canEdit && (
-            <Link className="button" href="/app/suppliers/new">
+            <Link className="button" href={addSupplierHref}>
               {es ? '+ Agregar proveedor' : '+ Add supplier'}
             </Link>
           )
@@ -35,7 +106,25 @@ export default async function Suppliers() {
       />
       <section className="panel">
         <SupplierHashDetails />
+        <SupplierReturnFocus
+          filteredSupplierIds={filteredSuppliers.map(({ supplier }) => supplier.id)}
+          allSupplierIds={suppliers.map((supplier) => supplier.id)}
+          page={directoryQuery.page}
+          pageSize={PAGE_SIZE}
+          locale={locale}
+        />
         <h2>{es ? 'Tus proveedores' : 'Your suppliers'}</h2>
+        <Suspense fallback={null}>
+          <DirectoryToolbar
+            label={es ? 'Filtros de proveedores' : 'Supplier filters'}
+            resultCount={filteredSuppliers.length}
+            filters={filters}
+            sortOptions={sortOptions}
+            locale={locale}
+            mobileFilters
+            pageCount={pageCount}
+          />
+        </Suspense>
         {!suppliers.length && (
           <div className="empty">
             <h3>{es ? 'Aún no hay proveedores' : 'No suppliers yet'}</h3>
@@ -44,9 +133,17 @@ export default async function Suppliers() {
                 ? 'Agrega un proveedor y configura sus presentaciones en cada ingrediente.'
                 : 'Add a supplier, then connect their packs from an ingredient’s detail page.'}
             </p>
+            {canEdit && <Link href={addSupplierHref}>{es ? 'Crear proveedor' : 'Create supplier'}</Link>}
           </div>
         )}
-        {!!suppliers.length && (
+        {!!suppliers.length && !visibleSuppliers.length && (
+          <div className="empty">
+            <h3>{es ? 'No hay proveedores en esta vista' : 'No suppliers in this view'}</h3>
+            <p>{emptyDescription}</p>
+            <Link href="/app/suppliers">{es ? 'Borrar filtros' : 'Clear all'}</Link>
+          </div>
+        )}
+        {!!visibleSuppliers.length && (
           <ListGrid
             label={es ? 'Directorio de proveedores' : 'Supplier directory'}
             locale={locale}
@@ -56,26 +153,29 @@ export default async function Suppliers() {
               { key: 'status', label: es ? 'Estado' : 'Status' },
               ...(canReadPurchases ? [{ key: 'purchases', label: es ? 'Compras abiertas' : 'Open purchase orders' }] : []),
             ]}
-            rows={suppliers.map((supplier) => {
-              const openCount = canReadPurchases ? workspace.drafts.filter(
-                (draft) => draft.supplier_id === supplier.id
-                  && purchaseProgress(draft, workspace.lines, workspace.receipts).open,
-              ).length : 0;
-              return {
-                id: supplier.id,
-                cells: {
-                  name: { text: supplier.name, detailsId: `supplier-${supplier.id}` },
-                  contact: { text: supplier.contact_name || '—', secondary: [supplier.email, supplier.phone].filter(Boolean).join('\n') },
-                  status: { text: supplier.active ? activeLabel : inactiveLabel, badge: supplier.active ? 'default' as const : 'muted' as const },
-                  ...(canReadPurchases ? {
-                    purchases: { text: String(openCount), sortValue: openCount },
-                  } : {}),
-                },
-              };
-            })}
+            searchable={false}
+            controlled={{
+              page: directoryQuery.page,
+              pageSize: PAGE_SIZE,
+              totalCount: filteredSuppliers.length,
+              sort: directoryQuery.sort === 'open-purchases'
+                ? { key: 'purchases', direction: 'desc' }
+                : { key: 'name', direction: directoryQuery.sort === 'name-desc' ? 'desc' : 'asc' },
+            }}
+            rows={visibleSuppliers.map(({ supplier, openCount }) => ({
+              id: supplier.id,
+              cells: {
+                name: { text: supplier.name, detailsId: `supplier-${supplier.id}` },
+                contact: { text: supplier.contact_name || '—', secondary: [supplier.email, supplier.phone].filter(Boolean).join('\n') },
+                status: { text: supplier.active ? activeLabel : inactiveLabel, badge: supplier.active ? 'default' as const : 'muted' as const },
+                ...(canReadPurchases ? {
+                  purchases: { text: String(openCount), sortValue: openCount },
+                } : {}),
+              },
+            }))}
           />
         )}
-        {suppliers.map((supplier) => (
+        {visibleSuppliers.map(({ supplier }) => (
           <details className="supplier-orders" id={`supplier-${supplier.id}`} key={supplier.id}>
             <summary>
               {`${es ? 'Ver detalles' : 'View details'} · ${supplier.name}`}
@@ -86,7 +186,11 @@ export default async function Suppliers() {
                 {es ? 'Contacto y configuración' : 'Supplier contact & settings'}
               </summary>
               {canEdit ? (
-                <SupplierForm supplier={supplier} />
+                <SupplierForm
+                  supplier={supplier}
+                  returnHref={returnHref}
+                  locale={locale}
+                />
               ) : (
                 <p>{`${supplier.contact_name} · ${supplier.email || (es ? 'Sin correo' : 'No email')} · ${supplier.phone || (es ? 'Sin teléfono' : 'No phone')} · ${supplier.lead_time_days ?? 0} ${es ? 'días' : 'days'}`}</p>
               )}

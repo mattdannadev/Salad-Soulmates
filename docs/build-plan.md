@@ -2,6 +2,17 @@
 
 Updated: September 24, 2026
 
+## UI/UX overhaul — approved cross-cutting work
+
+The owner approved a comprehensive UI/UX overhaul to make every screen and
+workflow consistent, smooth, recoverable, and easy to learn. The canonical scope,
+sequencing, interaction contracts, screen-family requirements, acceptance
+journeys, and verification gates are in the
+[UI/UX overhaul build plan](ui-ux-overhaul-build-plan.md). Treat that plan as
+required context for all user-facing implementation work. It does not authorize
+production deployment, shared-database sample data, or changes to existing domain
+and authorization safeguards.
+
 ## Native mobile companion plan
 
 The standalone Expo/React Native delivery plan is

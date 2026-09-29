@@ -6,6 +6,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { saveRecord } from '@/app/actions';
 import type { ActionResult } from '@/domain/master-data';
+import FormFooter from './form-footer';
 
 export interface Field {
   name: string;
@@ -95,6 +96,9 @@ export function RecordForm({
   afterSave = undefined,
   hidden = {},
   locale = 'en',
+  cancelHref = undefined,
+  replaceAfterSave = false,
+  afterSaveRecordHashPrefix = undefined,
 }: {
   kind: string;
   fields: Field[];
@@ -102,6 +106,9 @@ export function RecordForm({
   afterSave?: string;
   hidden?: Record<string, unknown>;
   locale?: 'en' | 'es';
+  cancelHref?: string;
+  replaceAfterSave?: boolean;
+  afterSaveRecordHashPrefix?: string;
 }) {
   const [result, setResult] = useState<ActionResult>();
   const [pending, start] = useTransition();
@@ -134,7 +141,14 @@ export function RecordForm({
                 receiptToken.current = undefined;
                 element.reset();
               }
-              if (afterSave) router.push(afterSave === 'detail' ? `/app/ingredients/${response.id}` : afterSave);
+              if (afterSave) {
+                const destination = afterSave === 'detail' ? `/app/ingredients/${response.id}` : afterSave;
+                const href = afterSaveRecordHashPrefix && response.id
+                  ? `${destination.split('#', 1)[0]}#${afterSaveRecordHashPrefix}${encodeURIComponent(response.id)}`
+                  : destination;
+                if (replaceAfterSave) router.replace(href);
+                else router.push(href);
+              }
               router.refresh();
             }
           } catch {
@@ -169,14 +183,25 @@ export function RecordForm({
           );
         })}
       </div>
-      {result && (
+      {!cancelHref && result && (
         <p role={result.ok ? 'status' : 'alert'} className={result.ok ? 'notice' : 'error-notice'}>
           {result.message}
         </p>
       )}
-      <button type="submit" disabled={pending}>
-        {pending ? savingLabel : submit}
-      </button>
+      {cancelHref ? (
+        <FormFooter
+          submitLabel={submit}
+          cancelLabel={locale === 'es' ? 'Cancelar' : 'Cancel'}
+          cancelHref={cancelHref}
+          pending={pending}
+          pendingLabel={savingLabel}
+          feedback={result ? { kind: result.ok ? 'success' : 'error', message: result.message } : undefined}
+        />
+      ) : (
+        <button type="submit" disabled={pending}>
+          {pending ? savingLabel : submit}
+        </button>
+      )}
     </form>
   );
 }

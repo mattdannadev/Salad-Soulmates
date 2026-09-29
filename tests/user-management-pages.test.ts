@@ -84,7 +84,8 @@ it('renders a responsive directory with validated URL search, sorting, and invit
   expect(html).toContain('Ana Rivera');
   expect(html).toContain('ana@example.test');
   expect(html).not.toContain('Email not recorded');
-  expect(html).toContain(`href="/app/user-management/users/${userId}"`);
+  expect(html).toContain(`href="/app/user-management/users/${userId}?returnTo=%2Fapp%2Fuser-management%2Fusers%3Fq%3Dana%26sort%3Dfirst_name&amp;focusRow=${userId}"`);
+  expect(html).not.toContain('View profile →');
   expect(html).toContain('1 of 1 users match “ana”.');
   expect(html).toContain('aria-label="Invitation panel"');
 });
@@ -102,6 +103,10 @@ it('rejects repeated and unsupported directory query values', async () => {
 it('shows profile, access, recent activity, and security controls on user detail', async () => {
   const html = renderToStaticMarkup(await UserDetail({
     params: Promise.resolve({ id: userId }),
+    searchParams: Promise.resolve({
+      returnTo: '/app/user-management/users?q=ana&sort=first_name',
+      focusRow: userId,
+    }),
   }));
   expect(mocks.detail).toHaveBeenCalledWith(userId);
   expect(html).toContain('Ana Rivera');
@@ -111,6 +116,7 @@ it('shows profile, access, recent activity, and security controls on user detail
   expect(html).toContain('Signed in');
   expect(html).toContain('Security actions available');
   expect(html).not.toContain('Current user');
+  expect(html).toContain(`href="/app/user-management/users?q=ana&amp;sort=first_name&amp;focusRow=${userId}"`);
 });
 
 it('explains unavailable audit history and retained deactivation details', async () => {
@@ -126,6 +132,7 @@ it('explains unavailable audit history and retained deactivation details', async
   });
   const html = renderToStaticMarkup(await UserDetail({
     params: Promise.resolve({ id: userId }),
+    searchParams: Promise.resolve({}),
   }));
   expect(html).toContain('Inactive');
   expect(html).toContain('Employment ended');

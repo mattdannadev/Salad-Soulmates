@@ -1,5 +1,34 @@
 import { expect, test } from './fixtures';
 
+test('customer directory keeps search and restores focus after an edit', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('Email or phone number').fill('admin@example.test');
+  await page.getByLabel('Password', { exact: true }).fill('local-test-password');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.goto('/app/customers/new');
+  await page.getByLabel('Customer name', { exact: true }).fill('Directory focus customer');
+  await page.getByRole('button', { name: 'Create customer', exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/customers\?customer=/);
+
+  await page.getByRole('searchbox', { name: 'Search' }).fill('Directory focus');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await expect(page).toHaveURL(/q=Directory\+focus/);
+  await page.getByRole('link', { name: 'Directory focus customer', exact: true }).click();
+  await page.getByLabel('Contact name', { exact: true }).fill('Changed contact');
+  await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/customers\?.*q=Directory\+focus/);
+  await expect(page.getByLabel('Contact name', { exact: true })).toHaveValue('Changed contact');
+  await expect(page.getByRole('link', { name: 'Directory focus customer', exact: true }))
+    .toBeFocused();
+
+  await page.getByRole('searchbox', { name: 'Search' }).fill('No matching customer');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await expect(page.getByText('No customers match the current criteria.')).toBeVisible();
+  await page.getByRole('link', { name: 'Clear filters to find it' }).click();
+  await expect(page.getByRole('link', { name: 'Directory focus customer', exact: true }))
+    .toBeFocused();
+});
+
 test('customer master lookup fills order details and dashboard shows product batch counts', async ({ page }, info) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -16,9 +45,11 @@ test('customer master lookup fills order details and dashboard shows product bat
   await page.getByLabel('Phone', { exact: true }).fill('555-0123');
   await page.getByLabel('Address', { exact: true }).fill('100 Test Road');
   await page.getByLabel('Customer notes', { exact: true }).fill('Call before pickup');
-  await page.getByRole('button', { name: 'Save customer', exact: true }).click();
-  await expect(page).toHaveURL(/\/app\/customers\?customer=/);
-  const customerUrl = page.url();
+  await page.getByRole('button', { name: 'Create customer', exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/orders\?customer=.*#new-order$/);
+  const savedCustomerId = new URL(page.url()).searchParams.get('customer');
+  expect(savedCustomerId).toMatch(/^[a-f\d-]{36}$/u);
+  const customerUrl = `/app/customers?customer=${savedCustomerId}`;
   await page.goto('/app/products');
   const options = page.locator('details.product-customer-options').first();
   await options.locator(':scope > summary').click();

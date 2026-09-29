@@ -5,8 +5,16 @@ import { requireAdminShell } from '@/lib/auth';
 import { rows, readResult } from '@/lib/data';
 import IngredientForm from '@/components/ingredient-form';
 import { PageHeader } from '@/components/shell';
+import BackButton from '@/components/back-button';
+import { ingredientReturnContext, ingredientReturnHref } from '../return-context';
 
-export default async function NewIngredient() {
+export default async function NewIngredient({
+  searchParams,
+}: {
+  searchParams: Promise<{ returnTo?: string; focusRow?: string }>;
+}) {
+  const query = await searchParams;
+  const returnContext = ingredientReturnContext(query.returnTo, query.focusRow);
   const { db, profile } = await requireAdminShell();
   const [canWrite, allergens, categoryResult, unitsResult] = await Promise.all([
     hasPermission(db, 'master_data.write'),
@@ -36,6 +44,7 @@ export default async function NewIngredient() {
   );
   return (
     <>
+      <BackButton href={ingredientReturnHref(returnContext)} label="Back to ingredients" />
       <PageHeader
         eyebrow="INGREDIENTS"
         title="Add ingredient"
@@ -47,6 +56,8 @@ export default async function NewIngredient() {
           categories={categories}
           baseUnits={baseUnits}
           locale={profile.preferred_locale}
+          returnContext={returnContext}
+          directEntry={query.returnTo === undefined}
         />
       </section>
     </>

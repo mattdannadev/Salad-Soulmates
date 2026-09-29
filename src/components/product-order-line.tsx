@@ -10,16 +10,22 @@ export default function ProductOrderLine({
   choice,
   options,
   locale,
+  initialBatches = 0,
+  initialOptionId = '',
 }: {
   choice: { id: string; name: string };
   options: CustomerOption[];
   locale: 'en' | 'es';
+  initialBatches?: number;
+  initialOptionId?: string;
 }) {
   const prefix = useId();
   const es = locale === 'es';
   const preferred = options.find((item) => item.is_preferred) ?? options[0];
-  const [optionId, setOptionId] = useState(preferred?.id ?? '');
-  const [batches, setBatches] = useState('0');
+  const [optionId, setOptionId] = useState(
+    options.some((item) => item.id === initialOptionId) ? initialOptionId : preferred?.id ?? '',
+  );
+  const [batches, setBatches] = useState(String(initialBatches));
   const option = options.find((item) => item.id === optionId);
   const units = option ? (Number(batches) * 40) / option.gallons_per_unit : 0;
   const wholePackageLabel = es

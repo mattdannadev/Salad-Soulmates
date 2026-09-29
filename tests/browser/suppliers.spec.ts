@@ -10,12 +10,20 @@ test('adds a supplier from the directory and preserves purchase-order access', a
   const directory = page.getByRole('region', { name: 'Supplier directory' });
   const grid = directory.getByRole('grid');
   await expect(grid.getByRole('columnheader', { name: 'Open purchase orders' })).toBeVisible();
+  await page.goto('/app/suppliers?q=greens&sort=name&page=2');
+  await page.getByRole('link', { name: '+ Add supplier', exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/suppliers\/new\?returnTo=/);
+  await page.getByRole('link', { name: 'Cancel', exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/suppliers\?q=greens&sort=name&page=2$/);
   await page.getByRole('link', { name: '+ Add supplier', exact: true }).click();
   await page.getByLabel('Supplier name').fill('New directory supplier');
   await page.getByLabel('Contact name').fill('Test contact');
   await page.getByLabel('Email', { exact: true }).fill('supplier@example.test');
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(page).toHaveURL(/\/app\/suppliers$/);
+  await page.getByRole('button', { name: 'Create supplier', exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/suppliers\?q=greens&sort=name&page=2#supplier-/);
+  await page.getByRole('link', { name: 'Clear all' }).click();
+  await page.getByRole('searchbox', { name: 'Search' }).fill('New directory supplier');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
   const row = page.getByRole('region', { name: 'Supplier directory' })
     .getByRole('grid').getByRole('row')
     .filter({ has: page.getByRole('gridcell', { name: 'New directory supplier', exact: true }) });
@@ -29,7 +37,7 @@ test('adds a supplier from the directory and preserves purchase-order access', a
   if (!detailHash) throw new Error('Supplier detail link is missing its hash target.');
   expect(detailHash).toMatch(/^#supplier-/);
   await detailLink.click();
-  await expect(page).toHaveURL(/\/app\/suppliers#supplier-/);
+  await expect(page).toHaveURL(/\/app\/suppliers\?q=New\+directory\+supplier#supplier-/);
   await expect(details).toHaveAttribute('open', '');
   await expect(details.getByText('No purchase orders for this supplier yet.', { exact: true })).toBeVisible();
   await expect(

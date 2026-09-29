@@ -31,7 +31,7 @@ it('makes purchase history primary and keeps contact editing collapsed', async (
   expect(html).toContain('<details class="supplier-orders" id="supplier-');
   expect(html.indexOf('</table>')).toBeLessThan(html.indexOf('<details class="supplier-orders"'));
   expect(html).toContain('aria-label="Supplier directory"');
-  expect(html).toContain('href="/app/suppliers/new"');
+  expect(html).toContain('href="/app/suppliers/new?returnTo=%2Fapp%2Fsuppliers"');
   expect(html).toContain('aria-controls="supplier-');
   expect(html).toMatch(/<table\b[^>]*aria-label="Supplier directory"/);
   expect(html).toContain('<th scope="col">Open purchase orders</th>');
@@ -79,5 +79,31 @@ it('provides a dedicated creation form only to supplier editors', async () => {
   expect(renderToStaticMarkup(await NewSupplier())).toContain('Supplier name');
   mocks.permission.mockImplementation((_db: unknown, permission: string) => Promise.resolve(permission !== 'master_data.write'));
   await expect(NewSupplier()).rejects.toThrow('REDIRECT:/app/suppliers');
-  expect(renderToStaticMarkup(await Suppliers())).not.toContain('href="/app/suppliers/new"');
+  expect(renderToStaticMarkup(await Suppliers())).not.toContain('href="/app/suppliers/new?');
+});
+
+it('carries the supplier directory query through create, cancel, and save', async () => {
+  const directory = renderToStaticMarkup(await Suppliers({
+    searchParams: Promise.resolve({ q: 'fresh greens', sort: 'name', page: '2' }),
+  }));
+  expect(directory).toContain('returnTo=%2Fapp%2Fsuppliers%3Fq%3Dfresh%2Bgreens%26sort%3Dname%26page%3D2');
+
+  const creation = renderToStaticMarkup(await NewSupplier({
+    searchParams: Promise.resolve({ returnTo: '/app/suppliers?q=fresh+greens&sort=name&page=2' }),
+  }));
+  expect(creation).toContain('href="/app/suppliers?q=fresh+greens&amp;sort=name&amp;page=2"');
+  expect(creation).toContain('Create supplier');
+  expect(creation).toContain('Cancel');
+});
+
+it('uses the supplier fallback for unsafe or unrelated return paths', async () => {
+  const paths = [
+    'https://example.test', '//example.test', '/app/orders', '/app/suppliers/%2e%2e/orders',
+  ];
+  await Promise.all(paths.map(async (returnTo) => {
+    const page = await NewSupplier({ searchParams: Promise.resolve({ returnTo }) });
+    const html = renderToStaticMarkup(page);
+    expect(html).toContain('href="/app/suppliers"');
+    expect(html).not.toContain(returnTo);
+  }));
 });

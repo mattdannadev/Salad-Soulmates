@@ -1,6 +1,8 @@
 import { rowSchemas } from '@/domain/master-data';
 import Link from 'next/link';
 import { z } from 'zod';
+import { Suspense } from 'react';
+import { redirect } from 'next/navigation';
 import { requireAdminShell } from '@/lib/auth';
 import {
   rows, number, readResult,
@@ -10,6 +12,14 @@ import InventoryAdjustmentControls from '@/components/inventory-adjustment-contr
 import { PageHeader } from '@/components/shell';
 import hasPermission from '@/lib/permissions';
 import ListGrid from '@/components/list-grid';
+import DirectoryToolbar from '@/components/directory-toolbar';
+import {
+  inventoryDirectoryFilters, inventoryDirectorySorts,
+  parseInventoryDirectoryQuery, selectInventoryIngredients,
+  type InventorySearchParams,
+} from './directory-query';
+
+const PAGE_SIZE = 20;
 
 const purchasePermissions = [
   'orders.read',
@@ -23,15 +33,34 @@ const purchasePermissions = [
 export default async function Inventory({
   searchParams = Promise.resolve({}),
 }: {
-  searchParams?: Promise<{ q?: string; category?: string; status?: string }>;
+  searchParams?: Promise<InventorySearchParams>;
 } = {}) {
   const { db, profile } = await requireAdminShell();
   const query = await searchParams;
-  const q = z
-    .string().trim().max(120).catch('')
-    .parse(query.q)
-    .toLowerCase();
-  const status = z.enum(['active', 'inactive', 'all']).catch('active').parse(query.status);
+  if (typeof query.category === 'string') {
+    const canonicalQuery = new URLSearchParams();
+    Object.entries(query).forEach(([key, value]) => {
+      (Array.isArray(value) ? value : [value]).forEach((part) => {
+        if (part !== undefined && key !== 'category') canonicalQuery.append(key, part);
+      });
+    });
+    if (!query.type && query.category === 'Dry') canonicalQuery.set('type', 'dry');
+    if (!query.type && query.category === 'Liquid') canonicalQuery.set('type', 'wet');
+    redirect(`/app/inventory${canonicalQuery.size ? `?${canonicalQuery}` : ''}`);
+  }
+  if (typeof query.status !== 'string' || !['active', 'inactive', 'all'].includes(query.status)) {
+    const canonicalQuery = new URLSearchParams();
+    Object.entries(query).forEach(([key, value]) => {
+      (Array.isArray(value) ? value : [value]).forEach((part) => {
+        if (part !== undefined && key !== 'status') canonicalQuery.append(key, part);
+      });
+    });
+    canonicalQuery.set('status', 'active');
+    redirect(`/app/inventory?${canonicalQuery}`);
+  }
+  const criteria = parseInventoryDirectoryQuery(query);
+  const locale = profile.preferred_locale;
+  const es = locale === 'es';
   const [ingredients, events, facility, purchasePermissionsResult, canAdjust] = await Promise.all([
     rows(db, 'ingredients', rowSchemas.ingredients),
     rows(db, 'inventory_events', rowSchemas.inventory_events),
@@ -41,17 +70,49 @@ export default async function Inventory({
   ]);
   const facilityData = readResult(facility, z.object({ name: z.string() }), 'inventory_facility');
   const canPurchase = purchasePermissionsResult.every(Boolean);
-  const categories = [...new Set(ingredients.map((ingredient) => ingredient.category))].sort();
-  const category = z
-    .string().trim().max(120).catch('all')
-    .parse(query.category);
-  const filteredIngredients = ingredients
-    .filter((ingredient) => ingredient.name.toLowerCase().includes(q))
-    .filter((ingredient) => status === 'all' || ingredient.active === (status === 'active'))
-    .filter((ingredient) => category === 'all' || ingredient.category === category);
   const activeIngredients = ingredients.filter((ingredient) => ingredient.active);
   const balances = inventoryBalances(events);
   const receivedUnits = inventoryUnits(events);
+  const filteredIngredients = selectInventoryIngredients(ingredients, balances, criteria, locale);
+  const pageCount = Math.max(1, Math.ceil(filteredIngredients.length / PAGE_SIZE));
+  const pageStart = (criteria.page - 1) * PAGE_SIZE;
+  const visibleIngredients = filteredIngredients.slice(pageStart, pageStart + PAGE_SIZE);
+  const filters = inventoryDirectoryFilters.map((filter) => ({
+    ...filter,
+    label: es ? ({
+      type: 'Tipo de ingrediente',
+      status: 'Disponibilidad',
+      stock: 'Punto de reposición',
+    })[filter.key] : filter.label,
+    options: filter.options.map((option) => ({
+      ...option,
+      label: es ? ({
+        dry: 'Seco',
+        wet: 'Líquido',
+        active: 'Activo',
+        inactive: 'Inactivo',
+        all: 'Activos e inactivos',
+        reorder: 'Igual o menor',
+        above: 'Por encima',
+        unset: 'Sin configurar',
+      })[option.value] : option.label,
+    })),
+  }));
+  const sortOptions = inventoryDirectorySorts.map((option) => ({
+    ...option,
+    label: es ? ({
+      name: 'Nombre A–Z', 'name-desc': 'Nombre Z–A', stock: 'Menor existencia primero',
+    })[option.value] : option.label,
+  }));
+  let emptyHeading = es ? 'No hay ingredientes en esta vista' : 'No ingredients in this view';
+  let emptyDescription = es ? 'Prueba otros filtros.' : 'Try another search or filter.';
+  if (!ingredients.length) {
+    emptyHeading = es ? 'Tu inventario empieza con un ingrediente' : 'Your inventory starts with an ingredient';
+    emptyDescription = es ? 'Agrega el primer ingrediente para registrar inventario.'
+      : 'Add the first ingredient to begin tracking inventory.';
+  } else if (criteria.page > pageCount) {
+    emptyDescription = es ? 'Esta página ya no tiene resultados.' : 'This page no longer has results.';
+  }
   const recent = [...events].sort((a, b) => (
     b.effective_on.localeCompare(a.effective_on) || b.created_at.localeCompare(a.created_at)
   )).slice(0, 50);
@@ -59,53 +120,45 @@ export default async function Inventory({
     <>
       <PageHeader
         eyebrow={facilityData.name}
-        title="Ingredient inventory"
-        description="Reviewed opening balances and adjustments for your facility. Every change keeps its history."
+        title={es ? 'Inventario de ingredientes' : 'Ingredient inventory'}
+        description={es
+          ? 'Saldos iniciales y ajustes revisados para tu instalación. Cada cambio conserva su historial.'
+          : 'Reviewed opening balances and adjustments for your facility. Every change keeps its history.'}
         action={
           canAdjust ? <InventoryAdjustmentControls ingredients={activeIngredients} /> : undefined
         }
       />
       <section className="panel">
-        <h2>On hand</h2>
+        <h2>{es ? 'Existencias' : 'On hand'}</h2>
         <p>
           Owned stock includes held and expired material. Planning excludes unavailable packages.
         </p>
         <Link href="/receiving/packages">View package balances, holds, and supplier lots →</Link>
         <Link href="/app/ingredients">Manage ingredient details and availability →</Link>
-        <form className="search inventory-filters">
-          <label className="inventory-filter-search" htmlFor="inventory-search">
-            <span className="sr-only">Search ingredients</span>
-            <input id="inventory-search" name="q" placeholder="Search ingredients…" defaultValue={query.q} />
-          </label>
-          <label className="inventory-filter-field" htmlFor="inventory-category">
-            <span>Ingredient type</span>
-            <select id="inventory-category" name="category" defaultValue={category}>
-              <option value="all">All types</option>
-              {categories.map((value) => <option key={value} value={value}>{value}</option>)}
-            </select>
-          </label>
-          <label className="inventory-filter-field" htmlFor="inventory-status">
-            <span>Availability</span>
-            <select id="inventory-status" name="status" defaultValue={status}>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="all">Active and inactive</option>
-            </select>
-          </label>
-          <button type="submit" className="secondary">Filter</button>
-          <Link
-            className="inventory-clear-filters"
-            href="/app/inventory"
-            aria-label="Clear inventory filters"
-            title="Clear filters"
-          >
-            <span aria-hidden="true">×</span>
-            <span>Clear</span>
-          </Link>
-        </form>
-        {filteredIngredients.length ? (
+        <Suspense fallback={null}>
+          <DirectoryToolbar
+            label={es ? 'Filtros de inventario' : 'Inventory filters'}
+            resultCount={filteredIngredients.length}
+            filters={filters}
+            sortOptions={sortOptions}
+            locale={locale}
+            mobileFilters
+            pageCount={pageCount}
+          />
+        </Suspense>
+        {visibleIngredients.length ? (
           <ListGrid
-            label="On-hand inventory"
+            label={es ? 'Inventario disponible' : 'On-hand inventory'}
+            locale={locale}
+            searchable={false}
+            controlled={{
+              page: criteria.page,
+              pageSize: PAGE_SIZE,
+              totalCount: filteredIngredients.length,
+              sort: criteria.sort === 'stock'
+                ? { key: 'onHand', direction: 'asc' }
+                : { key: 'ingredient', direction: criteria.sort === 'name-desc' ? 'desc' : 'asc' },
+            }}
             columns={[
               { key: 'ingredient', label: 'Ingredient' },
               { key: 'onHand', label: 'On hand' },
@@ -118,7 +171,7 @@ export default async function Inventory({
                 key: 'adjust', label: 'Adjust', sortable: false, filterable: false,
               }] : []),
             ]}
-            rows={filteredIngredients.map((ingredient) => {
+            rows={visibleIngredients.map((ingredient) => {
               const unit = receivedUnits[ingredient.id] ?? ingredient.default_uom;
               const quantity = balances[ingredient.id] ?? 0;
               const reorderPoint = ingredient.reorder_point ?? null;
@@ -154,7 +207,7 @@ export default async function Inventory({
                 },
               };
             })}
-            cellSlots={canAdjust ? Object.fromEntries(filteredIngredients
+            cellSlots={canAdjust ? Object.fromEntries(visibleIngredients
               .filter((ingredient) => ingredient.active)
               .map((ingredient) => [
                 ingredient.id,
@@ -167,8 +220,12 @@ export default async function Inventory({
           />
         ) : (
           <div className="empty">
-            <h3>No matching ingredients</h3>
-            <Link href="/app/inventory">Clear filters →</Link>
+            <h3>{emptyHeading}</h3>
+            <p>{emptyDescription}</p>
+            <Link href="/app/inventory?status=active">{es ? 'Borrar filtros →' : 'Clear filters →'}</Link>
+            {!ingredients.length && profile.role === 'admin' && (
+              <Link href="/app/ingredients/new">{es ? 'Agregar ingrediente →' : 'Add ingredient →'}</Link>
+            )}
           </div>
         )}
       </section>

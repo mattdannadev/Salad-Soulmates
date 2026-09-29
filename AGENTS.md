@@ -139,6 +139,21 @@ failure paths. Do not approve incomplete enforcement as complete compliance.
 
 ## Salad Soulmates preservation requirements
 
+## UI/UX overhaul
+
+For any change to a user-facing route, component, form, navigation flow, list,
+search, filter, empty state, dialog, or responsive layout, read
+[`docs/ui-ux-overhaul-build-plan.md`](docs/ui-ux-overhaul-build-plan.md) before
+implementation. It is the canonical cross-chat plan for the approved UI/UX
+overhaul and defines the shared interaction contracts, visual/action semantics,
+screen-family scope, acceptance criteria, and verification expectations.
+
+Preserve a user's task context: list → detail/create → save or cancel must return
+to the validated origin with applicable query state and focus restored. Do not
+introduce a new user-facing interaction pattern where an approved shared pattern
+in that plan applies. Treat missing data as a recovery opportunity with an
+actionable next step, never as a dead end.
+
 When a task relies on product requirements, read relevant current owner decisions
 in `docs/decisions.md` before older requirements or mockups. Preserve incremental
 delivery, approved lot/date rules and facility timezone, units/conversions,

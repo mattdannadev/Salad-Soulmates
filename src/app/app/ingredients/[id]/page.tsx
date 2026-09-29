@@ -12,10 +12,19 @@ import { PageHeader } from '@/components/shell';
 import loadIngredientStock from '@/lib/ingredient-stock';
 import IngredientStock from '@/components/ingredient-stock';
 import recipeText from '@/domain/recipe-text';
+import BackButton from '@/components/back-button';
+import { ingredientReturnContext, ingredientReturnHref } from '../return-context';
 
-export default async function IngredientDetail({ params }: { params: Promise<{ id: string }> }) {
+export default async function IngredientDetail({
+  params, searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ returnTo?: string; focusRow?: string }>;
+}) {
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
+  const query = await searchParams;
+  const returnContext = ingredientReturnContext(query.returnTo, query.focusRow, `/app/ingredients/${id}`);
   const { db, profile } = await requireAdminShell();
   const result = await db.from('ingredients').select('*').eq('id', id).maybeSingle();
   if (result.error) throw operationError('ingredient_load', 'Unable to load ingredient.', result.error);
@@ -73,9 +82,10 @@ export default async function IngredientDetail({ params }: { params: Promise<{ i
   );
   return (
     <>
-      <Link href="/app/ingredients" className="back-link">
-        ← Ingredients
-      </Link>
+      <BackButton
+        href={query.returnTo === undefined ? '/app/ingredients' : ingredientReturnHref(returnContext)}
+        label="Back to ingredients"
+      />
       <PageHeader
         eyebrow={ingredient.category}
         title={ingredient.name}
@@ -102,6 +112,8 @@ export default async function IngredientDetail({ params }: { params: Promise<{ i
             categories={categories}
             baseUnits={units.filter((unit) => unit.is_inventory_unit)}
             locale={profile.preferred_locale}
+            returnContext={returnContext}
+            directEntry={query.returnTo === undefined}
           />
         ) : (
           <dl>
