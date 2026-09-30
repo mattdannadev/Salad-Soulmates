@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   Leaf,
   LogOut,
+  ChevronDown,
   PanelLeftClose,
   PanelLeftOpen,
   Menu,
@@ -190,11 +191,17 @@ export function Shell({
             if (visibleItems.length === 0) return null;
 
             return (
-              <section key={group.id} className="nav-section" aria-label={isSpanish ? group.es : group.en}>
-                <p className="nav-section-label">
+              <details
+                key={group.id}
+                className="nav-section nav-group"
+                open
+                aria-label={isSpanish ? group.es : group.en}
+              >
+                <summary className="nav-section-label">
                   <group.icon className="nav-group-icon" size={18} aria-hidden />
                   <span>{isSpanish ? group.es : group.en}</span>
-                </p>
+                  <ChevronDown className="nav-group-chevron" size={16} aria-hidden />
+                </summary>
                 <div className="nav-group-links">
                   {visibleItems.map(({ active, destination }) => {
                     const { href, icon: Icon } = destination;
@@ -216,7 +223,7 @@ export function Shell({
                     );
                   })}
                 </div>
-              </section>
+              </details>
             );
           })}
         </nav>

@@ -2181,6 +2181,13 @@ export type Database = {
       save_shipping_draft: { Args: { payload: Json }; Returns: string };
       get_workforce_schedule: { Args: { payload: Json }; Returns: Json };
       get_my_workforce_schedule: { Args: { payload: Json }; Returns: Json };
+      get_workforce_work_context: { Args: { payload: Json }; Returns: Json };
+      get_my_workforce_work_queue: { Args: { payload: Json }; Returns: Json };
+      claim_workforce_work_queue_item: { Args: { payload: Json }; Returns: string };
+      create_workforce_work_queue_item: { Args: { payload: Json }; Returns: string };
+      publish_workforce_work_queue: { Args: { payload: Json }; Returns: number };
+      get_workforce_work_queue_overview: { Args: { payload: Json }; Returns: Json };
+      save_plant_operations_configuration: { Args: { payload: Json }; Returns: string };
       publish_workforce_schedule: { Args: { payload: Json }; Returns: string };
       save_workforce_schedule_event: { Args: { payload: Json }; Returns: string };
       delete_workforce_schedule_event: { Args: { payload: Json }; Returns: string };
@@ -2188,7 +2195,8 @@ export type Database = {
       cancel_workforce_pto: { Args: { payload: Json }; Returns: string };
       save_workforce_availability: { Args: { payload: Json }; Returns: string };
       save_facility_schedule_settings: { Args: { payload: Json }; Returns: string };
-      save_order_production_plan: { Args: { payload: Json }; Returns: string };
+        save_order_production_plan: { Args: { payload: Json }; Returns: string };
+        save_product_labor_estimate: { Args: { payload: Json }; Returns: string };
       assign_production_lot: { Args: { payload: Json }; Returns: string };
       set_product_lot_code: { Args: { payload: Json }; Returns: string };
       open_batch_worksheet: { Args: { batch_id: string }; Returns: string };

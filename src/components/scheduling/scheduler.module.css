@@ -81,11 +81,32 @@
   cursor: wait;
 }
 .actions .primary,
-.dialogActions .primary {
+.dialogActions .primary,
+.queueActions .primary {
   background: #176240;
   border-color: #176240;
   color: #fff;
 }
+
+.queueComposer {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid #d7e4dc;
+  border-radius: 0.75rem;
+  background: #fbfdfb;
+}
+
+.queueComposer h2,
+.queueComposer p { margin: 0; }
+.queueComposer p { color: #52635a; font-size: 0.9rem; }
+.queueFields { display: grid; gap: 0.65rem; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
+.queueFields label,
+.queueInstructions { display: grid; gap: 0.25rem; font-size: 0.85rem; font-weight: 600; }
+.queueTitle { grid-column: span 2; }
+.queueActions { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+@media (max-width: 640px) { .queueTitle { grid-column: auto; } }
 .actions .publish {
   border-color: #176240;
   background: #fff;
@@ -131,6 +152,56 @@
   font: inherit;
   cursor: pointer;
 }
+.workweek {
+  border: 1px solid #d2e0d8;
+  border-radius: 0.8rem;
+  background: #fff;
+  padding: 0.9rem 1rem 1rem;
+}
+.workweekHeading {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+  margin-bottom: 0.75rem;
+}
+.workweekHeading h2 {
+  font-size: 1.05rem;
+  margin: 0;
+}
+.workweekHeading p,
+.workweekHeading > span {
+  color: #4c6055;
+  font-size: 0.82rem;
+  margin: 0.2rem 0 0;
+}
+.workweekHeading > span { white-space: nowrap; }
+.dayCards {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+.dayCard {
+  min-width: 0;
+  border: 1px solid #dce8df;
+  border-radius: 0.55rem;
+  padding: 0.65rem;
+  background: #fbfdfb;
+}
+.dayCardTitle {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+}
+.dayCardTitle span { color: #4c6055; white-space: nowrap; }
+.dayCard dl { margin: 0.65rem 0; display: grid; gap: 0.35rem; }
+.dayCard dl div { display: flex; justify-content: space-between; gap: 0.4rem; font-size: 0.78rem; }
+.dayCard dt { color: #4c6055; }
+.dayCard dd { margin: 0; font-weight: 700; }
+.dayCard p { margin: 0; font-size: 0.76rem; font-weight: 650; }
+.gap { color: #9a4c08; }
+.covered { color: #176240; }
 .layout {
   display: grid;
   grid-template-columns: minmax(210px, 260px) minmax(0, 1fr);
@@ -381,6 +452,7 @@
   margin-right: auto;
 }
 @media (max-width: 1000px) {
+  .dayCards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .layout {
     grid-template-columns: 1fr;
   }
@@ -394,6 +466,8 @@
   }
 }
 @media (max-width: 650px) {
+  .workweekHeading { align-items: flex-start; flex-direction: column; }
+  .dayCards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sidebar {
     display: block;
   }

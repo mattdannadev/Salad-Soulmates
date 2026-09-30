@@ -9,7 +9,10 @@ import {
   inclusiveScheduleEnd, scheduleKindLabel,
 } from '@/domain/scheduling';
 import { loadMyWorkforceSchedule } from '@/services/scheduling';
+import { loadMyWorkQueue } from '@/services/work-queue';
 import isMobileOperationsCopilotEnabled from '@/services/mobile-operations-copilot-gate';
+import WorkerWorkQueue from '@/components/worker-work-queue';
+import claimWorkerQueueItem from '@/app/worker/queue-actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +23,10 @@ export default async function Worker() {
   const utcDay = now.toISOString().slice(0, 10);
   const scheduleStart = addScheduleDays(utcDay, -2);
   const scheduleEnd = addScheduleDays(utcDay, 92);
-  const schedule = await loadMyWorkforceSchedule(scheduleStart, scheduleEnd);
+  const [schedule, workQueue] = await Promise.all([
+    loadMyWorkforceSchedule(scheduleStart, scheduleEnd),
+    loadMyWorkQueue(scheduleStart, scheduleEnd),
+  ]);
   const today = facilityCalendarDateAt(now, schedule.timezone);
   const horizon = addScheduleDays(today, 90);
   const es = profile.preferred_locale === 'es';
@@ -60,6 +66,11 @@ export default async function Worker() {
           <p>{es ? 'Tu horario aparecerá cuando se publique.' : 'Your schedule appears when it is published.'}</p>
         </section>
       )}
+      <WorkerWorkQueue
+        items={workQueue}
+        locale={profile.preferred_locale}
+        claim={claimWorkerQueueItem}
+      />
       {days.map(({ day, events: tasks }) => (
         <section
           className="worker-day"

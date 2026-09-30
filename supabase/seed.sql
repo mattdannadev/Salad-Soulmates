@@ -39,6 +39,54 @@ join public.access_profiles access_profile on access_profile.organization_id=org
 where organization.slug='salad-soulmates'
 on conflict(id) do nothing;
 
+-- Two playful, local-only plant employees for the published-work / worker-claim demo.
+-- They deliberately use .test addresses, which cannot receive real email.
+insert into auth.users (
+  instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,
+  raw_app_meta_data,raw_user_meta_data,created_at,updated_at,
+  confirmation_token,email_change,email_change_token_new,recovery_token
+) values
+  ('00000000-0000-0000-0000-000000000000','10000000-0000-4000-8000-000000000002',
+   'authenticated','authenticated','basil.batch@saladsoulmates.test',
+   crypt('LocalSampleOnly!',gen_salt('bf')),now(),
+   '{"provider":"email","providers":["email"]}','{"display_name":"Basil Batch"}',
+   now(),now(),'','','',''),
+  ('00000000-0000-0000-0000-000000000000','10000000-0000-4000-8000-000000000003',
+   'authenticated','authenticated','casey.ofill@saladsoulmates.test',
+   crypt('LocalSampleOnly!',gen_salt('bf')),now(),
+   '{"provider":"email","providers":["email"]}','{"display_name":"Casey O’Fill"}',
+   now(),now(),'','','','')
+on conflict(id) do nothing;
+
+insert into auth.identities (
+  id,user_id,provider_id,identity_data,provider,last_sign_in_at,created_at,updated_at
+) values
+  ('10000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000002',
+   'basil.batch@saladsoulmates.test',
+   '{"sub":"10000000-0000-4000-8000-000000000002","email":"basil.batch@saladsoulmates.test"}',
+   'email',now(),now(),now()),
+  ('10000000-0000-4000-8000-000000000003','10000000-0000-4000-8000-000000000003',
+   'casey.ofill@saladsoulmates.test',
+   '{"sub":"10000000-0000-4000-8000-000000000003","email":"casey.ofill@saladsoulmates.test"}',
+   'email',now(),now(),now())
+on conflict(provider_id,provider) do nothing;
+
+insert into public.profiles(
+  id,organization_id,facility_id,display_name,role,preferred_locale,active,access_profile_id,
+  first_name,last_name,work_email
+)
+select employee.id, organization.id, facility.id, employee.display_name, 'worker', 'en', true,
+  access_profile.id, employee.first_name, employee.last_name, employee.email
+from (values
+  ('10000000-0000-4000-8000-000000000002'::uuid, 'Basil Batch', 'Basil', 'Batch', 'basil.batch@saladsoulmates.test'),
+  ('10000000-0000-4000-8000-000000000003'::uuid, 'Casey O’Fill', 'Casey', 'O’Fill', 'casey.ofill@saladsoulmates.test')
+) as employee(id,display_name,first_name,last_name,email)
+join public.organizations organization on organization.slug='salad-soulmates'
+join public.facilities facility on facility.organization_id=organization.id and facility.name='Main facility'
+join public.access_profiles access_profile on access_profile.organization_id=organization.id
+  and access_profile.base_role='worker' and access_profile.is_system
+on conflict(id) do nothing;
+
 set local role authenticated;
 select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000001',true);
 

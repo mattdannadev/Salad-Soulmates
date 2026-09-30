@@ -1,0 +1,165 @@
+.card {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.header h3 {
+  margin: 2px 0 0;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.header h3 a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.header h3 a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.date,
+.reference {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.date {
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.reference {
+  margin-top: 2px;
+}
+
+.overall {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.chain {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stage {
+  min-width: 0;
+  border-radius: 8px;
+  background: #f5f7f2;
+  color: var(--muted);
+}
+
+.stageBody,
+.stageLink {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px;
+}
+
+.stageLink {
+  min-height: 100%;
+  padding: 7px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.stageLink:hover {
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+.stageLink:focus-visible,
+.header a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.icon {
+  display: grid;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 70%);
+}
+
+.stageCopy {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.stageCopy strong,
+.stageCopy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stageCopy strong {
+  color: var(--ink);
+  font-size: 10px;
+}
+
+.stageCopy small {
+  font-size: 9px;
+}
+
+.state_complete {
+  color: var(--color-status-success-text);
+  background: var(--color-status-success-bg);
+}
+
+.state_in_progress,
+.state_pending {
+  color: var(--color-status-warning-text);
+  background: var(--color-status-warning-bg);
+}
+
+.state_blocked {
+  color: var(--color-status-error-text);
+  background: var(--color-status-error-bg);
+}
+
+.state_not_required {
+  color: var(--muted);
+  background: #f2f3f0;
+}
+
+@media (max-width: 900px) {
+  .chain {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .chain {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .header {
+    gap: 8px;
+  }
+}

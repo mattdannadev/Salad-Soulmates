@@ -58,7 +58,7 @@ it('renders the inclusive business end date for one or multiple days', () => {
 });
 
 it('uses a Spanish task label when an assignment title is blank', () => {
-  expect(scheduleKindLabel('spices', 'es')).toBe('Preparación de especias');
+  expect(scheduleKindLabel('ingredient_prep', 'es')).toBe('Preparación de ingredientes');
   expect(scheduleKindLabel('mixing', 'es')).toBe('Mezcla');
 });
 
@@ -79,7 +79,7 @@ it('marks work published only when all worker-visible fields still match', () =>
   };
   expect(matchesPublishedWork(published, published)).toBe(true);
   expect(matchesPublishedWork({ ...published, note: 'Changed' }, published)).toBe(false);
-  expect(matchesPublishedWork({ ...published, type: 'spices' }, published)).toBe(false);
+  expect(matchesPublishedWork({ ...published, type: 'ingredient_prep' }, published)).toBe(false);
   expect(matchesPublishedWork(
     { ...published, linkedTaskType: 'planned_spice_preparation' },
     published,

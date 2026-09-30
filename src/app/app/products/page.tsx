@@ -3,6 +3,7 @@ import Link from 'next/link';
 import PackagingSetup from '@/components/packaging-setup';
 import ProductRecipeDetails from '@/components/product-recipe-details';
 import CustomerProductOptions from '@/components/customer-product-options';
+import ProductLaborEstimates from '@/components/product-labor-estimates';
 import DirectoryToolbar from '@/components/directory-toolbar';
 import ListGrid from '@/components/list-grid';
 import { packagingVersionSchema } from '@/domain/packaging';
@@ -218,6 +219,7 @@ export default async function Products({
                         locale={locale}
                       />
                     )}
+                    <ProductLaborEstimates product={product} canWrite={canWrite && product.active} locale={locale} />
                     <PackagingSetup
                       product={product}
                       versions={packagingVersions.filter(

@@ -1,53 +1,122 @@
 import Link from 'next/link';
-import { ArrowRight, CalendarDays, Users } from 'lucide-react';
+import { ArrowRight, CalendarDays, CircleAlert, UserRoundCheck, Users } from 'lucide-react';
 import { inclusiveScheduleEnd, scheduleKindLabel } from '@/domain/scheduling';
+import styles from './dashboard-schedule.module.css';
 
 type UpcomingScheduleItem = {
   id: string;
   startOn: string;
   endOn: string;
-  kind: 'mixing' | 'spices' | 'making_product' | 'cleaning' | 'off' | 'other';
+  kind: 'pre_op' | 'post_op' | 'ingredient_prep' | 'mixing' | 'receiving' | 'shipment_loading' | 'packaging' | 'cleaning' | 'off' | 'other';
   title: string;
+  productionPlanId: string | null;
   employeeCount: number;
+  assigneeNames: string[];
+  ptoNames: string[];
+};
+type UpcomingProductionPlan = {
+  id: string;
+  customerName: string;
+  reference: string;
+  startOn: string;
+  finishOn: string;
+  pickupOn: string;
+  status: 'Draft' | 'Confirmed' | 'Cancelled';
 };
 
 /** Facility-scoped schedule summary for the operations dashboard. */
 export default function DashboardSchedule({
   events,
+  plans,
   locale,
 }: {
   events: UpcomingScheduleItem[];
+  plans: UpcomingProductionPlan[];
   locale: 'en' | 'es';
 }) {
   const es = locale === 'es';
+  const staffingGaps = events.filter((event) => event.kind !== 'off' && event.employeeCount === 0).length;
+  const timeOff = events.filter((event) => event.kind === 'off').length;
+  const dayFormatter = new Intl.DateTimeFormat(locale === 'es' ? 'es-US' : 'en-US', {
+    weekday: 'short',
+    timeZone: 'UTC',
+  });
   return (
-    <section className="dashboard-schedule panel" aria-labelledby="dashboard-schedule-heading">
+    <section className={`dashboard-schedule panel ${styles.schedule}`} aria-labelledby="dashboard-schedule-heading">
       <div className="dashboard-panel-heading">
         <div>
           <p className="eyebrow">{es ? 'PRÓXIMOS SIETE DÍAS' : 'NEXT SEVEN DAYS'}</p>
-          <h2 id="dashboard-schedule-heading">{es ? 'Programa del equipo' : 'Team schedule'}</h2>
+          <h2 id="dashboard-schedule-heading">{es ? 'Semana de operaciones' : 'Operations week'}</h2>
+          <p className={styles.intro}>
+            {es
+              ? 'Preparación, mezcla, producción y ausencias en una sola vista.'
+              : 'Preparation, mixing, production, and time off in one view.'}
+          </p>
         </div>
         <CalendarDays size={24} aria-hidden />
       </div>
+      <div className={styles.summary} aria-label={es ? 'Resumen del programa' : 'Schedule summary'}>
+        <span>
+          <CalendarDays size={15} aria-hidden />
+          <strong>{events.length}</strong> {es ? 'actividades' : 'scheduled'}
+        </span>
+        <span className={staffingGaps > 0 ? styles.attention : undefined}>
+          <CircleAlert size={15} aria-hidden />
+          <strong>{staffingGaps}</strong> {es ? 'sin personal' : 'staffing gaps'}
+        </span>
+        <span>
+          <UserRoundCheck size={15} aria-hidden />
+          <strong>{timeOff}</strong> {es ? 'ausencias' : 'time off'}
+        </span>
+      </div>
+      {plans.length > 0 && (
+        <section className={styles.productionPlans} aria-labelledby="weekly-production-plans-heading">
+          <div>
+            <p className="eyebrow">{es ? 'PLANES DE PEDIDOS' : 'ORDER PRODUCTION PLANS'}</p>
+            <h3 id="weekly-production-plans-heading">{es ? 'Qué se está produciendo esta semana' : 'What is being produced this week'}</h3>
+          </div>
+          <ol>
+            {plans.map((plan) => (
+              <li key={plan.id} className={plan.status === 'Draft' ? styles.draft : undefined}>
+                <span>
+                  <strong>{plan.customerName}</strong>
+                  <small>{`${plan.reference} · ${plan.startOn} – ${plan.finishOn}`}</small>
+                </span>
+                <span>
+                  <strong>{plan.status === 'Confirmed' ? (es ? 'Confirmado' : 'Confirmed') : (es ? 'Borrador' : 'Draft')}</strong>
+                  <small>{`${es ? 'Recogida' : 'Pickup'} ${plan.pickupOn}`}</small>
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
       {events.length ? (
         <ol className="dashboard-schedule-list">
           {events.map((event) => (
-            <li key={event.id}>
+            <li className={event.employeeCount === 0 && event.kind !== 'off' ? styles.unstaffed : undefined} key={event.id}>
               <span className="dashboard-schedule-date">
                 <strong>{event.startOn.slice(8)}</strong>
-                <small>{event.startOn.slice(5, 7)}</small>
+                <small>{dayFormatter.format(new Date(`${event.startOn}T12:00:00Z`))}</small>
               </span>
               <span className="dashboard-schedule-copy">
                 <strong>{event.title || scheduleKindLabel(event.kind, locale)}</strong>
                 <small>
+                  {scheduleKindLabel(event.kind, locale)} ·{' '}
                   {event.startOn === inclusiveScheduleEnd(event.endOn)
                     ? event.startOn
                     : `${event.startOn} – ${inclusiveScheduleEnd(event.endOn)}`}
                 </small>
+                {event.assigneeNames.length > 0 && <small>{event.assigneeNames.join(', ')}</small>}
+                {event.ptoNames.length > 0 && <small>{`${es ? 'Ausencia' : 'Time off'}: ${event.ptoNames.join(', ')}`}</small>}
               </span>
-              <span className="dashboard-schedule-staff">
+              <span className={`dashboard-schedule-staff ${styles.staff}`}>
                 <Users size={15} aria-hidden />
-                {event.employeeCount}
+                {event.employeeCount > 0
+                  ? `${event.employeeCount} ${es ? 'asignados' : 'assigned'}`
+                  : es
+                    ? 'Sin asignar'
+                    : 'Unassigned'}
               </span>
             </li>
           ))}
@@ -64,7 +133,7 @@ export default function DashboardSchedule({
         </div>
       )}
       <Link className="dashboard-footer-link" href="/app/scheduling">
-        {es ? 'Abrir programación del equipo' : 'Open team schedule'}
+        {es ? 'Abrir programación completa' : 'Open full schedule'}
         <ArrowRight size={17} aria-hidden />
       </Link>
     </section>

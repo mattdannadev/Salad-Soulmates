@@ -5,11 +5,13 @@ import DemandCoveragePanel from '@/components/demand-coverage-panel';
 import DashboardPriorities, { type DashboardPriority } from '@/components/dashboard-priorities';
 import DashboardQuickActions from '@/components/dashboard-quick-actions';
 import DashboardSchedule from '@/components/dashboard-schedule';
+import PickupReadiness, { type PickupReadinessData } from '@/components/pickup-readiness';
 import WorkspaceSetup from '@/components/workspace-setup';
 import loadWorkspaceSetup from '@/services/load-workspace-setup';
 import { facilityDate, formatDate, formatNumber } from '@/domain/format';
 import { purchaseStatusLabel } from '@/domain/supplier-orders';
 import { createDashboardWorkQueues } from '@/services/dashboard-work-queues';
+import { addScheduleDays } from '@/domain/scheduling';
 
 const DASHBOARD_LIMIT = 6;
 
@@ -30,7 +32,7 @@ export default async function Home() {
     stock,
     production,
     canViewSchedule,
-    upcomingSchedule,
+    upcomingSchedule = [],
   } = dashboard;
   const es = profile.preferred_locale === 'es';
   const today = facilityDate();
@@ -54,6 +56,80 @@ export default async function Home() {
   const unprepared = openOrders.filter(
     (order) => !production.some((plan) => plan.id === order.id && plan.status === 'Confirmed'),
   );
+  const pickupReadiness: PickupReadinessData[] = futurePickups.slice(0, 3).map((order) => {
+    const plan = production.find((candidate) => candidate.id === order.id && candidate.status === 'Confirmed');
+    const hasIngredientShortage = coverage.some((line) => line.planId === order.id && line.shortage > 0);
+    const inboundSupplyExpected = incoming.some((purchase) => purchase.material_plan_id === order.id);
+    const scheduledCleaning = upcomingSchedule.find(
+      (event) => event.kind === 'cleaning' && event.productionPlanId === order.id,
+    );
+    return {
+      id: order.id,
+      customerName: order.customer_name,
+      orderReference: order.reference || order.id.slice(0, 8),
+      pickupOn: order.needed_on,
+      hasProductionPlan: Boolean(plan),
+      hasIngredientShortage,
+      inboundSupplyExpected,
+      spicePrep: plan ? 'pending' : 'not_required',
+      mixing: plan ? 'pending' : 'not_required',
+      packaging: plan ? 'pending' : 'not_required',
+      sanitation: scheduledCleaning?.employeeCount ? 'in_progress' : 'pending',
+      pickup: !plan || hasIngredientShortage ? 'blocked' : 'pending',
+      links: {
+        order: `/app/orders?order=${order.id}`,
+        productionPlan: `/app/orders?order=${order.id}`,
+        ingredients: '#ingredient-demand',
+        spicePrep: '/app/production',
+        mixing: '/app/production',
+        packaging: '/app/shipping',
+        sanitation: '/app/scheduling',
+      },
+    };
+  });
+  const weeklyProductionPlans = production
+    .filter((plan) => plan.status !== 'Cancelled' && plan.start_on <= addScheduleDays(today, 7))
+    .map((plan) => {
+      const order = openOrders.find((candidate) => candidate.id === plan.id);
+      return {
+        id: plan.id,
+        customerName: order?.customer_name ?? (es ? 'Pedido de cliente' : 'Customer order'),
+        reference: order?.reference || plan.id.slice(0, 8),
+        startOn: plan.start_on,
+        finishOn: plan.finish_on,
+        pickupOn: order?.needed_on ?? plan.finish_on,
+        status: plan.status,
+      };
+    })
+    .filter((plan) => plan.finishOn >= today)
+    .slice(0, DASHBOARD_LIMIT);
+  const todayHandoffs = [
+    ...upcomingSchedule
+      .filter((event) => event.startOn <= today && event.endOn > today && event.kind !== 'off')
+      .map((event) => ({
+        id: `schedule-${event.id}`,
+        title: event.title || (es ? 'Trabajo programado' : 'Scheduled work'),
+        detail: event.assigneeNames.length
+          ? event.assigneeNames.join(', ')
+          : es ? 'Asignar a un miembro del equipo' : 'Assign a team member',
+        href: '/app/scheduling',
+        blocked: event.employeeCount === 0,
+      })),
+    ...(dueToday > 0 ? [{
+      id: 'pickups',
+      title: es ? 'Preparar recogidas de hoy' : 'Prepare today’s pickups',
+      detail: `${dueToday} ${es ? 'pedido(s) vence(n) hoy' : 'order(s) due today'}`,
+      href: '/app/orders?pickupTo=' + today,
+      blocked: overdue > 0,
+    }] : []),
+    ...(shortages > 0 ? [{
+      id: 'shortages',
+      title: es ? 'Resolver faltantes antes de producir' : 'Resolve shortages before production',
+      detail: `${shortages} ${es ? 'ingrediente(s) bloqueando demanda' : 'ingredient(s) blocking demand'}`,
+      href: '#ingredient-demand',
+      blocked: true,
+    }] : []),
+  ].slice(0, DASHBOARD_LIMIT);
   const priorities: DashboardPriority[] = createDashboardWorkQueues({
     today,
     canOrders: Boolean(canOrders),
@@ -149,8 +225,8 @@ export default async function Home() {
           <h1>{`${es ? 'Bienvenido' : 'Welcome'}, ${profile.display_name.split(' ')[0]}`}</h1>
           <p>
             {es
-              ? 'Tu día de producción, en un solo lugar. Revisa pendientes y da el siguiente paso.'
-              : 'Your production day, in one place. See what needs attention and take the next step.'}
+              ? 'Ve los compromisos, el equipo y los bloqueos de esta semana antes de profundizar.'
+              : 'See this week’s commitments, team work, and blockers before you dive into the details.'}
           </p>
           <DashboardQuickActions es={es} />
         </div>
@@ -161,6 +237,14 @@ export default async function Home() {
           <small>America/Chicago</small>
         </div>
       </header>
+      {canViewSchedule && (
+        <div className="dashboard-primary-schedule">
+          <DashboardSchedule events={upcomingSchedule} plans={weeklyProductionPlans} locale={profile.preferred_locale} />
+        </div>
+      )}
+      {(canOrders || canPurchases || canCoverage) && (
+        <DashboardPriorities items={priorities} es={es} />
+      )}
       <div className="dashboard-metrics">
         {metrics
           .filter((metric) => metric.available)
@@ -173,12 +257,50 @@ export default async function Home() {
             </Link>
           ))}
       </div>
-      <WorkspaceSetup steps={setupSteps} es={es} />
-      {(canOrders || canPurchases || canCoverage) && (
-        <DashboardPriorities items={priorities} es={es} />
-      )}
 
       <div className="dashboard-columns">
+        {canOrders && pickupReadiness.length > 0 && (
+          <section className="panel dashboard-readiness" aria-labelledby="pickup-readiness-heading">
+            <div className="dashboard-panel-heading">
+              <div>
+                <p className="eyebrow">{es ? 'ESTADO DE PRODUCCIÓN' : 'PRODUCTION READINESS'}</p>
+                <h2 id="pickup-readiness-heading">{es ? 'Próximas recogidas' : 'Next pickups'}</h2>
+              </div>
+              <PackageCheck size={24} aria-hidden />
+            </div>
+            <div className="dashboard-readiness-list">
+              {pickupReadiness.map((pickup) => (
+                <PickupReadiness key={pickup.id} pickup={pickup} locale={profile.preferred_locale} />
+              ))}
+            </div>
+          </section>
+        )}
+        <section className="panel dashboard-handoffs" aria-labelledby="dashboard-handoffs-heading">
+          <div className="dashboard-panel-heading">
+            <div>
+              <p className="eyebrow">{es ? 'RELEVOS DE HOY' : 'TODAY’S HANDOFFS'}</p>
+              <h2 id="dashboard-handoffs-heading">{es ? 'Mover el trabajo adelante' : 'Keep work moving'}</h2>
+            </div>
+            <ArrowUpRight size={24} aria-hidden />
+          </div>
+          {todayHandoffs.length ? (
+            <ul className="dashboard-handoff-list">
+              {todayHandoffs.map((handoff) => (
+                <li key={handoff.id} className={handoff.blocked ? 'is-blocked' : undefined}>
+                  <Link href={handoff.href}>
+                    <span>
+                      <strong>{handoff.title}</strong>
+                      <small>{handoff.detail}</small>
+                    </span>
+                    <ArrowUpRight size={16} aria-hidden />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted-text">{es ? 'No hay relevos pendientes para hoy.' : 'No handoffs are waiting today.'}</p>
+          )}
+        </section>
         <section className="panel dashboard-pickups">
           <div className="dashboard-panel-heading">
             <div>
@@ -240,9 +362,6 @@ export default async function Home() {
             {es ? 'Ver todos los pedidos' : 'View all orders'} <ArrowUpRight size={16} />
           </Link>
         </section>
-        {canViewSchedule && (
-          <DashboardSchedule events={upcomingSchedule} locale={profile.preferred_locale} />
-        )}
         <section className="panel" id="supplier-arrivals">
           <div className="dashboard-panel-heading">
             <div>
@@ -388,6 +507,7 @@ export default async function Home() {
           </section>
         </div>
       </div>
+      <WorkspaceSetup steps={setupSteps} es={es} />
     </div>
   );
 }

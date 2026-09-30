@@ -76,6 +76,8 @@ export default async function loadDashboard() {
   ]);
   if (scheduleResult?.error) throw new Error('Unable to load the dashboard schedule.');
   const schedule = scheduleResult ? workforceScheduleSchema.parse(scheduleResult.data) : null;
+  const employeeNames = new Map((schedule?.employees ?? []).map((employee) => [employee.id, employee.display_name]));
+  const ptoTypeNames = new Map((schedule?.pto_types ?? []).map((type) => [type.id, type.name]));
   const today = facilityDate();
   const upcomingSchedule = (schedule?.events ?? [])
     .filter((event) => event.end_on > today)
@@ -83,14 +85,22 @@ export default async function loadDashboard() {
       (left, right) =>
         left.start_on.localeCompare(right.start_on) || left.id.localeCompare(right.id),
     )
-    .slice(0, 5)
     .map((event) => ({
       id: event.id,
       startOn: event.start_on,
       endOn: event.end_on,
       kind: event.kind,
       title: event.title,
+      productionPlanId: event.production_plan_id,
       employeeCount: event.employee_ids.length,
+      assigneeNames: event.employee_ids.map((id) => employeeNames.get(id) ?? '—'),
+      ptoNames: (schedule?.pto ?? [])
+        .filter((pto) => pto.start_on < event.end_on && pto.end_on > event.start_on)
+        .map((pto) => {
+          const employee = employeeNames.get(pto.employee_id) ?? '—';
+          const type = ptoTypeNames.get(pto.pto_type_id) ?? '—';
+          return `${employee} · ${type}`;
+        }),
     }));
   const activePlans = plans.filter((plan) => plan.status === 'Active');
   const openOrders = orders

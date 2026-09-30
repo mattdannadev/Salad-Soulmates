@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import {
   publishScheduleInputSchema, scheduleAvailabilityInputSchema, scheduleDeleteInputSchema,
-  scheduleEventInputSchema, schedulePtoInputSchema, scheduleSettingsInputSchema,
+  scheduleEventInputSchema, schedulePtoInputSchema, scheduleSettingsInputSchema, saveSchedulePtoTypeSchema,
 } from '@/domain/scheduling';
 import type { ActionResult } from '@/domain/master-data';
 import { commitScheduleMutation } from '@/services/scheduling';
@@ -11,7 +11,8 @@ import { commitScheduleMutation } from '@/services/scheduling';
 async function runScheduleMutation(
   operation: 'save_workforce_schedule_event' | 'delete_workforce_schedule_event'
     | 'save_facility_schedule_settings' | 'publish_workforce_schedule'
-    | 'save_workforce_pto' | 'cancel_workforce_pto' | 'save_workforce_availability',
+    | 'save_workforce_pto' | 'cancel_workforce_pto' | 'save_workforce_availability'
+    | 'save_workforce_pto_type' | 'retire_workforce_pto_type',
   payload: { facility_id: string },
   requiredPermission: 'workforce.manage' | 'settings.manage',
 ): Promise<ActionResult> {
@@ -63,4 +64,16 @@ export async function saveScheduleAvailability(input: unknown): Promise<ActionRe
   const parsed = scheduleAvailabilityInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? 'Check available days.' };
   return runScheduleMutation('save_workforce_availability', parsed.data, 'workforce.manage');
+}
+
+export async function saveSchedulePtoType(input: unknown): Promise<ActionResult> {
+  const parsed = saveSchedulePtoTypeSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? 'Check PTO type details.' };
+  return runScheduleMutation('save_workforce_pto_type', parsed.data, 'settings.manage');
+}
+
+export async function retireSchedulePtoType(input: unknown): Promise<ActionResult> {
+  const parsed = scheduleDeleteInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? 'Check PTO type.' };
+  return runScheduleMutation('retire_workforce_pto_type', parsed.data, 'settings.manage');
 }

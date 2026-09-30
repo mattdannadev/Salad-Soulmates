@@ -819,3 +819,31 @@ regional-residency, independent restore/lifecycle, or demonstrated workload
 isolation requirements justify its operational cost. This decision does not
 authorize applying migrations to the shared hosted project, merging, or
 deploying without the separate release authorization and verification gates.
+
+## 2026-09-30 — Operations scheduling terminology and assignment modes
+
+For manufacturing-facing product language, use **Plant**. The canonical domain
+model retains **facility** as the broader physical operating-location term so
+the product remains applicable to food plants, central kitchens and
+commissaries, and stays aligned with FDA “food facility” terminology.
+
+Ingredient prep replaces “spice prep” in product language because preparation
+may include dry or wet ingredients. A plant configures its work-assignment
+policy: supervisor-assigned, worker-claimed from a published daily queue, or a
+permitted combination. The reference plant uses worker self-assignment and
+worker-chosen rotation across receiving, loading for shipment, ingredient prep,
+mixing, packaging and cleaning; this does not constrain other customers. The
+reference's weekly Friday planning, day-before prep, next-day packaging,
+45-case pallets, make-ahead rules and weekly cycle counts are configuration
+defaults only; each plant may set its own cadence, lead/hold times, capacity,
+rounding, release and count policies.
+
+## 2026-09-30 — Initial ingredient-prep bucket traceability boundary
+
+The initial Salad Soulmates pilot does not require a unique lot number or
+scannable identity for each ingredient-prep bucket. Preparations made during the
+same production day use the relevant day/product finished-lot context. A recall
+of a used ingredient may therefore affect the full finished product scope for
+that day; the product must not claim bucket-level recall narrowing it cannot
+support. Unique prep-container identity and quantity-bearing bucket-to-mix
+allocation remain later, evidence-gated roadmap work.

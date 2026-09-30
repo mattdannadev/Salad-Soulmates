@@ -89,8 +89,15 @@ export default async function Scheduling({ searchParams }: {
           endDate: addDays(block.end_on, -1),
           startMinute: block.start_minute,
           endMinute: block.end_minute,
+          ptoTypeId: block.pto_type_id,
           privateNote: block.private_note,
           revision: block.revision,
+        }))}
+        ptoTypes={data.pto_types.map((type) => ({
+          id: type.id,
+          name: type.name,
+          color: type.color,
+          active: type.active,
         }))}
         productionBands={data.production_plans.map((plan) => ({
           id: plan.id,

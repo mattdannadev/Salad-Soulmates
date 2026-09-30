@@ -2,7 +2,10 @@ import { z } from 'zod';
 
 /** Calendar dates are local to the facility; end_on is exclusive. */
 const date = z.iso.date();
-export const scheduleKinds = ['mixing', 'spices', 'making_product', 'cleaning', 'off', 'other'] as const;
+export const scheduleKinds = [
+  'pre_op', 'post_op', 'ingredient_prep', 'mixing', 'receiving',
+  'shipment_loading', 'packaging', 'cleaning', 'off', 'other',
+] as const;
 export const scheduleEventInputSchema = z.object({
   id: z.uuid(),
   facility_id: z.uuid(),
@@ -44,6 +47,7 @@ export const schedulePtoInputSchema = z.object({
   end_on: date,
   start_minute: z.number().int().min(0).max(1439),
   end_minute: z.number().int().min(1).max(1440),
+  pto_type_id: z.uuid(),
   private_note: z.string().max(500).default(''),
 }).refine(
   (v) => v.end_on > v.start_on && v.end_minute > v.start_minute,
@@ -88,6 +92,21 @@ export const scheduleEmployeeSchema = z.object({
 
 export const schedulePtoSchema = schedulePtoInputSchema.safeExtend({
   revision: z.number().int().positive(),
+});
+
+export const schedulePtoTypeSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  color: z.string(),
+  sort_order: z.number().int(),
+  active: z.boolean(),
+});
+export const saveSchedulePtoTypeSchema = z.object({
+  id: z.uuid(),
+  facility_id: z.uuid(),
+  name: z.string().trim().min(1).max(80),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+  sort_order: z.number().int().min(0),
 });
 
 export const publishedScheduleEventSchema = z.object({
@@ -142,7 +161,7 @@ export const schedulePlanSchema = z.object({
 });
 
 export const scheduleLinkedTaskSchema = z.object({
-  type: z.enum(['production_plan', 'order', 'planned_mixer_batch',
+  type: z.enum(['production_plan', 'order', 'purchase_draft', 'planned_mixer_batch',
     'planned_spice_preparation', 'production_lot']),
   id: z.uuid(),
   production_plan_id: z.uuid(),
@@ -162,6 +181,7 @@ export const workforceScheduleSchema = z.object({
   published_events: z.array(publishedScheduleEventSchema),
   publication_revision: z.number().int().min(0),
   pto: z.array(schedulePtoSchema),
+  pto_types: z.array(schedulePtoTypeSchema).default([]),
   production_plans: z.array(schedulePlanSchema),
   linked_tasks: z.array(scheduleLinkedTaskSchema),
   products: z.array(z.object({ id: z.uuid(), name: z.string() })),
@@ -231,17 +251,25 @@ export function selectLinkedPreparation<T extends {
 export function scheduleKindLabel(kind: typeof scheduleKinds[number], locale: 'en' | 'es') {
   const labels = {
     en: {
+      pre_op: 'Pre-Op',
+      post_op: 'Post-Op',
+      ingredient_prep: 'Ingredient prep',
       mixing: 'Mixing',
-      spices: 'Spice preparation',
-      making_product: 'Making product',
+      receiving: 'Receive delivery',
+      shipment_loading: 'Load pickup',
+      packaging: 'Packaging',
       cleaning: 'Cleaning',
       off: 'Time off',
       other: 'Other work',
     },
     es: {
+      pre_op: 'Preoperación',
+      post_op: 'Postoperación',
+      ingredient_prep: 'Preparación de ingredientes',
       mixing: 'Mezcla',
-      spices: 'Preparación de especias',
-      making_product: 'Elaboración',
+      receiving: 'Recibir entrega',
+      shipment_loading: 'Cargar recolección',
+      packaging: 'Empaque',
       cleaning: 'Limpieza',
       off: 'Ausencia',
       other: 'Otro trabajo',

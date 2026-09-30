@@ -50,7 +50,8 @@ describe('User Management navigation', () => {
       children: createElement('p', null, 'Contenido'),
     };
     const html = renderToStaticMarkup(createElement(Shell, props));
-    expect(html).toContain('<details class="nav-group"');
+    expect(html).toContain('<details class="nav-section nav-group"');
+    expect(html).toContain('open=""');
     expect(html).toContain('Administración');
     expect(html).toContain('Historial de inicio de sesión');
     expect(html).not.toContain('Administración de perfiles');

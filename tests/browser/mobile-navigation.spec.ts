@@ -20,9 +20,14 @@ test('phone navigation keeps Dashboard prominent and opens every permitted secti
   await mobileNavigation.getByRole('button', { name: 'More sections' }).click();
   const mainNavigation = page.getByRole('navigation', { name: 'Main navigation' });
   await expect(mainNavigation).toBeInViewport();
-  const inventory = mainNavigation.locator('.nav-group').filter({ hasText: 'Inventory' });
-  await inventory.locator('summary').click();
+  const inventory = mainNavigation.locator('.nav-group').filter({ hasText: 'Inventory & traceability' });
+  await expect(inventory).toHaveAttribute('open', '');
   await expect(inventory.getByRole('link', { name: 'Inventory', exact: true })).toBeVisible();
+
+  await inventory.locator('summary').click();
+  await expect(inventory).not.toHaveAttribute('open', '');
+  await inventory.locator('summary').click();
+  await expect(inventory).toHaveAttribute('open', '');
 
   await inventory.getByRole('link', { name: 'Inventory', exact: true }).click();
   await expect(page).toHaveURL(/\/app\/inventory$/);

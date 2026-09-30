@@ -39,6 +39,17 @@ describe('navigation registry', () => {
     expect(sidebarDestinationIds).toContain('allergens');
   });
 
+  it('orders customer-specific products and recipes before procurement work', () => {
+    expect(navigationSections.map(({ id }) => id)).toEqual([
+      'orders-delivery',
+      'catalog',
+      'procurement',
+      'inventory',
+      'planning-production',
+      'administration',
+    ]);
+  });
+
   it('selects one canonical active destination for customer detail routes', () => {
     const customers = navigationDestinations.find(({ id }) => id === 'customers');
     const administration = navigationSections.find(({ id }) => id === 'administration');

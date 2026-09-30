@@ -55,6 +55,13 @@
   gap: 12px;
   margin-bottom: 24px;
 }
+.dashboard-primary-schedule {
+  margin-bottom: 24px;
+}
+.dashboard-primary-schedule .dashboard-schedule {
+  margin: 0;
+  padding: 24px;
+}
 .dashboard-metric {
   background: var(--white);
   border: 1px solid var(--line);
@@ -343,6 +350,10 @@
   display: grid;
   gap: 20px;
 }
+.dashboard-readiness-list {
+  display: grid;
+  gap: 10px;
+}
 .dashboard-schedule {
   background: linear-gradient(145deg, #ffffff 0%, #f4f8ef 100%);
 }
@@ -401,6 +412,44 @@
 }
 .dashboard-schedule-empty {
   padding: 12px 8px 18px;
+}
+.dashboard-handoff-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dashboard-handoff-list a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink);
+}
+.dashboard-handoff-list a:hover,
+.dashboard-handoff-list a:focus-visible {
+  border-color: #8ca47c;
+  background: #f5f8f0;
+  text-decoration: none;
+}
+.dashboard-handoff-list span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.dashboard-handoff-list strong {
+  font-size: 13px;
+}
+.dashboard-handoff-list small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.dashboard-handoff-list .is-blocked a {
+  border-left: 3px solid #a57938;
 }
 .dashboard-preparation {
   background: #edf2e7;
@@ -735,14 +784,36 @@ small,
   display: flex;
   align-items: center;
   gap: 15px;
+  width: calc(100% - 28px);
   margin: 11px 14px 4px;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+  list-style: none;
+  background: none;
+  border: 0;
+  text-align: left;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
+.nav-section-label::-webkit-details-marker {
+  display: none;
+}
+.nav-group-chevron {
+  margin-left: auto;
+  color: #789063;
+  transition: transform 160ms ease;
+}
+.nav-group:not([open]) .nav-group-chevron {
+  transform: rotate(-90deg);
+}
 .nav-group-icon {
   color: #789063;
+}
+.nav-group:not([open]) .nav-section-label {
+  margin-bottom: 8px;
 }
 .nav-group-links {
   display: grid;
@@ -3537,6 +3608,9 @@ dialog::backdrop {
   margin: 2px 0 5px;
   padding: 0;
   border: 0;
+}
+.sidebar-collapsed .nav-group-chevron {
+  display: none;
 }
 @media (min-width: 761px) {
   .sidebar-collapsed .sidebar {

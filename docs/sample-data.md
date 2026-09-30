@@ -23,6 +23,12 @@ recreates only the local development database, applies every migration, and then
 runs `supabase/seed.sql`. Sign in locally with
 `sample.admin@saladsoulmates.test` / `LocalSampleOnly!`.
 
+Two Main plant worker accounts are also included for the scheduling and worker-claim
+demo. Both use the same local-only password, `LocalSampleOnly!`:
+
+- `basil.batch@saladsoulmates.test` — Basil Batch
+- `casey.ofill@saladsoulmates.test` — Casey O’Fill
+
 The formulation quantities are plausible workflow examples, not approved
 production formulas. The records use the reserved `10000000-...` UUID range so
 they remain visibly synthetic in diagnostics and exports.

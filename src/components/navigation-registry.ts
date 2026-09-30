@@ -375,6 +375,19 @@ export const navigationSections: readonly NavigationSection[] = [
     ],
   },
   {
+    id: 'catalog',
+    en: 'Products & recipes',
+    es: 'Productos y recetas',
+    icon: Layers3,
+    itemIds: [
+      { destinationId: 'ingredients' },
+      { destinationId: 'allergens' },
+      { destinationId: 'products' },
+      { destinationId: 'pricing' },
+      { destinationId: 'recipes' },
+    ],
+  },
+  {
     id: 'procurement',
     en: 'Purchasing & deliveries',
     es: 'Compras y entregas',
@@ -393,19 +406,6 @@ export const navigationSections: readonly NavigationSection[] = [
     itemIds: [
       { destinationId: 'inventory' },
       { destinationId: 'traceability' },
-    ],
-  },
-  {
-    id: 'catalog',
-    en: 'Products & recipes',
-    es: 'Productos y recetas',
-    icon: Layers3,
-    itemIds: [
-      { destinationId: 'ingredients' },
-      { destinationId: 'allergens' },
-      { destinationId: 'products' },
-      { destinationId: 'pricing' },
-      { destinationId: 'recipes' },
     ],
   },
   {

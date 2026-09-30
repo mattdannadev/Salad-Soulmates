@@ -14,7 +14,7 @@ test('short desktop sidebar scrolls independently to the final navigation links'
   const before = await page.evaluate(() => window.scrollY);
   await sidebar.hover();
   await page.mouse.wheel(0, 2000);
-  await expect(administration.locator('.nav-section-label')).toBeInViewport();
+  await expect(administration.locator('summary')).toBeInViewport();
   await sidebar.hover();
   await page.mouse.wheel(0, 2000);
   await expect(finalLink).toBeInViewport();

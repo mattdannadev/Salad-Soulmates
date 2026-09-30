@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, Plus } from 'lucide-react';
 import styles from './dashboard-quick-actions.module.css';
 
 interface DashboardQuickActionsProps {
@@ -27,17 +27,20 @@ const quickActions = (es: boolean) => [
 
 export default function DashboardQuickActions({ es }: DashboardQuickActionsProps) {
   return (
-    <nav className={styles.actions} aria-label={es ? 'Acciones rápidas' : 'Quick actions'}>
-      {quickActions(es).map((action) => (
-        <Link
-          className={`button ${styles.action}`}
-          href={action.href}
-          key={action.href}
-        >
-          {action.label}
-          <ArrowUpRight size={16} aria-hidden="true" />
-        </Link>
-      ))}
-    </nav>
+    <details className={styles.menu}>
+      <summary className={styles.trigger}>
+        <Plus size={17} aria-hidden="true" />
+        <span>{es ? 'Añadir o gestionar' : 'Add or manage'}</span>
+        <ChevronDown className={styles.chevron} size={15} aria-hidden="true" />
+      </summary>
+      <nav className={styles.actions} aria-label={es ? 'Acciones rápidas' : 'Quick actions'}>
+        {quickActions(es).map((action) => (
+          <Link className={styles.action} href={action.href} key={action.href}>
+            <span>{action.label}</span>
+            <ArrowUpRight size={15} aria-hidden="true" />
+          </Link>
+        ))}
+      </nav>
+    </details>
   );
 }

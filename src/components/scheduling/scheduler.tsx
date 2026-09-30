@@ -14,9 +14,11 @@ import {
   saveScheduleAvailability, saveScheduleEvent, saveSchedulePto,
 } from '@/app/app/scheduling/actions';
 import { matchesPublishedWork } from '@/domain/scheduling';
+import SchedulerWorkQueue from './scheduler-work-queue';
 import styles from './scheduler.module.css';
 
-export type WorkType = 'mixing' | 'spices' | 'making_product' | 'cleaning' | 'other' | 'off';
+export type WorkType = 'mixing' | 'ingredient_prep' | 'receiving' | 'shipment_loading'
+  | 'packaging' | 'pre_op' | 'post_op' | 'cleaning' | 'other' | 'off';
 export interface Facility { id: string; name: string; weeklyHours: number }
 export interface Employee { id: string; name: string; facilityId: string; availableDays: number[] }
 export interface Assignment {
@@ -29,7 +31,7 @@ export interface Assignment {
   employeeIds: string[];
   note: string | null;
   productionPlanId: string | null;
-  linkedTaskType: 'production_plan' | 'order' | 'planned_mixer_batch'
+  linkedTaskType: 'production_plan' | 'order' | 'purchase_draft' | 'planned_mixer_batch'
     | 'planned_spice_preparation' | 'production_lot' | null;
   linkedTaskId: string | null;
   productId: string | null;
@@ -53,6 +55,7 @@ export interface PtoBlock {
   privateNote: string;
   revision: number;
 }
+export interface PtoType { id: string; name: string; color: string; active: boolean }
 export interface ProductionBand {
   id: string;
   label: string;
@@ -71,6 +74,7 @@ interface Props {
     | 'productId' | 'customerId' | 'locationLabel'>[];
   publicationRevision: number;
   pto: PtoBlock[];
+  ptoTypes: PtoType[];
   productionBands: ProductionBand[];
   linkedTasks: LinkedTaskOption[];
   products: { id: string; name: string }[];
@@ -81,17 +85,17 @@ interface Props {
   initialPeriodEnd?: string;
 }
 
-const types: WorkType[] = ['mixing', 'spices', 'making_product', 'cleaning', 'other', 'off'];
+const types: WorkType[] = ['pre_op', 'receiving', 'ingredient_prep', 'mixing', 'packaging', 'shipment_loading', 'post_op', 'cleaning', 'other', 'off'];
 const colors: Record<WorkType, NonNullable<SchedulerEvent['color']>> = {
-  mixing: 'teal', spices: 'orange', making_product: 'green', cleaning: 'blue', other: 'purple', off: 'grey',
+  mixing: 'teal', ingredient_prep: 'orange', receiving: 'blue', shipment_loading: 'purple', packaging: 'green', pre_op: 'grey', post_op: 'grey', cleaning: 'blue', other: 'purple', off: 'grey',
 };
 const productionColor: NonNullable<SchedulerEvent['color']> = 'green';
 const labels: Record<'en' | 'es', Record<WorkType, string>> = {
   en: {
-    mixing: 'Mixing', spices: 'Spices', making_product: 'Making product', cleaning: 'Cleaning', other: 'Warehouse / other', off: 'Off / PTO',
+    mixing: 'Mixing', ingredient_prep: 'Ingredient prep', receiving: 'Receive delivery', shipment_loading: 'Load pickup', packaging: 'Packaging', pre_op: 'Pre-Op', post_op: 'Post-Op', cleaning: 'Cleaning', other: 'Other work', off: 'Off / PTO',
   },
   es: {
-    mixing: 'Mezcla', spices: 'Especias', making_product: 'Elaboración', cleaning: 'Limpieza', other: 'Almacén / otro', off: 'Libre / PTO',
+    mixing: 'Mezcla', ingredient_prep: 'Preparación de ingredientes', receiving: 'Recibir entrega', shipment_loading: 'Cargar recolección', packaging: 'Empaque', pre_op: 'Preoperación', post_op: 'Postoperación', cleaning: 'Limpieza', other: 'Otro trabajo', off: 'Libre / PTO',
   },
 };
 const spanishTheme = createTheme({}, esES);
@@ -146,6 +150,7 @@ export default function WorkforceScheduler({
   const router = useRouter();
   const es = locale === 'es';
   const [facilityId, setFacilityId] = useState(facilities[0]?.id ?? '');
+  // Plant planning is performed across the workweek; day view is a drill-in.
   const [view, setView] = useState<'day' | 'week'>('week');
   const [visibleDate, setVisibleDate] = useState(new Date());
   const [periodStart, setPeriodStart] = useState(initialPeriodStart);
@@ -161,7 +166,7 @@ export default function WorkforceScheduler({
     facilityId,
     startDate: dateKey(new Date()),
     endDate: dateKey(new Date()),
-    type: 'making_product',
+    type: 'mixing',
     employeeIds: [],
     note: null,
     productionPlanId: null,
@@ -341,6 +346,25 @@ export default function WorkforceScheduler({
   const relevantBands = productionBands.filter((band) => (
     band.startDate < reportEndExclusive && band.endDate >= reportStart
   ));
+  const workweekDays = useMemo(() => Array.from({ length: 5 }, (_, index) => {
+    const date = addDays(weekStart, index);
+    const work = facilityAssignments.filter((item) => item.startDate <= date && item.endDate >= date
+      && item.type !== 'off');
+    const assignedWorkers = new Set(work.flatMap((item) => item.employeeIds));
+    const unstaffed = work.filter((item) => item.employeeIds.length === 0);
+    const weekday = localDate(date).toLocaleDateString(es ? 'es-US' : 'en-US', {
+      weekday: 'short', month: 'short', day: 'numeric',
+    });
+    return {
+      date,
+      weekday,
+      work,
+      unstaffed,
+      assignedWorkers: assignedWorkers.size,
+      dailyCapacity: (facility?.weeklyHours ?? 40) / 5,
+      mixing: work.filter((item) => item.type === 'mixing').length,
+    };
+  }), [weekStart, facilityAssignments, facility, es]);
 
   const persist = useCallback(async (input: AssignmentInput, id?: string) => {
     const previous = id ? assignments.find((item) => item.id === id) : undefined;
@@ -393,7 +417,7 @@ export default function WorkforceScheduler({
       facilityId,
       startDate: activeDate,
       endDate: activeDate,
-      type: 'making_product',
+      type: 'mixing',
       employeeIds: selectedEmployees,
       note: null,
       productionPlanId: null,
@@ -469,7 +493,7 @@ export default function WorkforceScheduler({
           facilityId,
           startDate: dateKey(created.start),
           endDate: addDays(dateKey(created.end), -1),
-          type: 'making_product',
+          type: 'mixing',
           employeeIds: selectedIds,
           note: null,
           productionPlanId: null,
@@ -611,16 +635,16 @@ export default function WorkforceScheduler({
     if (published) return es ? 'Publicado' : 'Published';
     return es ? 'Borrador' : 'Draft';
   }
-  let dialogTitle = es ? 'Nueva asignación' : 'New assignment';
-  if (editingId) dialogTitle = es ? 'Editar asignación' : 'Edit assignment';
+  let dialogTitle = es ? 'Agregar trabajo' : 'Add work';
+  if (editingId) dialogTitle = es ? 'Editar trabajo' : 'Edit work';
 
   return (
     <div className={styles.workspace}>
       <div className={styles.controlBar}>
       <div className={styles.filters} aria-label={es ? 'Filtros de horario' : 'Schedule filters'}>
         <div className={styles.controlIntro}>
-          <strong>{es ? 'Vista del calendario' : 'Calendar view'}</strong>
-          <span>{es ? 'Estos controles cambian lo que se muestra.' : 'These controls change what is shown below.'}</span>
+          <strong>{es ? 'Semana de trabajo' : 'Plant workweek'}</strong>
+          <span>{es ? 'Planifique el trabajo diario, las entregas y las recolecciones de la semana.' : 'Plan daily work, deliveries, and pickups across the week.'}</span>
         </div>
         <label>
           {es ? 'Instalación' : 'Facility'}
@@ -630,7 +654,7 @@ export default function WorkforceScheduler({
         </label>
         <div className={styles.viewSwitch} role="group" aria-label={es ? 'Vista del calendario' : 'Calendar view'}>
           <button type="button" aria-pressed={view === 'day'} onClick={() => setView('day')}>{es ? 'Día' : 'Day'}</button>
-          <button type="button" aria-pressed={view === 'week'} onClick={() => setView('week')}>{es ? 'Semana' : 'Week'}</button>
+          <button type="button" aria-pressed={view === 'week'} onClick={() => setView('week')}>{es ? 'Semana laboral' : 'Workweek'}</button>
         </div>
         <label>
           {es ? 'Tipos de trabajo' : 'Work types'}
@@ -641,10 +665,10 @@ export default function WorkforceScheduler({
       </div>
       {canManage && <div className={styles.actions} aria-label={es ? 'Acciones de horario' : 'Schedule actions'}>
         <div className={styles.controlIntro}>
-          <strong>{es ? 'Programar trabajo' : 'Schedule work'}</strong>
-          <span>{es ? 'Crear o publicar cambios.' : 'Create or publish changes.'}</span>
+          <strong>{es ? 'Plan semanal' : 'Weekly plan'}</strong>
+          <span>{es ? 'Agregue trabajo diario y publique la semana.' : 'Add daily work and publish the week.'}</span>
         </div>
-        <button type="button" className={styles.primary} onClick={() => openForm()}>{es ? 'Nueva asignación' : 'New assignment'}</button>
+        <button type="button" className={styles.primary} onClick={() => openForm()}>{es ? 'Agregar trabajo' : 'Add work'}</button>
         <button
           type="button"
           disabled={pending}
@@ -671,7 +695,7 @@ export default function WorkforceScheduler({
           disabled={pending}
           onClick={publishDraft}
         >
-          {es ? 'Publicar horario' : 'Publish schedule'}
+          {es ? 'Publicar semana' : 'Publish week'}
         </button>
       </div>}
       </div>
@@ -693,6 +717,45 @@ export default function WorkforceScheduler({
           <button type="button" disabled={pending} onClick={saveCapacity}>{es ? 'Guardar capacidad' : 'Save capacity'}</button>
         </section>
         )}
+        <section className={styles.workweek} aria-labelledby="workweek-heading">
+          <div className={styles.workweekHeading}>
+            <div>
+              <h2 id="workweek-heading">{es ? 'Resumen de la semana laboral' : 'Workweek at a glance'}</h2>
+              <p>{es
+                ? 'Cada día muestra el trabajo publicado o en borrador, la cobertura de personal y las brechas que requieren atención.'
+                : 'Each day shows draft or published work, crew coverage, and gaps that need attention.'}</p>
+            </div>
+            <span>{es ? 'Capacidad por persona' : 'Per-person capacity'} · {((facility?.weeklyHours ?? 40) / 5).toFixed(1)}h/{es ? 'día' : 'day'}</span>
+          </div>
+          <div className={styles.dayCards}>
+            {workweekDays.map((day) => (
+              <article key={day.date} className={styles.dayCard}>
+                <div className={styles.dayCardTitle}>
+                  <strong>{day.weekday}</strong>
+                  <span>{day.work.length} {es ? 'tareas' : 'tasks'}</span>
+                </div>
+                <dl>
+                  <div><dt>{es ? 'Personal asignado' : 'Crew assigned'}</dt><dd>{day.assignedWorkers}</dd></div>
+                  <div><dt>{es ? 'Mezcla' : 'Mixing'}</dt><dd>{day.mixing}</dd></div>
+                  <div><dt>{es ? 'Capacidad' : 'Capacity'}</dt><dd>{day.dailyCapacity.toFixed(1)}h</dd></div>
+                </dl>
+                {day.unstaffed.length > 0 ? (
+                  <p className={styles.gap}>{day.unstaffed.length} {es ? 'tarea(s) sin personal' : 'unstaffed task(s)'}</p>
+                ) : (
+                  <p className={styles.covered}>{day.work.length ? (es ? 'Cobertura asignada' : 'Crew coverage assigned') : (es ? 'No hay trabajo programado' : 'No work scheduled')}</p>
+                )}
+              </article>
+            ))}
+          </div>
+        </section>
+        <SchedulerWorkQueue
+          key={`${facilityId}-${activeDate}`}
+          facilityId={facilityId}
+          initialDate={activeDate}
+          locale={locale}
+          canManage={canManage}
+          linkedTasks={linkedTasks}
+        />
         <div className={styles.layout}>
           <aside className={styles.sidebar} aria-label={es ? 'Personal y producción' : 'Staffing and production'}>
             <h2>{es ? 'Personal' : 'Staffing'}</h2>
@@ -818,8 +881,12 @@ export default function WorkforceScheduler({
                 {displayedEmployees.map((person) => {
                   const datesByType: Record<WorkType, Set<string>> = {
                     mixing: new Set(),
-                    spices: new Set(),
-                    making_product: new Set(),
+                    ingredient_prep: new Set(),
+                    receiving: new Set(),
+                    shipment_loading: new Set(),
+                    packaging: new Set(),
+                    pre_op: new Set(),
+                    post_op: new Set(),
                     cleaning: new Set(),
                     other: new Set(),
                     off: new Set(),

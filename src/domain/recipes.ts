@@ -9,9 +9,18 @@ export const productRowSchema = z.object({
   standard_batch_gallons: positiveQuantity,
   bag_size_gallons: positiveQuantity,
   bags_per_case: z.number().int().positive(),
+  ingredient_prep_minutes_per_batch: z.number().finite().positive().nullable().default(null),
+  ingredient_prep_crew_size: z.number().int().positive().nullable().default(null),
+  mixing_minutes_per_batch: z.number().finite().positive().nullable().default(null),
+  mixing_crew_size: z.number().int().positive().nullable().default(null),
   approved_ingredient_statement: z.string().nullable(),
   active: z.boolean(),
-});
+}).refine((product) => (
+  (product.ingredient_prep_minutes_per_batch === null) === (product.ingredient_prep_crew_size === null)
+), { message: 'Ingredient prep duration and crew size must be configured together.' })
+  .refine((product) => (
+    (product.mixing_minutes_per_batch === null) === (product.mixing_crew_size === null)
+  ), { message: 'Mixing duration and crew size must be configured together.' });
 export const recipeRowSchema = z.object({
   id: z.uuid(),
   product_id: z.uuid(),

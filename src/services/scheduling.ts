@@ -2,12 +2,12 @@ import 'server-only';
 
 import { z } from 'zod';
 import {
-  readFacilitySchedule, readMySchedule, writeSchedule,
+  readFacilitySchedule, readMySchedule, readWorkQueueContext, writeSchedule,
 } from '@/data/scheduling';
 import type { ScheduleMutation } from '@/data/scheduling';
 import type { ActionResult } from '@/domain/master-data';
 import {
-  myWorkforceScheduleSchema, scheduleRangeSchema, workforceScheduleSchema,
+  myWorkforceScheduleSchema, scheduleLinkedTaskSchema, scheduleRangeSchema, workforceScheduleSchema,
 } from '@/domain/scheduling';
 import { requireProfile } from '@/lib/auth';
 import { logFailure, operationError } from '@/lib/operation-error';
@@ -23,9 +23,19 @@ export default async function loadSchedule(facilityId: string, startOn: string, 
   const [canManage, canManageSettings] = await Promise.all([
     hasPermission(db, 'workforce.manage'), hasPermission(db, 'settings.manage'),
   ]);
-  const result = await readFacilitySchedule(db, range);
+  const [result, context] = await Promise.all([
+    readFacilitySchedule(db, range), readWorkQueueContext(db, range),
+  ]);
   if (result.error) throw operationError('workforce_schedule_load', 'Unable to load the worker schedule.', result.error);
-  return { ...workforceScheduleSchema.parse(result.data), canManage, canManageSettings };
+  if (context.error) throw operationError('work_queue_context_load', 'Unable to load available work context.', context.error);
+  const schedule = workforceScheduleSchema.parse(result.data);
+  const workContext = z.array(scheduleLinkedTaskSchema).parse(context.data);
+  return {
+    ...schedule,
+    linked_tasks: [...schedule.linked_tasks, ...workContext],
+    canManage,
+    canManageSettings,
+  };
 }
 
 /** Worker view is scoped by the database to the caller's identity and latest publication. */

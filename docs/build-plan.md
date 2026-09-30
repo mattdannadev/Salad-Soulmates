@@ -24,6 +24,50 @@ database access from a device, production credentials, deployment, or release.
 
 ## Current checkpoint
 
+### Plant operations configuration — approved next delivery slice
+
+Implement the operations-manager reference workflow as **plant configuration**,
+not fixed application behavior. This slice extends the existing workforce
+scheduling foundation in the following order:
+
+1. Add a plant work-assignment policy: supervisor-assigned, worker-claimed
+   daily queue, or hybrid. A claim must be atomic, attributable, conflict-safe,
+   auditable, and must not create inventory, receiving, production, packaging,
+   shipment, or cleaning completion records by itself.
+2. Replace the worker-facing “spices” category with **ingredient prep**, and
+   support the operational queue categories receiving, loading for shipment,
+   ingredient prep, mixing, packaging, and cleaning. “Ingredient prep” includes
+   dry and wet ingredients. Queue cards must deep-link into their canonical
+   workflow—Receiving Inventory for a PO/delivery, Batch Worksheet for ingredient
+   prep, mixer execution, packaging, fulfillment/shipping, or the associated
+   plant/production context for Pre-Op/Post-Op—instead of duplicating transaction
+   entry on a checklist.
+3. Add configuration contracts for planning cadence/horizon, preparation lead
+   time, mixing capacity, capacity-fill/make-ahead eligibility and release,
+   post-mix hold/cooling and packaging lead time, cases per pallet and rounding,
+   and raw-ingredient cycle-count cadence/scope. The reference defaults are
+   Friday weekly planning, day-before prep, 6 productive mixing hours in an
+   8-hour day, next-day packaging, 45 cases per pallet, and weekly counts.
+4. Keep **Plant** as the manufacturing-facing UI term while retaining the
+   facility-scoped database/authorization boundary. Every setting must be
+   versioned or snapshotted on the planned/executed record where a later change
+   could change historical meaning.
+
+Acceptance: one plant can use a supervisor-assigned schedule while another uses
+a worker-claimable daily queue; a task can retain its required crew size and more
+than one worker claim/assignment; claims are race-safe and preserve attribution;
+all reference values can be changed without code changes; planning keeps
+make-ahead quantity distinct from customer demand; and existing facility-scoped
+permissions, published-schedule behavior, audit history, inventory idempotency,
+and worker-phone boundaries remain intact. This authorizes implementation and
+non-production validation only—not a production migration, merge, or deploy.
+
+The scheduler UI is a single compact command center: the calendar/timeline is
+the primary surface and a contextual drawer carries task editing/detail. Do not
+build separate tall pages for queue, pickup, PO-delivery and staffing data.
+Its default is a configured plant workweek of daily calendars, each showing
+planned task hours against daily productive capacity; day view is a drill-in.
+
 Order follow-up: allow an authorized user to correct an active customer pickup
 date with a required reason and immutable change record. Keep the customer order
 and material-demand horizon synchronized, preserve the production-completion
