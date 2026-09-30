@@ -261,7 +261,7 @@ create table public.workforce_work_queue_items (
     or (kind not in ('ingredient_prep', 'mixing') and batch_quota is null and estimated_minutes is null)
   ),
   check (linked_task_type is null or linked_task_type in (
-    'purchase_order', 'purchase_receipt', 'order', 'production_plan',
+    'purchase_draft', 'purchase_order', 'purchase_receipt', 'order', 'production_plan',
     'planned_spice_preparation', 'planned_mixer_batch', 'production_lot',
     'packaging_run', 'shipment_fulfillment', 'plant_operations'
   )),
