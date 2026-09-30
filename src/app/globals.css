@@ -747,9 +747,9 @@ small,
 .nav-group-links {
   display: grid;
   gap: 3px;
-  margin: 0 0 7px;
-  padding: 0;
-  border: 0;
+  margin: 0 0 8px 16px;
+  padding: 3px 0 3px 9px;
+  border-left: 1px solid #dce5d6;
 }
 .nav-group-links a {
   min-height: 42px;
@@ -2539,9 +2539,9 @@ dialog::backdrop {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 5px;
-    margin: 0 0 2px;
-    padding: 0;
-    border: 0;
+    margin: 0 0 2px 8px;
+    padding: 4px 0 4px 8px;
+    border-left: 1px solid #dce5d6;
   }
   .nav-group-links a {
     min-width: 0;
