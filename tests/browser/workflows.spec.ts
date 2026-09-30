@@ -18,10 +18,10 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
   const mainNavigation = page.getByRole('navigation', { name: 'Main navigation' });
   await [
     'Customers & orders',
-    'Procurement',
+    'Purchasing & deliveries',
     'Inventory & traceability',
-    'Product catalog',
-    'Planning & production',
+    'Products & recipes',
+    'Production & team',
     'Administration',
   ].reduce(async (previous, groupLabel) => {
     await previous;

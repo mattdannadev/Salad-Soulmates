@@ -12,7 +12,7 @@ test('sidebar collapses to accessible icons and expands after navigation', async
   await expect(page.getByRole('button', { name: 'Expand navigation' })).toHaveAttribute('aria-expanded', 'false');
   await expect(page.locator('.brand strong')).toBeHidden();
   await expect(navigation.locator('.nav-label').first()).toBeHidden();
-  const catalog = navigation.locator('.nav-group').filter({ hasText: 'Product catalog' });
+  const catalog = navigation.locator('.nav-group').filter({ hasText: 'Products & recipes' });
   await catalog.locator('summary').click();
   await expect(navigation.getByRole('link', { name: 'Ingredients', exact: true })).toBeVisible();
   await page.screenshot({ path: info.outputPath('sidebar-collapsed.png'), fullPage: true });

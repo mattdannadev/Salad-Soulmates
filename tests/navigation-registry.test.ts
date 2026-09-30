@@ -35,7 +35,7 @@ describe('navigation registry', () => {
     );
 
     expect(new Set(sidebarDestinationIds)).toHaveLength(sidebarDestinationIds.length);
-    expect(sidebarDestinationIds).not.toContain('purchasing');
+    expect(sidebarDestinationIds).toContain('purchasing');
     expect(sidebarDestinationIds).toContain('allergens');
   });
 
@@ -69,17 +69,23 @@ describe('navigation registry', () => {
     ).toEqual(['dashboard', 'orders', 'inventory']);
   });
 
-  it('keeps purchasing contextual while preserving a procurement breadcrumb', () => {
+  it('keeps purchasing together with deliveries while preserving its breadcrumb', () => {
     const procurement = navigationSections.find(({ id }) => id === 'procurement');
     expect(procurement).toBeDefined();
     expect(
-      getVisibleSectionDestinations(procurement!, ['master_data.read']).map(
+      getVisibleSectionDestinations(procurement!, [
+        'orders.read',
+        'planning.read',
+        'inventory.read',
+        'products.read',
+        'master_data.read',
+      ]).map(
         ({ destination }) => destination.id,
       ),
-    ).toEqual(['suppliers']);
+    ).toEqual(['purchasing', 'receiving', 'suppliers']);
     expect(getNavigationBreadcrumb('/app/purchasing', 'en')).toEqual([
       { label: 'Dashboard', href: '/app' },
-      { label: 'Procurement' },
+      { label: 'Purchasing & deliveries' },
       { label: 'Purchase planning' },
     ]);
   });

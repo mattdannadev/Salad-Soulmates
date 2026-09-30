@@ -77,10 +77,10 @@ test('Inventory keeps receiving discoverable while purchasing stays contextual',
     .getByRole('button', { name: 'More sections' })
     .click();
   const navigation = page.getByRole('navigation', { name: 'Main navigation' });
-  const inventory = navigation.locator('.nav-group').filter({ hasText: 'Inventory' });
-  await inventory.locator('summary').click();
-  await expect(inventory.getByRole('link', { name: 'Purchase planning' })).toHaveCount(0);
-  await inventory.getByRole('link', { name: 'Receive deliveries' }).click();
+  const purchasing = navigation.locator('.nav-group').filter({ hasText: 'Purchasing & deliveries' });
+  await purchasing.locator('summary').click();
+  await expect(purchasing.getByRole('link', { name: 'Purchase planning' })).toHaveCount(1);
+  await purchasing.getByRole('link', { name: 'Receive deliveries' }).click();
 
   await expect(page).toHaveURL(/\/app\/receiving$/);
   await expect(page.getByText('No receipts yet', { exact: true })).toBeVisible();

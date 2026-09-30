@@ -69,7 +69,7 @@ export default function CommandPalette({
         aria-label={es ? 'Abrir comandos' : 'Open commands'}
       >
         <Search size={17} aria-hidden />
-        <span>{es ? 'Ir a…' : 'Go to…'}</span>
+        <span>{es ? 'Buscar una página' : 'Find a page'}</span>
         <kbd>⌘K</kbd>
       </button>
       {open && (

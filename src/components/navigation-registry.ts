@@ -139,7 +139,6 @@ export const navigationDestinations: readonly NavigationDestination[] = [
     icon: ShoppingBasket,
     itemType: 'destination',
     permissions: purchasingPermissions,
-    sidebar: false,
     parent: 'procurement',
     breadcrumb: { en: 'Purchase planning', es: 'Planificación de compras' },
     searchKeywords: ['purchasing', 'purchase planning', 'compras'],
@@ -152,7 +151,7 @@ export const navigationDestinations: readonly NavigationDestination[] = [
     icon: PackageCheck,
     itemType: 'destination',
     permissions: ['inventory.read'],
-    parent: 'inventory',
+    parent: 'procurement',
     breadcrumb: { en: 'Receive deliveries', es: 'Recibir entregas' },
     searchKeywords: ['receiving', 'deliveries', 'recibir'],
   },
@@ -249,7 +248,6 @@ export const navigationDestinations: readonly NavigationDestination[] = [
     icon: Users,
     itemType: 'destination',
     permissions: ['workforce.read'],
-    sidebar: false,
     parent: 'planning-production',
     breadcrumb: { en: 'Team', es: 'Equipo' },
     searchKeywords: ['team', 'employees', 'equipo'],
@@ -378,10 +376,14 @@ export const navigationSections: readonly NavigationSection[] = [
   },
   {
     id: 'procurement',
-    en: 'Procurement',
-    es: 'Abastecimiento',
+    en: 'Purchasing & deliveries',
+    es: 'Compras y entregas',
     icon: ShoppingBasket,
-    itemIds: [{ destinationId: 'suppliers' }],
+    itemIds: [
+      { destinationId: 'purchasing' },
+      { destinationId: 'receiving' },
+      { destinationId: 'suppliers' },
+    ],
   },
   {
     id: 'inventory',
@@ -390,14 +392,13 @@ export const navigationSections: readonly NavigationSection[] = [
     icon: Package,
     itemIds: [
       { destinationId: 'inventory' },
-      { destinationId: 'receiving' },
       { destinationId: 'traceability' },
     ],
   },
   {
     id: 'catalog',
-    en: 'Product catalog',
-    es: 'Catálogo de productos',
+    en: 'Products & recipes',
+    es: 'Productos y recetas',
     icon: Layers3,
     itemIds: [
       { destinationId: 'ingredients' },
@@ -409,10 +410,14 @@ export const navigationSections: readonly NavigationSection[] = [
   },
   {
     id: 'planning-production',
-    en: 'Planning & production',
-    es: 'Planificación y producción',
+    en: 'Production & team',
+    es: 'Producción y equipo',
     icon: CalendarDays,
-    itemIds: [{ destinationId: 'planning' }, { destinationId: 'scheduling' }],
+    itemIds: [
+      { destinationId: 'planning' },
+      { destinationId: 'scheduling' },
+      { destinationId: 'team' },
+    ],
   },
   {
     id: 'administration',
