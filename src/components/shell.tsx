@@ -186,11 +186,40 @@ export function Shell({
               </Link>
             );
           })}
-          {navigationSections.map((group) => {
+          {navigationSections.map((group, index) => {
             const visibleItems = getVisibleSectionDestinations(group, permissions);
             const hasCurrentPage = isNavigationSectionCurrent(group, path, permissions);
 
             if (visibleItems.length === 0) return null;
+
+            // Small sections create an unnecessary "open before you can find it" step.
+            // Reserve accordion groups for three or more related destinations.
+            if (visibleItems.length <= 2) {
+              return (
+                <Fragment key={group.id}>
+                  {index > 0 && <div className="nav-group-divider" aria-hidden />}
+                  {visibleItems.map(({ active, destination }) => {
+                    const { href, icon: Icon } = destination;
+                    const label = navigationLabel(destination, locale);
+                    const isCurrentPage =
+                      active !== false && isNavigationDestinationCurrent(destination, path);
+                    return (
+                      <Link
+                        key={href}
+                        href={href}
+                        aria-label={label}
+                        title={label}
+                        aria-current={isCurrentPage ? 'page' : undefined}
+                        onClick={() => closeMobileNavigation(false)}
+                      >
+                        <Icon size={20} aria-hidden />
+                        <span className="nav-label">{label}</span>
+                      </Link>
+                    );
+                  })}
+                </Fragment>
+              );
+            }
 
             return (
               <details key={group.id} className="nav-group" open={hasCurrentPage}>

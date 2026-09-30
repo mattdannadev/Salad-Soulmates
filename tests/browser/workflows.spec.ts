@@ -19,7 +19,6 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
   await [
     'Customers & orders',
     'Purchasing & deliveries',
-    'Inventory & traceability',
     'Products & recipes',
     'Production & team',
     'Administration',
@@ -28,6 +27,8 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
     const group = mainNavigation.locator('.nav-group').filter({ hasText: groupLabel });
     await group.locator('summary').click();
   }, Promise.resolve());
+  await expect(mainNavigation.getByRole('link', { name: 'Inventory', exact: true })).toHaveCount(1);
+  await expect(mainNavigation.getByRole('link', { name: 'Traceability', exact: true })).toHaveCount(1);
   await Promise.all(
     [
       'Dashboard',
