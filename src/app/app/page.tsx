@@ -12,6 +12,7 @@ import { facilityDate, formatDate, formatNumber } from '@/domain/format';
 import { purchaseStatusLabel } from '@/domain/supplier-orders';
 import { createDashboardWorkQueues } from '@/services/dashboard-work-queues';
 import { addScheduleDays } from '@/domain/scheduling';
+import { dashboardProductionPlans } from '@/services/dashboard-production-plans';
 
 const DASHBOARD_LIMIT = 6;
 
@@ -87,22 +88,8 @@ export default async function Home() {
       },
     };
   });
-  const weeklyProductionPlans = production
-    .filter((plan) => plan.status !== 'Cancelled' && plan.start_on <= addScheduleDays(today, 7))
-    .map((plan) => {
-      const order = openOrders.find((candidate) => candidate.id === plan.id);
-      return {
-        id: plan.id,
-        customerName: order?.customer_name ?? (es ? 'Pedido de cliente' : 'Customer order'),
-        reference: order?.reference || plan.id.slice(0, 8),
-        startOn: plan.start_on,
-        finishOn: plan.finish_on,
-        pickupOn: order?.needed_on ?? plan.finish_on,
-        status: plan.status,
-      };
-    })
-    .filter((plan) => plan.finishOn >= today)
-    .slice(0, DASHBOARD_LIMIT);
+  const weeklyProductionPlans = dashboardProductionPlans(production, openOrders, today,
+    addScheduleDays(today, 7), DASHBOARD_LIMIT);
   const todayHandoffs = [
     ...upcomingSchedule
       .filter((event) => event.startOn <= today && event.endOn > today && event.kind !== 'off')

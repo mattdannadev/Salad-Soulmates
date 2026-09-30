@@ -558,7 +558,8 @@ begin
     select 'purchase_draft'::text type, d.id, d.material_plan_id production_plan_id,
       'Expected PO ' || coalesce(nullif(d.reference, ''), left(d.id::text, 8)) || ' · ' || d.expected_on label
     from public.purchase_drafts d where d.organization_id=public.current_org()
-      and d.facility_id=requested_facility and d.status in ('Draft', 'Confirmed')
+      and d.facility_id=requested_facility and d.material_plan_id is not null
+      and d.status in ('Draft', 'Confirmed')
       and d.expected_on >= requested_start and d.expected_on < requested_end
     union all
     select 'order'::text type, o.id, o.id production_plan_id,

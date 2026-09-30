@@ -1,9 +1,12 @@
 import Link from 'next/link';
-import { ArrowRight, CalendarDays, CircleAlert, UserRoundCheck, Users } from 'lucide-react';
+import {
+  ArrowRight, CalendarDays, CircleAlert, UserRoundCheck, Users,
+} from 'lucide-react';
 import { inclusiveScheduleEnd, scheduleKindLabel } from '@/domain/scheduling';
+import type { DashboardProductionPlan } from '@/services/dashboard-production-plans';
 import styles from './dashboard-schedule.module.css';
 
-type UpcomingScheduleItem = {
+interface UpcomingScheduleItem {
   id: string;
   startOn: string;
   endOn: string;
@@ -13,16 +16,7 @@ type UpcomingScheduleItem = {
   employeeCount: number;
   assigneeNames: string[];
   ptoNames: string[];
-};
-type UpcomingProductionPlan = {
-  id: string;
-  customerName: string;
-  reference: string;
-  startOn: string;
-  finishOn: string;
-  pickupOn: string;
-  status: 'Draft' | 'Confirmed' | 'Cancelled';
-};
+}
 
 /** Facility-scoped schedule summary for the operations dashboard. */
 export default function DashboardSchedule({
@@ -31,7 +25,7 @@ export default function DashboardSchedule({
   locale,
 }: {
   events: UpcomingScheduleItem[];
-  plans: UpcomingProductionPlan[];
+  plans: DashboardProductionPlan[];
   locale: 'en' | 'es';
 }) {
   const es = locale === 'es';
@@ -40,6 +34,9 @@ export default function DashboardSchedule({
   const dayFormatter = new Intl.DateTimeFormat(locale === 'es' ? 'es-US' : 'en-US', {
     weekday: 'short',
     timeZone: 'UTC',
+  });
+  const pickupFormatter = new Intl.DateTimeFormat(es ? 'es-US' : 'en-US', {
+    month: 'short', day: 'numeric', timeZone: 'UTC',
   });
   return (
     <section className={`dashboard-schedule panel ${styles.schedule}`} aria-labelledby="dashboard-schedule-heading">
@@ -58,15 +55,21 @@ export default function DashboardSchedule({
       <div className={styles.summary} aria-label={es ? 'Resumen del programa' : 'Schedule summary'}>
         <span>
           <CalendarDays size={15} aria-hidden />
-          <strong>{events.length}</strong> {es ? 'actividades' : 'scheduled'}
+          <strong>{events.length}</strong>
+          {' '}
+          {es ? 'actividades' : 'scheduled'}
         </span>
         <span className={staffingGaps > 0 ? styles.attention : undefined}>
           <CircleAlert size={15} aria-hidden />
-          <strong>{staffingGaps}</strong> {es ? 'sin personal' : 'staffing gaps'}
+          <strong>{staffingGaps}</strong>
+          {' '}
+          {es ? 'sin personal' : 'staffing gaps'}
         </span>
         <span>
           <UserRoundCheck size={15} aria-hidden />
-          <strong>{timeOff}</strong> {es ? 'ausencias' : 'time off'}
+          <strong>{timeOff}</strong>
+          {' '}
+          {es ? 'ausencias' : 'time off'}
         </span>
       </div>
       {plans.length > 0 && (
@@ -79,12 +82,33 @@ export default function DashboardSchedule({
             {plans.map((plan) => (
               <li key={plan.id} className={plan.status === 'Draft' ? styles.draft : undefined}>
                 <span>
-                  <strong>{plan.customerName}</strong>
-                  <small>{`${plan.reference} · ${plan.startOn} – ${plan.finishOn}`}</small>
+                  <strong>{plan.customerName || (es ? 'Pedido de cliente' : 'Customer order')}</strong>
+                  {plan.products.map((product) => (
+                    <small key={product.name} className={styles.productQuota}>
+                      {product.name}
+                      {' '}
+                      ·
+                      {product.batchCount}
+                      {' '}
+                      {es
+                        ? (product.batchCount === 1 ? 'lote' : 'lotes')
+                        : (product.batchCount === 1 ? 'batch' : 'batches')}
+                    </small>
+                  ))}
+                  {plan.products.length === 0 && <small>{es ? 'Productos no disponibles' : 'Product details unavailable'}</small>}
+                  <small>
+                    {plan.spansOutsideWindow
+                      ? (es ? 'Cantidad del plan completo · distribución semanal pendiente' : 'Full-plan quantity · weekly allocation pending')
+                      : (es ? 'Planificados esta semana' : 'Planned this week')}
+                  </small>
                 </span>
                 <span>
                   <strong>{plan.status === 'Confirmed' ? (es ? 'Confirmado' : 'Confirmed') : (es ? 'Borrador' : 'Draft')}</strong>
-                  <small>{`${es ? 'Recogida' : 'Pickup'} ${plan.pickupOn}`}</small>
+                  <small>
+                    {`${es ? 'Recogida' : 'Pickup'} ${plan.pickupOn
+                      ? pickupFormatter.format(new Date(`${plan.pickupOn}T12:00:00Z`))
+                      : (es ? 'sin fecha' : 'date unavailable')}`}
+                  </small>
                 </span>
               </li>
             ))}
@@ -102,7 +126,10 @@ export default function DashboardSchedule({
               <span className="dashboard-schedule-copy">
                 <strong>{event.title || scheduleKindLabel(event.kind, locale)}</strong>
                 <small>
-                  {scheduleKindLabel(event.kind, locale)} ·{' '}
+                  {scheduleKindLabel(event.kind, locale)}
+                  {' '}
+                  ·
+                  {' '}
                   {event.startOn === inclusiveScheduleEnd(event.endOn)
                     ? event.startOn
                     : `${event.startOn} – ${inclusiveScheduleEnd(event.endOn)}`}

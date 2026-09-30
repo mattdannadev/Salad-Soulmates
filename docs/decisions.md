@@ -1,5 +1,21 @@
 # Implementation decisions
 
+## 2026-09-30 — Dashboard is the digital production floor
+
+The main dashboard is the plant's **digital production floor**, not a summary
+landing page. Every future dashboard modification must preserve and advance this
+operational purpose: at a glance, authorized users need the current status of
+work, the week's schedule, who is working, incoming inventory deliveries, the
+status of specific orders, overdue bills, and customer pickup dates.
+
+Dashboard views must present these signals from their canonical operational
+records and remain facility- and role-scoped. They may link to the owning
+workflow for action, but must not create duplicate sources of truth or bypass
+the existing orders, purchasing, inventory, scheduling, workforce, invoicing,
+or authorization contracts. This is a durable dashboard direction; detailed
+information architecture, availability, and acceptance criteria are defined in
+the applicable delivery slice before implementation.
+
 ## 2026-09-29 — Optional inventory stocking locations
 
 An Ingredient remains a single master-data record, regardless of where its

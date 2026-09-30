@@ -403,18 +403,24 @@ controls.
 
 ### Dashboard schedule — planned Phase 5 capability
 
-Add a schedule to the main dashboard that gives workers a clear, read-only view
-of the operational day and upcoming work. It must surface the key dated events:
-customer pickups, supplier drop-offs, employee shifts, and spice-mixing work.
-Operations supervisors must be able to view the schedule for each facility they
-are authorized to supervise, including a combined view when they supervise
-multiple facilities; workers must see only the facilities and schedule detail
-their existing permissions allow. Reuse the facility-scoped scheduling,
-authorization, audit, and localization contracts rather than creating a separate
-calendar or bypassing the underlying order, purchasing, and workforce records.
-Acceptance includes clear empty/loading/error states, chronological event
-ordering, facility attribution, desktop and phone usability, and permission
-negative tests for cross-facility access.
+The dashboard is the digital production floor: its operational view must make
+current work status, the week's schedule, who is working, incoming inventory
+deliveries, specific-order status, overdue bills, and customer pickup dates
+visible at a glance. Add a schedule that gives workers a clear, read-only view
+of the operational day and upcoming work, including customer pickups, supplier
+drop-offs, employee shifts, and spice-mixing work. Operations supervisors must
+be able to view the schedule for each facility they are authorized to supervise,
+including a combined view when they supervise multiple facilities; workers must
+see only the facilities and schedule detail their existing permissions allow.
+
+Dashboard additions must reuse the facility-scoped scheduling, authorization,
+audit, localization, orders, purchasing, inventory, workforce, and invoicing
+contracts rather than creating a separate calendar, duplicate status record, or
+bypass of an underlying operational workflow. Acceptance includes clear
+empty/loading/error states, chronological event ordering, facility attribution,
+desktop and phone usability, and permission negative tests for cross-facility
+access. See the durable owner direction in `decisions.md` whenever dashboard
+scope is modified.
 
 This owner correction changes workflow and sequencing, not confirmed recipe,
 lot/date, inventory, facility isolation, packaging or workforce rules.

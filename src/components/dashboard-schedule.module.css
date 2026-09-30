@@ -88,6 +88,11 @@
   font-size: 11px;
 }
 
+.productionPlans .productQuota {
+  color: var(--ink);
+  font-weight: 600;
+}
+
 .productionPlans .draft strong {
   color: #805518;
 }
@@ -110,6 +115,14 @@
 }
 
 @media (max-width: 520px) {
+  .productionPlans li {
+    flex-wrap: wrap;
+  }
+
+  .productionPlans li > span:last-child {
+    text-align: left;
+  }
+
   .summary {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
