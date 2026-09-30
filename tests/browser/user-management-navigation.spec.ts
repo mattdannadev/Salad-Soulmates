@@ -11,12 +11,9 @@ test('User Management navigation organizes admin screens and preserves legacy ac
   await expect(page).toHaveURL(/\/app$/);
 
   const navigation = page.getByRole('navigation', { name: 'Main navigation' });
-  const group = navigation.locator('.nav-group').filter({ hasText: 'Administration' });
-  await expect(group.locator('summary')).toBeVisible();
-  await group.locator('summary').click();
   await Promise.all(['Users', 'Profile Management', 'Access Requests', 'Login History']
     .map(async (label) => {
-      await expect(group.getByRole('link', { name: label, exact: true })).toBeVisible();
+      await expect(navigation.getByRole('link', { name: label, exact: true })).toBeVisible();
     }));
 
   await page.goto('/app/settings');

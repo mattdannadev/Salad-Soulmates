@@ -16,17 +16,6 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
   await expect(page).toHaveURL(/\/app$/);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Welcome');
   const mainNavigation = page.getByRole('navigation', { name: 'Main navigation' });
-  await [
-    'Customers & orders',
-    'Purchasing & deliveries',
-    'Products & recipes',
-    'Production & team',
-    'Administration',
-  ].reduce(async (previous, groupLabel) => {
-    await previous;
-    const group = mainNavigation.locator('.nav-group').filter({ hasText: groupLabel });
-    await group.locator('summary').click();
-  }, Promise.resolve());
   await expect(mainNavigation.getByRole('link', { name: 'Inventory', exact: true })).toHaveCount(1);
   await expect(mainNavigation.getByRole('link', { name: 'Traceability', exact: true })).toHaveCount(1);
   await Promise.all(
@@ -76,13 +65,8 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
   await expect(page).toHaveURL(/\/app\/orders$/);
   await page.goto('/app/planning');
   await expect(page).toHaveURL(/\/app\/orders$/);
-  await expect(
-    page
-      .getByRole('navigation', { name: 'Main navigation' })
-      .locator('.nav-group')
-      .filter({ hasText: 'Inventory' })
-      .locator('summary'),
-  ).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('link', { name: 'Inventory', exact: true })).toBeVisible();
   await page.goto('/app/products');
   await expect(page.getByRole('cell', { name: /^Preview Italian dressing Active$/ })).toBeVisible();
   const recipeDetails = page.locator('details.product-recipe-details');

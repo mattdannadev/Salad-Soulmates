@@ -52,10 +52,8 @@ test('expanded navigation stays readable after a collapsed desktop rail becomes 
 
   const navigation = page.getByRole('navigation', { name: 'Main navigation' });
   await expect(navigation).toBeInViewport();
-  await expect(navigation.locator('.nav-group-label').first()).toBeVisible();
-  const inventory = navigation.locator('.nav-group').filter({ hasText: 'Inventory' });
-  await inventory.locator('summary').click();
-  await expect(inventory.getByRole('link', { name: 'Inventory', exact: true })).toBeVisible();
+  await expect(navigation.locator('.nav-section-label').first()).toBeVisible();
+  await expect(navigation.getByRole('link', { name: 'Inventory', exact: true })).toBeVisible();
   await expect(page.locator('.navigation-scrim')).toBeVisible();
 
   await page.locator('.navigation-scrim').click({ position: { x: 580, y: 100 } });
@@ -77,10 +75,8 @@ test('Inventory keeps receiving discoverable while purchasing stays contextual',
     .getByRole('button', { name: 'More sections' })
     .click();
   const navigation = page.getByRole('navigation', { name: 'Main navigation' });
-  const purchasing = navigation.locator('.nav-group').filter({ hasText: 'Purchasing & deliveries' });
-  await purchasing.locator('summary').click();
-  await expect(purchasing.getByRole('link', { name: 'Purchase planning' })).toHaveCount(1);
-  await purchasing.getByRole('link', { name: 'Receive deliveries' }).click();
+  await expect(navigation.getByRole('link', { name: 'Purchase planning' })).toHaveCount(1);
+  await navigation.getByRole('link', { name: 'Receive deliveries' }).click();
 
   await expect(page).toHaveURL(/\/app\/receiving$/);
   await expect(page.getByText('No receipts yet', { exact: true })).toBeVisible();
@@ -112,7 +108,7 @@ test('closed mobile drawer leaves the tab order and opens as a keyboard dialog',
   const close = drawer.getByRole('button', { name: 'Close navigation' });
   await expect(close).toBeFocused();
   await page.keyboard.press('Shift+Tab');
-  await expect(drawer.locator('a:visible, button:visible, summary:visible').last()).toBeFocused();
+  await expect(drawer.locator('a:visible, button:visible').last()).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(drawer).toBeHidden();
   await expect(more).toBeFocused();
@@ -187,12 +183,10 @@ test('390px shell controls stay inside the viewport and the drawer dismisses by 
   await expect(toggle).toBeFocused();
 
   await toggle.click();
-  const inventory = page
+  await page
     .getByRole('navigation', { name: 'Main navigation' })
-    .locator('.nav-group')
-    .filter({ hasText: 'Inventory' });
-  await inventory.locator('summary').click();
-  await inventory.getByRole('link', { name: 'Inventory', exact: true }).click();
+    .getByRole('link', { name: 'Inventory', exact: true })
+    .click();
   await expect(page).toHaveURL(/\/app\/inventory$/);
   await expect(drawer).toBeHidden();
   await expect(bottomNavigation.getByRole('button', { name: 'More sections' })).toHaveAttribute(

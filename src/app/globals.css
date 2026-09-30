@@ -723,8 +723,7 @@ small,
   margin: 7px 14px;
   background: #dce5d6;
 }
-.sidebar nav a,
-.nav-group summary {
+.sidebar nav a {
   display: flex;
   align-items: center;
   gap: 15px;
@@ -732,43 +731,25 @@ small,
   color: #626b64;
   border-radius: 8px;
 }
-.nav-group summary {
-  cursor: pointer;
-  min-height: 42px;
+.nav-section-label {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin: 11px 14px 4px;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  user-select: none;
-}
-.nav-group-label {
-  flex: 1;
 }
 .nav-group-icon {
   color: #789063;
 }
-.nav-group summary::-webkit-details-marker {
-  display: none;
-}
-.nav-group summary > svg:last-child {
-  color: #879288;
-  transition: transform 160ms ease;
-}
-.nav-group[open] summary > svg:last-child {
-  transform: rotate(180deg);
-}
-.nav-group[open] summary {
-  color: #244b31;
-}
-.nav-group summary:hover {
-  background: #eef2e9;
-}
 .nav-group-links {
   display: grid;
   gap: 3px;
-  margin: 1px 0 7px 16px;
-  padding: 3px 0 3px 9px;
-  border-left: 1px solid #dce5d6;
+  margin: 0 0 7px;
+  padding: 0;
+  border: 0;
 }
 .nav-group-links a {
   min-height: 42px;
@@ -2544,8 +2525,7 @@ dialog::backdrop {
   .sidebar-foot {
     padding-top: 26px;
   }
-  .sidebar nav a,
-  .nav-group summary {
+  .sidebar nav a {
     min-height: 46px;
     padding: 12px;
     font-size: 12px;
@@ -2555,16 +2535,13 @@ dialog::backdrop {
     display: grid;
     gap: 7px;
   }
-  .nav-group summary {
-    width: 100%;
-  }
   .nav-group-links {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 5px;
-    margin: 0 0 2px 8px;
-    padding: 4px 0 4px 8px;
-    border-left: 1px solid #dce5d6;
+    margin: 0 0 2px;
+    padding: 0;
+    border: 0;
   }
   .nav-group-links a {
     min-width: 0;
@@ -3537,12 +3514,11 @@ dialog::backdrop {
 .sidebar-collapsed .brand strong,
 .sidebar-collapsed .brand small,
 .sidebar-collapsed .nav-label,
-.sidebar-collapsed .nav-group-label,
+.sidebar-collapsed .nav-section-label,
 .sidebar-collapsed .sidebar-foot {
   display: none;
 }
-.sidebar-collapsed .sidebar nav a,
-.sidebar-collapsed .nav-group summary {
+.sidebar-collapsed .sidebar nav a {
   justify-content: center;
   min-width: 44px;
   min-height: 44px;
@@ -3556,9 +3532,6 @@ dialog::backdrop {
   height: 44px;
   margin: 0 auto 18px;
   padding: 10px;
-}
-.sidebar-collapsed .nav-group summary > svg:last-child {
-  display: none;
 }
 .sidebar-collapsed .nav-group-links {
   margin: 2px 0 5px;
@@ -3611,12 +3584,11 @@ dialog::backdrop {
   .sidebar-collapsed .brand strong,
   .sidebar-collapsed .brand small,
   .sidebar-collapsed .nav-label,
-  .sidebar-collapsed .nav-group-label,
+  .sidebar-collapsed .nav-section-label,
   .sidebar-collapsed .sidebar-foot {
     display: block;
   }
-  .sidebar-collapsed .sidebar nav a,
-  .sidebar-collapsed .nav-group summary {
+  .sidebar-collapsed .sidebar nav a {
     justify-content: flex-start;
     padding: 12px;
     gap: 10px;
@@ -3630,12 +3602,9 @@ dialog::backdrop {
     padding: 12px;
     gap: 10px;
   }
-  .sidebar-collapsed .nav-group summary > svg:last-child {
-    display: block;
-  }
   .sidebar-collapsed .nav-group-links {
-    margin: 0 0 2px 8px;
-    padding: 4px 0 4px 8px;
-    border-left: 1px solid #dce5d6;
+    margin: 0 0 2px;
+    padding: 0;
+    border: 0;
   }
 }

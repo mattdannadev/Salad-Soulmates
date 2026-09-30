@@ -8,7 +8,6 @@ import {
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
-  ChevronDown,
   Menu,
   X,
   Sparkles,
@@ -25,7 +24,6 @@ import {
   getVisibleNavigationDestinations,
   getVisibleSectionDestinations,
   isNavigationDestinationCurrent,
-  isNavigationSectionCurrent,
   navigationLabel,
   navigationSections,
 } from './navigation-registry';
@@ -186,51 +184,17 @@ export function Shell({
               </Link>
             );
           })}
-          {navigationSections.map((group, index) => {
+          {navigationSections.map((group) => {
             const visibleItems = getVisibleSectionDestinations(group, permissions);
-            const hasCurrentPage = isNavigationSectionCurrent(group, path, permissions);
 
             if (visibleItems.length === 0) return null;
 
-            // Small sections create an unnecessary "open before you can find it" step.
-            // Reserve accordion groups for three or more related destinations.
-            if (visibleItems.length <= 2) {
-              return (
-                <Fragment key={group.id}>
-                  {index > 0 && <div className="nav-group-divider" aria-hidden />}
-                  {visibleItems.map(({ active, destination }) => {
-                    const { href, icon: Icon } = destination;
-                    const label = navigationLabel(destination, locale);
-                    const isCurrentPage =
-                      active !== false && isNavigationDestinationCurrent(destination, path);
-                    return (
-                      <Link
-                        key={href}
-                        href={href}
-                        aria-label={label}
-                        title={label}
-                        aria-current={isCurrentPage ? 'page' : undefined}
-                        onClick={() => closeMobileNavigation(false)}
-                      >
-                        <Icon size={20} aria-hidden />
-                        <span className="nav-label">{label}</span>
-                      </Link>
-                    );
-                  })}
-                </Fragment>
-              );
-            }
-
             return (
-              <details key={group.id} className="nav-group" open={hasCurrentPage}>
-                <summary
-                  aria-label={isSpanish ? group.es : group.en}
-                  title={isSpanish ? group.es : group.en}
-                >
+              <section key={group.id} className="nav-section" aria-label={isSpanish ? group.es : group.en}>
+                <p className="nav-section-label">
                   <group.icon className="nav-group-icon" size={18} aria-hidden />
-                  <span className="nav-group-label">{isSpanish ? group.es : group.en}</span>
-                  <ChevronDown size={16} aria-hidden />
-                </summary>
+                  <span>{isSpanish ? group.es : group.en}</span>
+                </p>
                 <div className="nav-group-links">
                   {visibleItems.map(({ active, destination }) => {
                     const { href, icon: Icon } = destination;
@@ -252,7 +216,7 @@ export function Shell({
                     );
                   })}
                 </div>
-              </details>
+              </section>
             );
           })}
         </nav>

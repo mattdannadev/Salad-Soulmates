@@ -8,14 +8,13 @@ test('short desktop sidebar scrolls independently to the final navigation links'
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/app$/);
   const sidebar = page.locator('.sidebar');
-  const administration = sidebar.locator('.nav-group').filter({ hasText: 'Administration' });
+  const administration = sidebar.locator('.nav-section').filter({ hasText: 'Administration' });
   const finalLink = administration.getByRole('link', { name: 'Feedback' });
   await expect(sidebar).toBeVisible();
   const before = await page.evaluate(() => window.scrollY);
   await sidebar.hover();
   await page.mouse.wheel(0, 2000);
-  await expect(administration.locator('summary')).toBeInViewport();
-  await administration.locator('summary').click();
+  await expect(administration.locator('.nav-section-label')).toBeInViewport();
   await sidebar.hover();
   await page.mouse.wheel(0, 2000);
   await expect(finalLink).toBeInViewport();
