@@ -81,6 +81,7 @@ export default async function Purchasing({
   const drafts = selectPurchaseDrafts(
     scopedDrafts,
     scopedLines,
+    workspace.receipts,
     directoryQuery,
     supplierNames,
     orderNames,
@@ -103,6 +104,7 @@ export default async function Purchasing({
         { value: 'Cancelled', label: es ? 'Cancelado' : 'Cancelled' },
       ],
     },
+    { key: 'delivery', label: es ? 'Entrega' : 'Delivery', options: [{ value: 'unreceived', label: es ? 'Pendiente de recibir' : 'Awaiting receipt' }] },
     { key: 'orderFilter', label: es ? 'Pedido de cliente' : 'Customer order', options: [...new Set(scopedDrafts.flatMap((draft) => (draft.material_plan_id ? [draft.material_plan_id] : [])))].map((id) => ({ value: id, label: orderNames.get(id) ?? id })) },
     { key: 'ingredientFilter', label: es ? 'Ingrediente' : 'Ingredient', options: [...new Set(scopedLines.map((line) => line.ingredient_id))].map((id) => ({ value: id, label: ingredientNames.get(id) ?? id })) },
     { key: 'due', label: es ? 'Fecha esperada' : 'Expected date', options: [...new Set(scopedDrafts.map((draft) => draft.expected_on))].sort().map((date) => ({ value: date, label: formatDate(date) })) },
@@ -211,6 +213,7 @@ export default async function Purchasing({
             packs={packs}
             ingredients={(workspace.ingredients ?? []).filter((item) => item.active
               && (!ingredient || item.id === ingredient))}
+            supplierPrices={workspace.supplierPrices}
             locale={locale}
           />
         </section>
@@ -258,6 +261,7 @@ export default async function Purchasing({
               packs={packs}
               suppliers={suppliers}
               existingSuppliers={scopedDrafts.filter((draft) => draft.status === 'Draft').map((draft) => draft.supplier_id)}
+              supplierPrices={workspace.supplierPrices}
               locale={locale}
             />
           )}

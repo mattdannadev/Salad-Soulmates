@@ -16,30 +16,58 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
   await expect(page).toHaveURL(/\/app$/);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Welcome');
   const mainNavigation = page.getByRole('navigation', { name: 'Main navigation' });
-  await ['Orders & delivery', 'Inventory', 'Product catalog', 'Administration'].reduce(async (previous, groupLabel) => {
+  await [
+    'Customers & orders',
+    'Procurement',
+    'Inventory & traceability',
+    'Product catalog',
+    'Planning & production',
+    'Administration',
+  ].reduce(async (previous, groupLabel) => {
     await previous;
     const group = mainNavigation.locator('.nav-group').filter({ hasText: groupLabel });
     await group.locator('summary').click();
   }, Promise.resolve());
-  await Promise.all([
-    'Dashboard', 'Orders', 'Purchase planning', 'Receive deliveries', 'Inventory', 'Shipping', 'Customers',
-    'Recipes', 'Products', 'Team', 'Users', 'Profile Management', 'Access Requests',
-    'Login History', 'Settings',
-  ].map(async (label) => {
-    await expect(mainNavigation.getByRole('link', { name: label, exact: true })).toBeVisible();
-  }));
+  await Promise.all(
+    [
+      'Dashboard',
+      'Orders',
+      'Receive deliveries',
+      'Inventory',
+      'Shipping',
+      'Customers',
+      'Suppliers',
+      'Allergens',
+      'Recipes',
+      'Products',
+      'Schedule',
+      'Users',
+      'Profile Management',
+      'Access Requests',
+      'Login History',
+      'Settings',
+    ].map(async (label) => {
+      await expect(mainNavigation.getByRole('link', { name: label, exact: true })).toBeVisible();
+    }),
+  );
   await mainNavigation.getByRole('link', { name: 'Recipes', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Recipes', exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Preview Italian recipe', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Version history' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Preview garlic powder', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Preview garlic powder', exact: true }),
+  ).toBeVisible();
   await expect(page.locator('details.ingredient-stock')).toHaveCount(0);
   await page.screenshot({ path: info.outputPath('recipe-ingredients.png'), fullPage: true });
   await page.getByRole('link', { name: 'Preview garlic powder', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Preview garlic powder');
-  await expect(page.getByRole('heading', { name: 'Inventory reference', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Inventory reference', exact: true }),
+  ).toBeVisible();
   await expect(page.getByText('Open purchase-order inbound', { exact: true })).toBeVisible();
-  await expect(page.getByText('Committed to active production plans', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText('Committed to active production plans', { exact: true }),
+  ).toBeVisible();
   await page.goBack();
   await page.getByRole('link', { name: 'v2 · Draft', exact: true }).click();
   await expect(page.getByText('No preparation sections recorded.', { exact: true })).toBeVisible();
@@ -47,12 +75,15 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
   await expect(page).toHaveURL(/\/app\/orders$/);
   await page.goto('/app/planning');
   await expect(page).toHaveURL(/\/app\/orders$/);
-  await expect(page.getByRole('navigation', { name: 'Main navigation' })
-    .locator('.nav-group').filter({ hasText: 'Inventory' })
-    .locator('summary')).toBeVisible();
+  await expect(
+    page
+      .getByRole('navigation', { name: 'Main navigation' })
+      .locator('.nav-group')
+      .filter({ hasText: 'Inventory' })
+      .locator('summary'),
+  ).toBeVisible();
   await page.goto('/app/products');
-  await expect(page.getByRole('cell', { name: /^Preview Italian dressing Active$/ }))
-    .toBeVisible();
+  await expect(page.getByRole('cell', { name: /^Preview Italian dressing Active$/ })).toBeVisible();
   const recipeDetails = page.locator('details.product-recipe-details');
   await expect(recipeDetails).not.toHaveAttribute('open', '');
   await recipeDetails.locator('summary').click();
@@ -62,7 +93,9 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
   await page.keyboard.press('Enter');
   await expect(recipeDetails).not.toHaveAttribute('open', '');
   await page.goto('/app/ingredients');
-  await expect(page.getByRole('heading', { name: 'Ingredients library', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Ingredients library', exact: true }),
+  ).toBeVisible();
   await page.goto('/app/inventory');
   await expect(
     page.getByRole('heading', { name: 'Ingredient inventory', exact: true }),
@@ -71,9 +104,13 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
   await expect(page.getByText('No receipts yet', { exact: true })).toBeVisible();
   await page.goto('/app/settings');
   await expect(page.getByRole('heading', { name: 'Configuration', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Shared unit catalog', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Shared unit catalog', exact: true }),
+  ).toBeVisible();
   await expect(page.getByText('Pound (lb)', { exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Invite a new user', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Invite a new user', exact: true })).toHaveCount(
+    0,
+  );
   await page.goto('/app/user-management/users');
   await expect(page.getByRole('heading', { name: 'Invite a new user', exact: true })).toBeVisible();
   await expect(page.getByLabel('Invitation email preview')).toContainText('Set up your account');
@@ -82,8 +119,13 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
   await expect(page.getByRole('heading', { name: 'Access Requests', exact: true })).toBeVisible();
   await page.goto('/app/user-management/login-history');
   await expect(page.getByRole('heading', { name: 'Login History', exact: true })).toBeVisible();
-  await expect(page.getByRole('row').filter({ hasText: 'Test Administrator' })
-    .filter({ hasText: 'Signed in' }).first()).toBeVisible();
+  await expect(
+    page
+      .getByRole('row')
+      .filter({ hasText: 'Test Administrator' })
+      .filter({ hasText: 'Signed in' })
+      .first(),
+  ).toBeVisible();
   await expect(page.locator('body')).not.toContainText('Application error');
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(/\/login$/);
@@ -101,7 +143,9 @@ test('registration validation and callback without a code preserve safe routes',
   await expect(page.getByLabel('Email', { exact: false })).toBeVisible();
 });
 
-test('a lost inventory response preserves the request ID and entered values on retry', async ({ page }, info) => {
+test('a lost inventory response preserves the request ID and entered values on retry', async ({
+  page,
+}, info) => {
   await page.goto('/login');
   await page.getByLabel('Email or phone number').fill('admin@example.test');
   await page.getByLabel('Password', { exact: true }).fill('local-test-password');
@@ -110,10 +154,12 @@ test('a lost inventory response preserves the request ID and entered values on r
   await page.goto('/app/inventory');
   await page.getByRole('button', { name: 'Record inventory adjustment' }).click();
   const adjustmentDialog = page.locator('dialog[open]');
-  await expect(adjustmentDialog.getByRole('heading', { name: 'Record inventory adjustment' }))
-    .toBeVisible();
+  await expect(
+    adjustmentDialog.getByRole('heading', { name: 'Record inventory adjustment' }),
+  ).toBeVisible();
   const reason = `Retry fixture ${info.project.name}`;
-  await adjustmentDialog.getByRole('combobox', { name: /^Ingredient\s*\*/ })
+  await adjustmentDialog
+    .getByRole('combobox', { name: /^Ingredient\s*\*/ })
     .selectOption({ label: 'Preview garlic powder' });
   await adjustmentDialog.getByRole('spinbutton', { name: /^Quantity/ }).fill('2');
   await adjustmentDialog.getByLabel('Reason *', { exact: true }).fill(reason);
@@ -128,16 +174,20 @@ test('a lost inventory response preserves the request ID and entered values on r
     await route.continue();
   });
   await adjustmentDialog.getByRole('button', { name: 'Record adjustment', exact: true }).click();
-  await expect(adjustmentDialog.getByRole('alert').filter({ hasText: 'Connection interrupted' }))
-    .toBeVisible();
+  await expect(
+    adjustmentDialog.getByRole('alert').filter({ hasText: 'Connection interrupted' }),
+  ).toBeVisible();
   await expect(adjustmentDialog.getByRole('spinbutton', { name: /^Quantity/ })).toHaveValue('2');
   await expect(adjustmentDialog.getByLabel('Reason *', { exact: true })).toHaveValue(reason);
   await adjustmentDialog.getByRole('button', { name: 'Record adjustment', exact: true }).click();
-  await expect(adjustmentDialog.getByRole('button', { name: 'Record adjustment', exact: true }))
-    .toBeEnabled();
+  await expect(
+    adjustmentDialog.getByRole('button', { name: 'Record adjustment', exact: true }),
+  ).toBeEnabled();
   const response = await page.request.get('http://127.0.0.1:4010/test/inventory-attempts');
   const body: unknown = await response.json();
-  const attempts = z.array(z.object({ request_id: z.uuid(), reason_note: z.string() })).parse(body)
+  const attempts = z
+    .array(z.object({ request_id: z.uuid(), reason_note: z.string() }))
+    .parse(body)
     .filter((attempt) => attempt.reason_note === reason);
   expect(attempts).toHaveLength(2);
   expect(new Set(attempts.map((attempt) => attempt.request_id)).size).toBe(1);

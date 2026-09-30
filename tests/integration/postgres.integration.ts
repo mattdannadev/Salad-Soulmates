@@ -135,6 +135,51 @@ async function receiptPayload() {
     request_id: randomUUID(),
   };
 }
+it('preserves supplier price packaging snapshots after the supplier item changes', async () => {
+  const ingredientId = await ingredient();
+  const supplierId = randomUUID();
+  const supplierItemId = randomUUID();
+  await first.query('insert into public.suppliers(id,name) values($1,$2)', [supplierId, supplierId]);
+  await first.query(`insert into public.supplier_items(
+    id,supplier_id,ingredient_id,purchase_uom,pack_quantity,pack_quantity_uom)
+    values($1,$2,$3,'pail',30,'lb')`, [supplierItemId, supplierId, ingredientId]);
+  await first.query(
+    `insert into public.supplier_item_prices(supplier_item_id,unit_price,effective_on,note)
+      values($1,42.75,'2026-09-01','  Quote  ')`,
+    [supplierItemId],
+  );
+  await first.query(`update public.supplier_items
+    set purchase_uom='case',pack_quantity=24 where id=$1`, [supplierItemId]);
+  const result: unknown = await first.query(
+    `select purchase_uom,pack_quantity::text,pack_quantity_uom,note
+      from public.supplier_item_prices where supplier_item_id=$1`,
+    [supplierItemId],
+  );
+  expect(resultRows.parse(result).rows).toEqual([{
+    purchase_uom: 'pail',
+    pack_quantity: '30.0000',
+    pack_quantity_uom: 'lb',
+    note: 'Quote',
+  }]);
+});
+it('waits for linked deactivation and rejects a concurrently inserted supplier price', async () => {
+  const ingredientId = await ingredient();
+  const supplierId = randomUUID();
+  const supplierItemId = randomUUID();
+  await first.query('insert into public.suppliers(id,name) values($1,$2)', [supplierId, supplierId]);
+  await first.query(`insert into public.supplier_items(
+    id,supplier_id,ingredient_id,purchase_uom,pack_quantity,pack_quantity_uom)
+    values($1,$2,$3,'case',10,'lb')`, [supplierItemId, supplierId, ingredientId]);
+  const outcome = await overlap(
+    'update public.ingredients set active=false where id=$1',
+    [ingredientId],
+    `insert into public.supplier_item_prices(supplier_item_id,unit_price,effective_on)
+      values($1,25,'2026-10-01')`,
+    [supplierItemId],
+  );
+  expect(outcome.error).toBeInstanceOf(Error);
+  expect(String(outcome.error)).toContain('active supplier item');
+});
 const receiptSql = 'select public.post_inventory_receipt($1::jsonb) as id';
 it('serializes identical receipt retries into one ledger posting', async () => {
   const payload = await receiptPayload();
@@ -601,10 +646,15 @@ it('serializes duplicate customer orders into one order and one ingredient commi
 it('rejects an overlapping stale customer-price revision', async () => {
   const { productId } = await draftRecipe();
   const id = randomUUID();
+  const customerId = randomUUID();
+  await first.query('insert into public.customers(id,name) values($1,$2)', [
+    customerId,
+    `Customer ${id}`,
+  ]);
   const input = {
     id,
     revision: 0,
-    customer_name: `Customer ${id}`,
+    customer_id: customerId,
     product_id: productId,
     label: 'Bag',
     packaging_mode: 'custom',

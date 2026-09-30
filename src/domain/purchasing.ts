@@ -123,7 +123,8 @@ export const purchaseDraftRowSchema = z.object({
   status: z.enum(['Draft', 'Confirmed', 'Cancelled']),
   reference: z.string(),
   note: z.string(),
-  total_cost: z.number().finite().nonnegative().nullable().default(null),
+  total_cost: z.number().finite().nonnegative().nullable()
+    .default(null),
   placed_on: z.iso.date().nullable().default(null),
   revision: z.number().int().positive(),
   created_at: z.string(),
@@ -144,8 +145,82 @@ export const purchaseLineRowSchema = z.object({
   purchase_units: z.number().int().positive(),
   quantity: quantity.positive(),
   override_reason: z.string(),
+  supplier_price_id: z.uuid().nullable().optional(),
+  estimated_unit_cost: z.number().finite().positive().nullable()
+    .optional(),
+  estimated_line_cost: z.number().finite().positive().nullable()
+    .optional(),
+  estimated_as_of: z.iso.date().optional(),
 });
 export type PurchaseLine = z.infer<typeof purchaseLineRowSchema>;
+
+export interface PurchasePlanningPrice {
+  id: string;
+  supplier_item_id: string;
+  unit_price: number;
+  effective_on: string;
+}
+
+export interface PurchaseCostLine {
+  supplierItemId: string;
+  purchaseUnits: number;
+}
+
+/** Select the latest supplier price effective on or before the expected delivery date. */
+export function effectivePurchasePrice(
+  prices: readonly PurchasePlanningPrice[],
+  supplierItemId: string,
+  expectedOn: string,
+): PurchasePlanningPrice | null {
+  z.iso.date().parse(expectedOn);
+  return prices
+    .filter((price) => price.supplier_item_id === supplierItemId
+      && price.effective_on <= expectedOn)
+    .sort((left, right) => (
+      right.effective_on.localeCompare(left.effective_on)
+      || right.id.localeCompare(left.id)
+    ))[0] ?? null;
+}
+
+/** Estimate whole-pack line costs; a missing price keeps the overall total unknown. */
+export function estimatePurchaseCosts(
+  lines: readonly PurchaseCostLine[],
+  prices: readonly PurchasePlanningPrice[],
+  expectedOn: string,
+) {
+  const estimates = lines.map((line) => {
+    const units = z.number().int().min(0).max(MAX_PURCHASE_UNITS)
+      .parse(line.purchaseUnits);
+    const price = effectivePurchasePrice(prices, line.supplierItemId, expectedOn);
+    return {
+      ...line,
+      supplierPriceId: price?.id ?? null,
+      unitCost: price?.unit_price ?? null,
+      lineCost: price ? Math.round(price.unit_price * units * 100) / 100 : null,
+    };
+  });
+  const missingPriceCount = estimates.filter((estimate) => estimate.unitCost === null).length;
+  return {
+    lines: estimates,
+    missingPriceCount,
+    total: missingPriceCount === 0
+      ? Math.round(estimates.reduce((sum, estimate) => sum + (estimate.lineCost ?? 0), 0) * 100)
+        / 100
+      : null,
+  };
+}
+
+/** Total immutable draft-line estimates without treating unknown historical prices as zero. */
+export function savedPurchaseCostTotal(lines: readonly PurchaseLine[]) {
+  const missingPriceCount = lines.filter((line) => line.estimated_line_cost == null).length;
+  return {
+    missingPriceCount,
+    total: missingPriceCount === 0
+      ? Math.round(lines.reduce((sum, line) => sum + (line.estimated_line_cost ?? 0), 0) * 100)
+        / 100
+      : null,
+  };
+}
 
 /** Select a preferred active pack, or the sole active choice; never guess between suppliers. */
 export function selectSupplierPack<

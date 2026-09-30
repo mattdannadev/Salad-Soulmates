@@ -1,192 +1,34 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import {
   Leaf,
-  Home,
-  Package,
-  Truck,
-  MessageCircle,
   LogOut,
-  ArrowUpRight,
-  BookOpen,
-  ClipboardList,
-  Search,
-  Users,
-  ShieldCheck,
-  Settings,
   PanelLeftClose,
   PanelLeftOpen,
   ChevronDown,
   Menu,
   X,
-  Layers3,
-  ShoppingBasket,
-  Building2,
-  UserCog,
-  History,
-  PackageCheck,
   Sparkles,
-  CalendarDays,
 } from 'lucide-react';
 import { signOut } from '@/app/actions';
 import FeedbackDrawer from './feedback';
 import LocaleSwitcher from './locale-switcher';
 import styles from './shell-ai-launcher.module.css';
 import shellStyles from './shell.module.css';
-
-const purchasingPermissions = [
-  'orders.read',
-  'planning.read',
-  'inventory.read',
-  'products.read',
-  'master_data.read',
-];
-
-const homeNavigation = [
-  {
-    href: '/app', en: 'Dashboard', es: 'Panel', icon: Home, permissions: ['dashboard.read'],
-  },
-];
-
-const navigationGroups = [
-  {
-    id: 'orders-delivery',
-    en: 'Orders & delivery',
-    es: 'Pedidos y entregas',
-    icon: ClipboardList,
-    items: [
-      {
-        href: '/app/orders', en: 'Orders', es: 'Pedidos', icon: ClipboardList, permission: 'orders.read',
-      },
-      {
-        href: '/app/shipping', en: 'Shipping', es: 'Envíos', icon: Truck, permission: 'orders.read',
-      },
-      {
-        href: '/app/customers', en: 'Customers', es: 'Clientes', icon: Users, permission: 'orders.read',
-      },
-    ],
-  },
-  {
-    id: 'inventory',
-    en: 'Inventory',
-    es: 'Inventario',
-    icon: Package,
-    items: [
-      {
-        href: '/app/inventory', en: 'Inventory', es: 'Inventario', icon: Package, permission: 'inventory.read',
-      },
-      {
-        href: '/app/purchasing', en: 'Purchase planning', es: 'Planificación de compras', icon: ShoppingBasket, permissions: purchasingPermissions,
-      },
-      {
-        href: '/app/receiving', en: 'Receive deliveries', es: 'Recibir entregas', icon: PackageCheck, permission: 'inventory.read',
-      },
-      {
-        href: '/app/traceability', en: 'Traceability', es: 'Trazabilidad', icon: Search, permission: 'inventory.read',
-      },
-      {
-        href: '/app/suppliers', en: 'Suppliers', es: 'Proveedores', icon: Truck, permission: 'master_data.read',
-      },
-    ],
-  },
-  {
-    id: 'catalog',
-    en: 'Product catalog',
-    es: 'Catálogo de productos',
-    icon: Layers3,
-    items: [
-      {
-        href: '/app/ingredients',
-        en: 'Ingredients',
-        es: 'Ingredientes',
-        icon: Leaf,
-        permission: 'master_data.read',
-      },
-      {
-        href: '/app/products',
-        en: 'Products',
-        es: 'Productos',
-        icon: Package,
-        permission: 'products.read',
-      },
-      {
-        href: '/app/recipes',
-        en: 'Recipes',
-        es: 'Recetas',
-        icon: BookOpen,
-        permission: 'products.read',
-      },
-    ],
-  },
-  {
-    id: 'administration',
-    en: 'Administration',
-    es: 'Administración',
-    icon: Building2,
-    items: [
-      {
-        href: '/app/customers', en: 'Customers', es: 'Clientes', icon: Users, permission: 'orders.read',
-      },
-      {
-        href: '/app/suppliers', en: 'Suppliers', es: 'Proveedores', icon: Truck, permission: 'master_data.read',
-      },
-      {
-        href: '/app/team', en: 'Team', es: 'Equipo', icon: Users, permission: 'workforce.read',
-      },
-      {
-        href: '/app/scheduling', en: 'Schedule', es: 'Calendario', icon: CalendarDays, permission: 'workforce.read',
-      },
-      {
-        href: '/app/settings', en: 'Settings', es: 'Configuración', icon: Settings, permission: 'settings.manage',
-      },
-      {
-        href: '/app/user-management/users',
-        en: 'Users',
-        es: 'Usuarios',
-        icon: Users,
-        permission: 'access.manage',
-      },
-      {
-        href: '/app/user-management/profiles',
-        en: 'Profile Management',
-        es: 'Administración de perfiles',
-        icon: UserCog,
-        permission: 'settings.manage',
-      },
-      {
-        href: '/app/user-management/access-requests',
-        en: 'Access Requests',
-        es: 'Solicitudes de acceso',
-        icon: ShieldCheck,
-        permission: 'access.manage',
-      },
-      {
-        href: '/app/user-management/login-history',
-        en: 'Login History',
-        es: 'Historial de inicio de sesión',
-        icon: History,
-        permission: 'audit.read',
-      },
-      {
-        href: '/app/administration-copilot',
-        en: 'Administration Copilot',
-        es: 'Copiloto de administración',
-        icon: Sparkles,
-        permission: 'access.manage',
-      },
-      {
-        href: '/app/feedback',
-        en: 'Feedback',
-        es: 'Comentarios',
-        icon: MessageCircle,
-        permission: null,
-      },
-    ],
-  },
-];
+import CommandPalette from './command-palette';
+import {
+  getMobileNavigationDestinations,
+  getNavigationBreadcrumb,
+  getVisibleNavigationDestinations,
+  getVisibleSectionDestinations,
+  isNavigationDestinationCurrent,
+  isNavigationSectionCurrent,
+  navigationLabel,
+  navigationSections,
+} from './navigation-registry';
 export function Shell({
   children,
   name,
@@ -217,9 +59,6 @@ export function Shell({
     mobileToggleLabel = isSpanish ? 'Cerrar navegación' : 'Close navigation';
   }
   const drawerLabel = isSpanish ? 'Navegación principal' : 'Main navigation';
-  const isCurrentPath = (href: string) => (
-    path === href || (href !== '/app' && path.startsWith(`${href}/`))
-  );
   const closeMobileNavigation = (restoreFocus = true) => {
     setMobileNavigationOpen(false);
     if (restoreFocus) {
@@ -241,10 +80,15 @@ export function Shell({
         return;
       }
       if (event.key !== 'Tab' || !drawerRef.current) return;
-      const focusable = Array.from(drawerRef.current.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), summary, [tabindex]:not([tabindex="-1"])',
-      )).filter((element) => element.getClientRects().length > 0
-        && (element.tagName === 'SUMMARY' || !element.closest('details:not([open])')));
+      const focusable = Array.from(
+        drawerRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), summary, [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter(
+        (element) =>
+          element.getClientRects().length > 0 &&
+          (element.tagName === 'SUMMARY' || !element.closest('details:not([open])')),
+      );
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       if (!first || !last) return;
@@ -268,21 +112,11 @@ export function Shell({
       desktopQuery.removeEventListener('change', closeOnDesktop);
     };
   }, [mobileNavigationOpen]);
-  const canSee = (required: string[]) => required.every(
-    (permission) => permissions.includes(permission),
+  const visibleHomeNavigation = getVisibleNavigationDestinations(permissions).filter(
+    (item) => item.itemType === 'home',
   );
-  const canSeeItem = (item: { permission?: string | null; permissions?: string[] }) => (
-    item.permissions
-      ? canSee(item.permissions)
-      : !item.permission || permissions.includes(item.permission)
-  );
-  const visibleHomeNavigation = homeNavigation.filter((item) => canSee(item.permissions));
-  const mobileDestinations = [
-    homeNavigation[0],
-    navigationGroups[0]?.items[0],
-    navigationGroups[1]?.items[0],
-  ].filter((item) => item !== undefined)
-    .filter(canSeeItem);
+  const mobileDestinations = getMobileNavigationDestinations(permissions);
+  const breadcrumb = getNavigationBreadcrumb(path, locale);
   return (
     <div
       className={`app-shell ${shellStyles.shellRoot}${collapsed ? ' sidebar-collapsed' : ''}${mobileNavigationOpen ? ' mobile-navigation-open' : ''}`}
@@ -336,9 +170,7 @@ export function Shell({
           id="main-navigation"
           aria-label={isSpanish ? 'Navegación principal' : 'Main navigation'}
         >
-          {visibleHomeNavigation.map(({
-            href, en, es, icon: Icon,
-          }) => {
+          {visibleHomeNavigation.map(({ href, en, es, icon: Icon }) => {
             const label = isSpanish ? es : en;
             return (
               <Link
@@ -346,7 +178,7 @@ export function Shell({
                 href={href}
                 aria-label={label}
                 title={label}
-                aria-current={isCurrentPath(href) ? 'page' : undefined}
+                aria-current={isNavigationDestinationCurrent({ href }, path) ? 'page' : undefined}
                 onClick={() => closeMobileNavigation(false)}
               >
                 <Icon size={20} aria-hidden />
@@ -354,10 +186,9 @@ export function Shell({
               </Link>
             );
           })}
-          {navigationGroups.map((group) => {
-            const visibleItems = group.items.filter(canSeeItem);
-            const hasCurrentPage = visibleItems.some((item) => isCurrentPath(item.href)
-              && !(group.id === 'administration' && ['/app/customers', '/app/suppliers'].includes(item.href)));
+          {navigationSections.map((group) => {
+            const visibleItems = getVisibleSectionDestinations(group, permissions);
+            const hasCurrentPage = isNavigationSectionCurrent(group, path, permissions);
 
             if (visibleItems.length === 0) return null;
 
@@ -372,12 +203,11 @@ export function Shell({
                   <ChevronDown size={16} aria-hidden />
                 </summary>
                 <div className="nav-group-links">
-                  {visibleItems.map(({
-                    href, en, es, icon: Icon,
-                  }) => {
-                    const label = isSpanish ? es : en;
-                    const isCurrentPage = isCurrentPath(href)
-                      && !(group.id === 'administration' && ['/app/customers', '/app/suppliers'].includes(href));
+                  {visibleItems.map(({ active, destination }) => {
+                    const { href, icon: Icon } = destination;
+                    const label = navigationLabel(destination, locale);
+                    const isCurrentPage =
+                      active !== false && isNavigationDestinationCurrent(destination, path);
                     return (
                       <Link
                         key={href}
@@ -430,14 +260,26 @@ export function Shell({
           >
             {mobileNavigationOpen ? <X size={21} aria-hidden /> : <Menu size={21} aria-hidden />}
           </button>
-          <span className="breadcrumb">
-            {isSpanish ? 'Operaciones' : 'Operations'}
-            {' '}
-            <ArrowUpRight size={14} />
-            {' '}
-            {isSpanish ? 'Etapa 1A' : 'Increment 1A'}
-          </span>
+          <nav className="breadcrumb" aria-label={isSpanish ? 'Ruta de navegación' : 'Breadcrumb'}>
+            {breadcrumb ? (
+              breadcrumb.map((item, index) => (
+                <Fragment key={`${item.label}-${index}`}>
+                  {index > 0 && <span aria-hidden>›</span>}
+                  {item.href ? (
+                    <Link href={item.href}>{item.label}</Link>
+                  ) : (
+                    <span aria-current={index === breadcrumb.length - 1 ? 'page' : undefined}>
+                      {item.label}
+                    </span>
+                  )}
+                </Fragment>
+              ))
+            ) : (
+              <span>{isSpanish ? 'Operaciones' : 'Operations'}</span>
+            )}
+          </nav>
           <div className="identity">
+            <CommandPalette locale={locale} permissions={permissions} />
             {role === 'admin' && (
               <Link
                 href="/app/operations-copilot"
@@ -467,8 +309,7 @@ export function Shell({
           </div>
         </header>
         <div className="staging-banner">
-          {isSpanish ? 'ETAPA 1A' : 'INCREMENT 1A'}
-          {' '}
+          {isSpanish ? 'ETAPA 1A' : 'INCREMENT 1A'}{' '}
           <span>
             {locale === 'es'
               ? 'Datos maestros activos · la ejecución de producción sigue bloqueada'
@@ -492,13 +333,11 @@ export function Shell({
         aria-label={isSpanish ? 'Navegación móvil' : 'Mobile navigation'}
         inert={mobileNavigationOpen}
       >
-        {mobileDestinations.map(({
-          href, en, es, icon: Icon,
-        }) => (
+        {mobileDestinations.map(({ href, en, es, icon: Icon }) => (
           <Link
             key={href}
             href={href}
-            aria-current={isCurrentPath(href) ? 'page' : undefined}
+            aria-current={isNavigationDestinationCurrent({ href }, path) ? 'page' : undefined}
             onClick={() => closeMobileNavigation(false)}
           >
             <Icon size={20} aria-hidden />

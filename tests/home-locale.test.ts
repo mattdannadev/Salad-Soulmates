@@ -66,7 +66,7 @@ describe('operations dashboard', () => {
     mocks.load.mockRejectedValue(new Error('Read failed'));
     await expect(Home()).rejects.toThrow('Read failed');
   });
-  it('surfaces due work with working detail anchors while keeping future pickups separate', async () => {
+  it('surfaces due work with canonical directory URLs while keeping future pickups separate', async () => {
     const order = {
       id: 'due-order',
       customer_name: 'Today customer',
@@ -85,6 +85,17 @@ describe('operations dashboard', () => {
           supplier_id: 'supplier',
           material_plan_id: 'due-order',
           progress: { status: 'Confirmed', balances: [] },
+        },
+      ],
+      purchases: [
+        {
+          id: 'purchase',
+          expected_on: '2026-09-20',
+          reference: 'PO-1',
+          supplier_id: 'supplier',
+          material_plan_id: 'due-order',
+          status: 'Confirmed',
+          progress: { open: true },
         },
       ],
       coverage: [
@@ -109,14 +120,11 @@ describe('operations dashboard', () => {
       html.indexOf('class="dashboard-columns"'),
     );
     expect(priorities).toContain('1 due today · 1 past pickup date');
-    expect(priorities).toContain('Expected today or earlier: 1');
     expect(priorities).toContain('Ingredients below demand: 1');
-    expect(priorities).toContain('Orders awaiting confirmed preparation: 2');
-    ['supplier-arrivals', 'ingredient-demand', 'order-preparation'].forEach((id) => {
-      expect(priorities).toContain(`href="#${id}"`);
-      expect(html).toContain(`id="${id}"`);
-    });
-    expect(priorities).toContain('href="/app/orders"');
+    expect(priorities).toContain('Orders without a production plan: 2');
+    expect(priorities).toContain('href="/app/orders?pickupTo=2026-09-20&amp;sort=pickup-oldest"');
+    expect(priorities).toContain('href="/app?queue=ingredient-shortages#ingredient-demand"');
+    expect(priorities).toContain('href="/app/orders?status=unplanned&amp;sort=pickup-oldest"');
   });
   it('does not show unavailable metrics or a misleading all-clear to restricted users', async () => {
     mocks.load.mockResolvedValue({

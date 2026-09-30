@@ -30,7 +30,7 @@ export default function CustomerOptionForm({
         id: option?.id ?? requestId,
         revision: option?.revision ?? 0,
         product_id: productId,
-        customer_name: form.get('customer_name'),
+        customer_id: option?.customer_id ?? form.get('customer_id'),
         label: form.get('label'),
         packaging_mode: form.get('packaging_mode'),
         unit_name: mode === 'product_default' ? 'case' : form.get('unit_name'),
@@ -44,9 +44,19 @@ export default function CustomerOptionForm({
       <div className="form-grid">
         <label htmlFor={`${prefix}-customer`}>
           {es ? 'Cliente' : 'Customer'}
-          <input id={`${prefix}-customer`} list={`${prefix}-customers`} name="customer_name" required maxLength={120} readOnly={Boolean(option)} defaultValue={customers.find((customer) => customer.id === option?.customer_id)?.name ?? ''} />
+          <select
+            id={`${prefix}-customer`}
+            name="customer_id"
+            required
+            disabled={Boolean(option)}
+            defaultValue={option?.customer_id ?? ''}
+          >
+            <option value="">{es ? 'Selecciona un cliente' : 'Select a customer'}</option>
+            {customers.map((customer) => (
+              <option key={customer.id} value={customer.id}>{customer.name}</option>
+            ))}
+          </select>
         </label>
-        <datalist id={`${prefix}-customers`}>{customers.map((customer) => <option key={customer.id} value={customer.name}>{customer.name}</option>)}</datalist>
         <label htmlFor={`${prefix}-label`}>
           {es ? 'Nombre de la opción' : 'Option name'}
           <input id={`${prefix}-label`} name="label" required maxLength={120} defaultValue={option?.label ?? ''} placeholder={es ? 'Bolsa de 2 galones' : '2-gallon bag'} />

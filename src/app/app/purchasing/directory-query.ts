@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { PurchaseDraft, PurchaseLine } from '@/domain/purchasing';
+import { purchaseProgress, type PurchaseReceipt } from '@/domain/supplier-orders';
 
 export type PurchasingSearchParams = Record<string, string | string[] | undefined>;
 export const PURCHASING_PAGE_SIZE = 20;
@@ -39,6 +40,8 @@ export function parsePurchasingDirectoryQuery(
     due: due && dueDates.includes(due) ? due : undefined,
     status: z.enum(['Draft', 'Confirmed', 'Cancelled']).optional().catch(undefined)
       .parse(singleValue(query, 'status')),
+    delivery: z.enum(['unreceived']).optional().catch(undefined)
+      .parse(singleValue(query, 'delivery')),
     sort: z.enum(['recent', 'due-soon', 'due-late']).catch('recent')
       .parse(singleValue(query, 'sort')),
     page: rawPage && /^[1-9]\d*$/.test(rawPage)
@@ -53,6 +56,7 @@ export type PurchasingDirectoryQuery = ReturnType<typeof parsePurchasingDirector
 export function selectPurchaseDrafts(
   drafts: readonly PurchaseDraft[],
   lines: readonly PurchaseLine[],
+  receipts: readonly PurchaseReceipt[],
   query: PurchasingDirectoryQuery,
   supplierNames: ReadonlyMap<string, string>,
   orderNames: ReadonlyMap<string, string>,
@@ -66,7 +70,12 @@ export function selectPurchaseDrafts(
     matching.push(line);
     linesByDraft.set(line.purchase_draft_id, matching);
   });
+  const progressLines = [...lines];
+  const progressReceipts = [...receipts];
   return drafts
+    .filter((draft) => query.delivery !== 'unreceived'
+      || (draft.status === 'Confirmed'
+        && purchaseProgress(draft, progressLines, progressReceipts).open))
     .filter((draft) => !query.supplierFilter || draft.supplier_id === query.supplierFilter)
     .filter((draft) => !query.orderFilter || draft.material_plan_id === query.orderFilter)
     .filter((draft) => !query.ingredientFilter || linesByDraft.get(draft.id)

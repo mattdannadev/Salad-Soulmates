@@ -5,9 +5,12 @@ import {
 } from 'vitest';
 import { Shell } from '../src/components/shell';
 
-const mocks = vi.hoisted(() => ({ pathname: '/app' }));
+const mocks = vi.hoisted(() => ({ pathname: '/app', push: vi.fn() }));
 
-vi.mock('next/navigation', () => ({ usePathname: () => mocks.pathname }));
+vi.mock('next/navigation', () => ({
+  usePathname: () => mocks.pathname,
+  useRouter: () => ({ push: mocks.push }),
+}));
 vi.mock('../src/app/actions', () => ({ signOut: vi.fn() }));
 vi.mock('../src/components/feedback', () => ({ default: () => null }));
 vi.mock('../src/components/locale-switcher', () => ({ default: () => null }));

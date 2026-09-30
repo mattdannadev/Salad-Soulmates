@@ -9,6 +9,7 @@ import {
   purchaseDraftRowSchema,
   purchaseLineRowSchema,
 } from '@/domain/purchasing';
+import { supplierPriceRowSchema } from '@/features/supplier-pricing/domain';
 import { mixerBatchSchema, productionLotSchema, productionPlanSchema } from '@/domain/production';
 import {
   productRowSchema,
@@ -43,6 +44,7 @@ export default function createSupabasePurchasingRepository(
         customerOptions,
         productionPlans,
         productionLots,
+        supplierPrices,
       ] = await Promise.all([
         rows(db, 'material_plans', materialPlanRowSchema),
         rows(db, 'purchase_drafts', purchaseDraftRowSchema),
@@ -59,6 +61,7 @@ export default function createSupabasePurchasingRepository(
         rows(db, 'customer_product_options', customerOptionRowSchema),
         rows(db, 'order_production_plans', productionPlanSchema),
         rows(db, 'production_lots', productionLotSchema),
+        rows(db, 'supplier_item_prices', supplierPriceRowSchema),
       ]);
       return {
         productionPlans,
@@ -70,6 +73,7 @@ export default function createSupabasePurchasingRepository(
         receipts,
         drafts,
         lines,
+        supplierPrices,
         ingredients,
         suppliers,
         packs,

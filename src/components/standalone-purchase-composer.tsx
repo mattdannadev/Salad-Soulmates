@@ -1,18 +1,24 @@
 'use client';
 
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import type { Ingredient, Supplier, SupplierItem } from '@/domain/master-data';
-import { MAX_PURCHASE_UNITS, standalonePurchaseLines } from '@/domain/purchasing';
+import {
+  MAX_PURCHASE_UNITS,
+  standalonePurchaseLines,
+  type PurchasePlanningPrice,
+} from '@/domain/purchasing';
 import { formatNumber } from '@/domain/format';
 import PurchasingForm from './purchasing-form';
+import PurchaseCostEstimate from './purchase-cost-estimate';
 
 /** Creates a manual supplier purchase that is intentionally independent of customer demand. */
 export default function StandalonePurchaseComposer({
-  suppliers, packs, ingredients, locale,
+  suppliers, packs, ingredients, supplierPrices, locale,
 }: {
   suppliers: Supplier[];
   packs: SupplierItem[];
   ingredients: Ingredient[];
+  supplierPrices: PurchasePlanningPrice[];
   locale: 'en' | 'es';
 }) {
   const prefix = useId();
@@ -20,6 +26,22 @@ export default function StandalonePurchaseComposer({
   const ingredientNames = new Map(
     ingredients.map((ingredient) => [ingredient.id, ingredient.name]),
   );
+  const selectionKey = (supplierId: string, ingredientId: string) => (
+    `${supplierId}:${ingredientId}`
+  );
+  const [selectedPacks, setSelectedPacks] = useState<Record<string, string>>(() => (
+    Object.fromEntries(suppliers.flatMap((supplier) => ingredients.flatMap((ingredient) => {
+      const ingredientPacks = packs.filter((pack) => pack.active
+        && pack.supplier_id === supplier.id && pack.ingredient_id === ingredient.id);
+      const selectedPack = ingredientPacks.find((pack) => pack.is_preferred)
+        ?? ingredientPacks[0];
+      return selectedPack
+        ? [[selectionKey(supplier.id, ingredient.id), selectedPack.id]]
+        : [];
+    })))
+  ));
+  const [purchaseUnits, setPurchaseUnits] = useState<Record<string, number>>({});
+  const [expectedDates, setExpectedDates] = useState<Record<string, string>>({});
   return suppliers.filter((supplier) => supplier.active).map((supplier) => {
     const supplierPacks = packs.filter((pack) => pack.active && pack.supplier_id === supplier.id
       && ingredientNames.has(pack.ingredient_id));
@@ -69,7 +91,17 @@ export default function StandalonePurchaseComposer({
           <div className="form-grid">
             <label htmlFor={`${prefix}-date-${supplier.id}`}>
               {es ? 'Fecha prevista' : 'Expected delivery'}
-              <input id={`${prefix}-date-${supplier.id}`} name="expected_on" type="date" required />
+              <input
+                id={`${prefix}-date-${supplier.id}`}
+                name="expected_on"
+                type="date"
+                required
+                value={expectedDates[supplier.id] ?? ''}
+                onChange={(event) => setExpectedDates({
+                  ...expectedDates,
+                  [supplier.id]: event.target.value,
+                })}
+              />
             </label>
             <label htmlFor={`${prefix}-reason-${supplier.id}`}>
               {es ? 'Motivo de compra (opcional)' : 'Purchase reason (optional)'}
@@ -93,8 +125,11 @@ export default function StandalonePurchaseComposer({
                     <select
                       id={`${prefix}-pack-${supplier.id}-${ingredient.id}`}
                       name={`pack-${ingredient.id}`}
-                      defaultValue={ingredientPacks.find((pack) => pack.is_preferred)?.id
-                        ?? ingredientPacks[0]?.id}
+                      value={selectedPacks[selectionKey(supplier.id, ingredient.id)] ?? ''}
+                      onChange={(event) => setSelectedPacks({
+                        ...selectedPacks,
+                        [selectionKey(supplier.id, ingredient.id)]: event.target.value,
+                      })}
                     >
                       {ingredientPacks.map((pack) => (
                         <option value={pack.id} key={pack.id}>
@@ -106,11 +141,41 @@ export default function StandalonePurchaseComposer({
                 )}
                 <label htmlFor={`${prefix}-units-${supplier.id}-${ingredient.id}`}>
                   {quantityLabel}
-                  <input id={`${prefix}-units-${supplier.id}-${ingredient.id}`} name={`units-${ingredient.id}`} type="number" min={0} max={MAX_PURCHASE_UNITS} step="1" defaultValue={0} />
+                  <input
+                    id={`${prefix}-units-${supplier.id}-${ingredient.id}`}
+                    name={`units-${ingredient.id}`}
+                    type="number"
+                    min={0}
+                    max={MAX_PURCHASE_UNITS}
+                    step="1"
+                    value={purchaseUnits[selectionKey(supplier.id, ingredient.id)] ?? 0}
+                    onChange={(event) => setPurchaseUnits({
+                      ...purchaseUnits,
+                      [selectionKey(supplier.id, ingredient.id)]: Number(event.target.value),
+                    })}
+                  />
                 </label>
               </fieldset>
             );
           })}
+          <PurchaseCostEstimate
+            items={supplierIngredients.flatMap(({ ingredient, packs: ingredientPacks }) => {
+              const supplierItemId = selectedPacks[
+                selectionKey(supplier.id, ingredient.id)
+              ] ?? ingredientPacks[0]?.id;
+              return supplierItemId ? [{
+                id: ingredient.id,
+                label: ingredient.name,
+                supplierItemId,
+                purchaseUom: ingredientPacks.find((pack) => pack.id === supplierItemId)
+                  ?.purchase_uom ?? '',
+                purchaseUnits: purchaseUnits[selectionKey(supplier.id, ingredient.id)] ?? 0,
+              }] : [];
+            })}
+            prices={supplierPrices}
+            expectedOn={expectedDates[supplier.id] ?? ''}
+            locale={locale}
+          />
         </PurchasingForm>
       </section>
     );

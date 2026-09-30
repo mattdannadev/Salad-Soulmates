@@ -56,6 +56,9 @@ beforeAll(async () => {
     readFileSync('supabase/migrations/20260919170000_harden_function_grants.sql', 'utf8'),
   );
   await db.exec(
+    readFileSync('supabase/migrations/20260930043559_supplier_item_prices.sql', 'utf8'),
+  );
+  await db.exec(
     readFileSync('supabase/migrations/20260919231113_refactor_reliability.sql', 'utf8'),
   );
   await db.exec(
@@ -150,11 +153,11 @@ describe('foundation migration against PostgreSQL (PGlite)', () => {
     ).toEqual([{ work_email: 'admin-renamed@example.com' }]);
   });
 
-  it('has RLS on all twenty-nine application tables', async () => {
+  it('has RLS on all thirty application tables', async () => {
     const result = await db.query<{ relrowsecurity: boolean }>(
       "select relrowsecurity from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and relkind='r'",
     );
-    expect(result.rows).toHaveLength(29);
+    expect(result.rows).toHaveLength(30);
     expect(result.rows.every((r) => r.relrowsecurity)).toBe(true);
   });
   it('does not expose security-definer trigger helpers for direct execution', async () => {
@@ -256,6 +259,85 @@ describe('foundation migration against PostgreSQL (PGlite)', () => {
     await expect(asUser(1, sql, [id(100), id(300), 'NaN'])).rejects.toThrow();
     await asUser(1, sql, [id(100), id(300), 50]);
     await expect(asUser(1, sql, [id(100), id(300), 25])).rejects.toThrow();
+  });
+  it('keeps effective-dated supplier prices append-only and tenant isolated', async () => {
+    const supplierItem = await asUser(
+      1,
+      'select id from public.supplier_items where supplier_id=$1',
+      [id(300)],
+    );
+    const supplierItemId = z.object({ id: z.uuid() }).parse(supplierItem.rows[0]).id;
+    const insertPrice = `insert into public.supplier_item_prices
+      (supplier_item_id,unit_price,effective_on,note) values($1,$2,$3,$4)`;
+    await asUser(1, insertPrice, [supplierItemId, 24.5, '2026-09-01', 'September quote']);
+    await asUser(1, insertPrice, [supplierItemId, 25.75, '2026-10-01', 'October quote']);
+
+    expect((await asUser(4, `select unit_price::text,effective_on::text,
+        purchase_uom,pack_quantity::text,pack_quantity_uom,note
+      from public.supplier_item_prices order by effective_on`)).rows).toEqual([
+      {
+        unit_price: '24.5',
+        effective_on: '2026-09-01',
+        purchase_uom: 'bag',
+        pack_quantity: '50.0000',
+        pack_quantity_uom: 'lb',
+        note: 'September quote',
+      },
+      {
+        unit_price: '25.75',
+        effective_on: '2026-10-01',
+        purchase_uom: 'bag',
+        pack_quantity: '50.0000',
+        pack_quantity_uom: 'lb',
+        note: 'October quote',
+      },
+    ]);
+    await asUser(1, `update public.supplier_items set purchase_uom='case',pack_quantity=25
+      where id=$1`, [supplierItemId]);
+    expect((await asUser(1, `select purchase_uom,pack_quantity::text
+      from public.supplier_item_prices order by effective_on`)).rows).toEqual([
+      { purchase_uom: 'bag', pack_quantity: '50.0000' },
+      { purchase_uom: 'bag', pack_quantity: '50.0000' },
+    ]);
+    await asUser(1, insertPrice, [supplierItemId, 27, '2026-11-01', '  Normalized note  ']);
+    expect((await asUser(1, `select purchase_uom,pack_quantity::text,note
+      from public.supplier_item_prices where effective_on='2026-11-01'`)).rows).toEqual([
+      { purchase_uom: 'case', pack_quantity: '25.0000', note: 'Normalized note' },
+    ]);
+    expect((await asUser(2, 'select * from public.supplier_item_prices')).rows).toHaveLength(0);
+    await expect(asUser(4, insertPrice, [supplierItemId, 26, '2026-11-01', 'No write']))
+      .rejects.toThrow();
+    await expect(asUser(1, insertPrice, [supplierItemId, 25, '2026-10-01', 'Duplicate']))
+      .rejects.toThrow();
+    await expect(asUser(1, insertPrice, [supplierItemId, 1.001, '2026-12-01', 'Precision']))
+      .rejects.toThrow();
+    await expect(asUser(1, insertPrice, [supplierItemId, 28, '2027-01-01', 'x'.repeat(1001)]))
+      .rejects.toThrow();
+    try {
+      await asUser(1, 'update public.supplier_items set active=false where id=$1', [supplierItemId]);
+      await expect(asUser(1, insertPrice, [supplierItemId, 28, '2027-02-01', 'Inactive item']))
+        .rejects.toThrow('active supplier item');
+    } finally {
+      await asUser(1, 'update public.supplier_items set active=true where id=$1', [supplierItemId]);
+    }
+    try {
+      await asUser(1, 'update public.ingredients set active=false where id=$1', [id(100)]);
+      await expect(asUser(1, insertPrice, [supplierItemId, 28, '2027-02-01', 'Inactive ingredient']))
+        .rejects.toThrow('active supplier item');
+    } finally {
+      await asUser(1, 'update public.ingredients set active=true where id=$1', [id(100)]);
+    }
+    try {
+      await asUser(1, 'update public.suppliers set active=false where id=$1', [id(300)]);
+      await expect(asUser(1, insertPrice, [supplierItemId, 28, '2027-02-01', 'Inactive supplier']))
+        .rejects.toThrow('active supplier item');
+    } finally {
+      await asUser(1, 'update public.suppliers set active=true where id=$1', [id(300)]);
+    }
+    await expect(asUser(1, 'update public.supplier_item_prices set unit_price=99'))
+      .rejects.toThrow('permission denied');
+    await expect(asUser(1, 'delete from public.supplier_item_prices'))
+      .rejects.toThrow('permission denied');
   });
   it('rolls back the entire ingredient save if an allergen belongs to another organization', async () => {
     await asUser(2, "insert into public.allergens(id,name) values($1,'Milk')", [id(400)]);

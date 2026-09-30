@@ -183,6 +183,55 @@ Shipping usability follow-up: unavailable actions must not display a busy cursor
 Keep confirmation disabled until physical fulfillment is implemented; cover its
 disabled state and cursor in the desktop/phone shipping checks.
 
+## Financial unit economics and order margin — approved follow-up
+
+The product goal is a truthful **margin for every ordered sales unit** (a bag,
+case, or other customer package), plus order-level revenue, cost, gross profit,
+and margin percentage. Ingredient quantities, supplier packs, recipe batches,
+and customer packages are distinct units in that calculation; none may be
+silently treated as interchangeable.
+
+Supplier price history and the Pricing workspace provide the starting data, and
+purchase planning may show a price-based estimate. They are not historical order
+margin by themselves. The following delivery order is required:
+
+1. **Unit economics foundation.** Retain each ingredient's base calculation UOM.
+   Add explicit, same-family conversion rules (for example oz/lb and fl oz/gal)
+   and calculate supplier cost per ingredient base unit from the effective pack
+   price. Never convert mass to volume, or infer a missing conversion. Flag the
+   resulting cost as unavailable until an approved conversion or ingredient
+   density/yield rule exists.
+2. **Effective-dated commercial inputs.** Preserve append-only supplier prices
+   and add effective-dated customer price history. A customer price, supplier
+   source/preference status, and recipe version used for a historical order must
+   remain explainable after later edits. The planning margin view must clearly
+   distinguish a current projection from an as-of calculation and must not claim
+   historical order truth.
+3. **Immutable order-margin snapshots.** Introduce normalized customer order
+   lines and cost-breakdown records while retaining the existing JSON order item
+   snapshot during migration. At order creation, calculate and store the selected
+   recipe version, ordered package count, revenue per package and total, cost per
+   gallon, ingredient cost per batch and package, supplier-item/price and pack
+   snapshots for every ingredient, total cost, gross profit, margin percentage,
+   and an explicit margin status. Missing, inactive, ambiguous, or incompatible
+   costs result in `unavailable`, never a zero-cost margin.
+4. **Order and operations visibility.** Display per-bag/case margin and
+   order-level totals on Orders, with a detailed explanation of the saved cost
+   basis. Keep confirmed supplier quotes and actual purchase costs separate from
+   planning estimates. Historical order margins are read from snapshots, never
+   recomputed from current recipes or price books.
+5. **Fully loaded margin.** Extend the ingredient-only margin with explicit,
+   separately tracked packaging, labor, freight, tax, waste, and overhead costs.
+   Until each cost source exists, label the calculation as ingredient margin or
+   contribution margin; do not present it as fully loaded margin.
+
+Acceptance requires price-effective-date boundaries, UOM conversions and blocked
+cross-family conversions, multiple package sizes, missing-cost states, stale
+customer/supplier-price changes, recipe revisions, direct-database protection,
+and proof that later price/recipe/source changes cannot alter a saved order-line
+margin. Include disposable PostgreSQL and browser coverage for per-package and
+order aggregate results.
+
 The owner subsequently prioritized packaging setup and authorized releasing all
 outstanding PRs: #7 (continuity), #8 (shipping preparation), #9 (packaging setup).
 See `packaging-setup.md`, `shipping.md` and PR #9 for this release and verification.

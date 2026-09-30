@@ -59,6 +59,9 @@ const migrations = [
   '20260930011136_provider_customer_accounts.sql',
   '20260930015045_provider_public_cloud_provisioning_foundation.sql',
   '20260930020001_fix_canonical_uom_trigger.sql',
+  '20260930043559_supplier_item_prices.sql',
+  '20260930052842_purchase_planning_cost_estimates.sql',
+  '20260930060000_customer_price_stable_customer.sql',
 ];
 
 /** Apply migrations and synthetic identity data only inside the newly created test database. */
@@ -78,7 +81,14 @@ export async function initializeGateDatabase(execute: (sql: string) => Promise<u
   `);
   await migrations.reduce(async (previous, migration) => {
     await previous;
-    await execute(await readFile(`supabase/migrations/${migration}`, 'utf8'));
+    try {
+      await execute(await readFile(`supabase/migrations/${migration}`, 'utf8'));
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new Error(`Disposable database bootstrap failed at ${migration}: ${detail}`, {
+        cause: error,
+      });
+    }
     if (migration === '202609180001_foundation.sql') {
       await execute(`
         insert into auth.users(id,email) values('${actor}','fixture-admin@example.test');

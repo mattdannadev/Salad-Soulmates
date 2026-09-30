@@ -4,12 +4,14 @@ import { useId, useState } from 'react';
 import type { Supplier, SupplierItem } from '@/domain/master-data';
 import {
   type MaterialAvailability,
+  type PurchasePlanningPrice,
   recommendPurchase,
   selectSupplierPack,
   MAX_PURCHASE_UNITS,
 } from '@/domain/purchasing';
 import { formatNumber } from '@/domain/format';
 import PurchasingForm from './purchasing-form';
+import PurchaseCostEstimate from './purchase-cost-estimate';
 
 export default function PurchaseComposer({
   planId,
@@ -18,6 +20,7 @@ export default function PurchaseComposer({
   packs,
   suppliers,
   existingSuppliers,
+  supplierPrices,
   locale,
 }: {
   planId: string;
@@ -26,6 +29,7 @@ export default function PurchaseComposer({
   packs: SupplierItem[];
   suppliers: Supplier[];
   existingSuppliers: string[];
+  supplierPrices: PurchasePlanningPrice[];
   locale: 'en' | 'es';
 }) {
   const prefix = useId();
@@ -42,6 +46,22 @@ export default function PurchaseComposer({
         activePacks.filter((pack) => pack.ingredient_id === requirement.ingredient_id),
       )?.id ?? '',
     ]),
+  ));
+  const [purchaseUnits, setPurchaseUnits] = useState<Record<string, number>>(() => (
+    Object.fromEntries(shortages.flatMap((requirement) => {
+      const pack = selectSupplierPack(
+        activePacks.filter((candidate) => candidate.ingredient_id === requirement.ingredient_id),
+      );
+      return pack && pack.pack_quantity_uom === requirement.uom
+        ? [[requirement.ingredient_id, recommendPurchase(
+          requirement.shortage,
+          pack.pack_quantity,
+        ).units]]
+        : [];
+    }))
+  ));
+  const [expectedDates, setExpectedDates] = useState<Record<string, string>>(() => (
+    Object.fromEntries(suppliers.map((supplier) => [supplier.id, neededOn]))
   ));
   const selectedLines = shortages.flatMap((requirement) => {
     const pack = activePacks.find(
@@ -70,10 +90,20 @@ export default function PurchaseComposer({
               <select
                 id={`${prefix}-${requirement.ingredient_id}`}
                 value={selected[requirement.ingredient_id] ?? ''}
-                onChange={(event) => setSelected({
-                  ...selected,
-                  [requirement.ingredient_id]: event.target.value,
-                })}
+                onChange={(event) => {
+                  const supplierItemId = event.target.value;
+                  const nextPack = activePacks.find((pack) => pack.id === supplierItemId);
+                  setSelected({ ...selected, [requirement.ingredient_id]: supplierItemId });
+                  if (nextPack && nextPack.pack_quantity_uom === requirement.uom) {
+                    setPurchaseUnits({
+                      ...purchaseUnits,
+                      [requirement.ingredient_id]: recommendPurchase(
+                        requirement.shortage,
+                        nextPack.pack_quantity,
+                      ).units,
+                    });
+                  }
+                }}
               >
                 <option value="">
                   {es ? 'Seleccionar presentación' : 'Select supplier pack'}
@@ -157,7 +187,11 @@ export default function PurchaseComposer({
                       name="expected_on"
                       type="date"
                       required
-                      defaultValue={neededOn}
+                      value={expectedDates[supplier.id] ?? neededOn}
+                      onChange={(event) => setExpectedDates({
+                        ...expectedDates,
+                        [supplier.id]: event.target.value,
+                      })}
                     />
                   </label>
                   {lines.map(({ requirement, pack }) => {
@@ -208,7 +242,12 @@ export default function PurchaseComposer({
                               max={MAX_PURCHASE_UNITS}
                               step="1"
                               required
-                              defaultValue={recommendation.units}
+                              value={purchaseUnits[requirement.ingredient_id]
+                                ?? recommendation.units}
+                              onChange={(event) => setPurchaseUnits({
+                                ...purchaseUnits,
+                                [requirement.ingredient_id]: Number(event.target.value),
+                              })}
                             />
                           </label>
                           <label
@@ -225,6 +264,19 @@ export default function PurchaseComposer({
                       </div>
                     );
                   })}
+                  <PurchaseCostEstimate
+                    items={lines.map(({ requirement, pack }) => ({
+                      id: requirement.ingredient_id,
+                      label: requirement.ingredient_name,
+                      supplierItemId: pack.id,
+                      purchaseUom: pack.purchase_uom,
+                      purchaseUnits: purchaseUnits[requirement.ingredient_id]
+                        ?? recommendPurchase(requirement.shortage, pack.pack_quantity).units,
+                    }))}
+                    prices={supplierPrices}
+                    expectedOn={expectedDates[supplier.id] ?? neededOn}
+                    locale={locale}
+                  />
                 </PurchasingForm>
               )}
             </section>

@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   materialPlanInputSchema,
+  effectivePurchasePrice,
+  estimatePurchaseCosts,
   purchaseDraftInputSchema,
   purchaseStatusInputSchema,
   recommendPurchase,
   selectSupplierPack,
+  savedPurchaseCostTotal,
   standalonePurchaseLines,
   outstandingInbound,
 } from '@/domain/purchasing';
@@ -41,6 +44,53 @@ const draft = {
 };
 
 describe('purchasing input and display calculations', () => {
+  it('uses the latest supplier price effective by the expected delivery date', () => {
+    const prices = [
+      {
+        id: '00000000-0000-4000-8000-000000000010',
+        supplier_item_id: id,
+        unit_price: 18,
+        effective_on: '2026-09-01',
+      },
+      {
+        id: '00000000-0000-4000-8000-000000000011',
+        supplier_item_id: id,
+        unit_price: 20,
+        effective_on: '2026-09-20',
+      },
+      {
+        id: '00000000-0000-4000-8000-000000000012',
+        supplier_item_id: id,
+        unit_price: 22,
+        effective_on: '2026-10-10',
+      },
+    ];
+    expect(effectivePurchasePrice(prices, id, '2026-09-30')?.unit_price).toBe(20);
+    expect(estimatePurchaseCosts([
+      { supplierItemId: id, purchaseUnits: 3 },
+    ], prices, '2026-09-30')).toMatchObject({ total: 60, missingPriceCount: 0 });
+  });
+
+  it('keeps totals unknown when any supplier price is missing', () => {
+    const estimate = estimatePurchaseCosts([
+      { supplierItemId: id, purchaseUnits: 2 },
+      {
+        supplierItemId: '00000000-0000-4000-8000-000000000099',
+        purchaseUnits: 1,
+      },
+    ], [{
+      id: '00000000-0000-4000-8000-000000000010',
+      supplier_item_id: id,
+      unit_price: 12.5,
+      effective_on: '2026-09-01',
+    }], '2026-09-30');
+    expect(estimate).toMatchObject({ total: null, missingPriceCount: 1 });
+    expect(savedPurchaseCostTotal([
+      { ...line, estimated_line_cost: 25 },
+      { ...line, id: '00000000-0000-4000-8000-000000000099', estimated_line_cost: null },
+    ])).toEqual({ total: null, missingPriceCount: 1 });
+  });
+
   it('requires unique recipe versions and whole batch counts', () => {
     const plan = {
       id,

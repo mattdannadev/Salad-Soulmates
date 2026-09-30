@@ -36,6 +36,7 @@ const records: PurchasingWorkspaceRecords = {
   receipts: [],
   drafts: [],
   lines: [],
+  supplierPrices: [],
   ingredients: [],
   suppliers: [],
   packs: [],

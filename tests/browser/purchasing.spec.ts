@@ -1,7 +1,8 @@
 import { expect, test } from './fixtures';
 
 test.afterEach(async ({ page }, info) => {
-  if (info.status !== info.expectedStatus) console.error('Synthetic browser failure:', await page.locator('main').ariaSnapshot());
+  if (info.status !== info.expectedStatus)
+    console.error('Synthetic browser failure:', await page.locator('main').ariaSnapshot());
 });
 
 test('inventory starts a purchase with its ingredient fixed', async ({ page }, info) => {
@@ -12,7 +13,9 @@ test('inventory starts a purchase with its ingredient fixed', async ({ page }, i
   await expect(page).toHaveURL(/\/app$/);
   await page.goto('/app/inventory');
   const mainNavigation = page.getByRole('navigation', { name: 'Main navigation' });
-  await expect(mainNavigation.getByRole('link', { name: 'Purchase planning', exact: true })).toHaveCount(1);
+  await expect(
+    mainNavigation.getByRole('link', { name: 'Purchase planning', exact: true }),
+  ).toHaveCount(0);
   await page.getByRole('link', { name: 'Purchase Preview garlic powder' }).click();
   await expect(page).toHaveURL(
     /\/app\/purchasing\?ingredient=00000000-0000-4000-8000-000000000100/,
@@ -26,17 +29,21 @@ test('inventory starts a purchase with its ingredient fixed', async ({ page }, i
   await expect(createPurchase).toBeEnabled();
   if (info.project.name === 'phone') {
     await createPurchase.scrollIntoViewIfNeeded();
-    expect(await createPurchase.evaluate((button) => {
-      const viewport = window.visualViewport;
-      if (!viewport) return false;
-      const bounds = button.getBoundingClientRect();
-      const centerX = bounds.left + bounds.width / 2;
-      const centerY = bounds.top + bounds.height / 2;
-      return document.documentElement.scrollWidth <= viewport.width
-        && bounds.right <= viewport.width
-        && bounds.bottom <= viewport.height
-        && document.elementFromPoint(centerX, centerY) === button;
-    })).toBe(true);
+    expect(
+      await createPurchase.evaluate((button) => {
+        const viewport = window.visualViewport;
+        if (!viewport) return false;
+        const bounds = button.getBoundingClientRect();
+        const centerX = bounds.left + bounds.width / 2;
+        const centerY = bounds.top + bounds.height / 2;
+        return (
+          document.documentElement.scrollWidth <= viewport.width &&
+          bounds.right <= viewport.width &&
+          bounds.bottom <= viewport.height &&
+          document.elementFromPoint(centerX, centerY) === button
+        );
+      }),
+    ).toBe(true);
   }
   await createPurchase.click();
   await expect(page.getByRole('article').getByText('Confirmed', { exact: true })).toBeVisible();
@@ -89,7 +96,9 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await page.goto('/app/orders');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Orders');
   await expect(page.getByLabel('Worksheet name')).toHaveCount(0);
-  await page.getByRole('combobox', { name: 'Customer', exact: true }).selectOption({ label: 'Preview customer' });
+  await page
+    .getByRole('combobox', { name: 'Customer', exact: true })
+    .selectOption({ label: 'Preview customer' });
   const orderingUnit = page.getByRole('combobox', { name: 'Ordering unit', exact: true });
   await expect(orderingUnit).toBeEnabled();
   await expect(orderingUnit).toHaveValue(/^[0-9a-f-]{36}$/);
@@ -179,13 +188,18 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await page.getByLabel('Quantity received').fill('10');
   await page.getByLabel('Quantity in each physical package').fill('10');
   const inboundOrder = page.getByRole('combobox', { name: 'Confirmed inbound order (optional)' });
-  await inboundOrder.selectOption({ label: `PO-${info.project.name} · Preview garlic powder · 60 lb` });
+  await inboundOrder.selectOption({
+    label: `PO-${info.project.name} · Preview garlic powder · 60 lb`,
+  });
   const capturedPack = page.getByRole('combobox', { name: /^Supplier pack from confirmed order/ });
   await expect(capturedPack.locator('option:checked')).toHaveText('pail · 30 lb');
   await inboundOrder.selectOption('');
-  await expect(page.getByRole('combobox', { name: 'Supplier item / pack (optional)' }))
-    .toHaveValue('');
-  await inboundOrder.selectOption({ label: `PO-${info.project.name} · Preview garlic powder · 60 lb` });
+  await expect(page.getByRole('combobox', { name: 'Supplier item / pack (optional)' })).toHaveValue(
+    '',
+  );
+  await inboundOrder.selectOption({
+    label: `PO-${info.project.name} · Preview garlic powder · 60 lb`,
+  });
   await expect(capturedPack.locator('option:checked')).toHaveText('pail · 30 lb');
   await page.getByLabel(/^Supplier-provided lot \(if shown\)/).fill('TEST-LOT');
   await page.getByRole('button', { name: 'Post receipt & update inventory' }).click();
@@ -194,6 +208,14 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await expect(
     page.getByRole('article').getByRole('row').filter({ hasText: 'Preview garlic powder' }),
   ).toContainText('50 lb');
+  await page.goto('/app');
+  await page.getByRole('link', { name: 'Review unreceived deliveries', exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/purchasing\?delivery=unreceived&sort=due-soon$/);
+  await expect(page.getByRole('article')).toContainText('Preview garlic powder');
+  await page.reload();
+  await expect(page).toHaveURL(/\/app\/purchasing\?delivery=unreceived&sort=due-soon$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/app$/);
   await page.goto('/app/suppliers');
   await supplier.locator(':scope > summary').click();
   await expect(
@@ -201,8 +223,7 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   ).toBeVisible();
   await expect(supplier.getByRole('article')).toContainText('50 lb');
   await expect(
-    page.getByRole('row').filter({ hasText: 'Preview supplier' }).first().getByRole('cell')
-      .last(),
+    page.getByRole('row').filter({ hasText: 'Preview supplier' }).first().getByRole('cell').last(),
   ).toHaveText('1');
   const fitsScreen = await page.evaluate(
     () => document.documentElement.scrollWidth <= window.innerWidth,

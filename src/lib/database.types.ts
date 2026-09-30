@@ -505,6 +505,10 @@ export type Database = {
           purchase_units: number;
           quantity: number;
           override_reason: string;
+          supplier_price_id: string | null;
+          estimated_unit_cost: number | null;
+          estimated_line_cost: number | null;
+          estimated_as_of: string;
         };
         Insert: {
           id: string;
@@ -523,6 +527,10 @@ export type Database = {
           purchase_units: number;
           quantity: number;
           override_reason?: string;
+          supplier_price_id?: string | null;
+          estimated_unit_cost?: number | null;
+          estimated_line_cost?: number | null;
+          estimated_as_of?: string;
         };
         Update: {
           id?: string;
@@ -541,6 +549,10 @@ export type Database = {
           purchase_units?: number;
           quantity?: number;
           override_reason?: string;
+          supplier_price_id?: string | null;
+          estimated_unit_cost?: number | null;
+          estimated_line_cost?: number | null;
+          estimated_as_of?: string;
         };
         Relationships: [];
       };
@@ -1902,6 +1914,66 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: 'suppliers';
             referencedColumns: ['organization_id', 'id'];
+          },
+        ];
+      };
+      supplier_item_prices: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          currency: 'USD';
+          effective_on: string;
+          id: string;
+          note: string;
+          organization_id: string;
+          pack_quantity: number;
+          pack_quantity_uom: string;
+          purchase_uom: string;
+          supplier_item_id: string;
+          unit_price: number;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string;
+          currency?: 'USD';
+          effective_on: string;
+          id?: string;
+          note?: string;
+          organization_id?: string;
+          pack_quantity?: number;
+          pack_quantity_uom?: string;
+          purchase_uom?: string;
+          supplier_item_id: string;
+          unit_price: number;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string;
+          currency?: 'USD';
+          effective_on?: string;
+          id?: string;
+          note?: string;
+          organization_id?: string;
+          pack_quantity?: number;
+          pack_quantity_uom?: string;
+          purchase_uom?: string;
+          supplier_item_id?: string;
+          unit_price?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'supplier_item_prices_organization_id_supplier_item_id_fkey';
+            columns: ['organization_id', 'supplier_item_id'];
+            isOneToOne: false;
+            referencedRelation: 'supplier_items';
+            referencedColumns: ['organization_id', 'id'];
+          },
+          {
+            foreignKeyName: 'supplier_item_prices_created_by_fkey';
+            columns: ['created_by'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
           },
         ];
       };

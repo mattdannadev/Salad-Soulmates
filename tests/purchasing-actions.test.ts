@@ -120,7 +120,7 @@ it('validates customer prices and requires product-write permission', async () =
     id,
     revision: 0,
     product_id: id,
-    customer_name: 'Customer',
+    customer_id: id,
     label: 'Bag',
     packaging_mode: 'custom',
     unit_name: 'bag',
@@ -130,6 +130,9 @@ it('validates customer prices and requires product-write permission', async () =
     active: true,
     is_preferred: true,
   };
+  expect((await savePurchasing('save-option', {
+    ...option, customer_id: undefined, customer_name: 'Customer',
+  })).ok).toBe(false);
   expect((await savePurchasing('save-option', { ...option, unit_price: 1.001 })).ok).toBe(false);
   mocks.permission.mockImplementation((_db: unknown, permission: string) => Promise.resolve(permission !== 'products.write'));
   expect((await savePurchasing('save-option', option)).ok).toBe(false);

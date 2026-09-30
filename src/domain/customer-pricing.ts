@@ -16,7 +16,7 @@ export const customerOptionInputSchema = z.object({
   id: z.uuid(),
   revision: z.number().int().nonnegative(),
   product_id: z.uuid(),
-  customer_name: z.string().trim().min(1).max(120),
+  customer_id: z.uuid(),
   ...optionFields,
 });
 export const customerOptionRowSchema = z.object({

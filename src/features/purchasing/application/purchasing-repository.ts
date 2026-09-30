@@ -5,7 +5,7 @@ import type {
   Ingredient, ReceiptLine, Supplier, SupplierItem,
 } from '@/domain/master-data';
 import type {
-  MaterialAvailability, MaterialPlan, PurchaseDraft, PurchaseLine,
+  MaterialAvailability, MaterialPlan, PurchaseDraft, PurchaseLine, PurchasePlanningPrice,
 } from '@/domain/purchasing';
 import type {
   MixerBatch, ProductionLot, ProductionPlan,
@@ -29,6 +29,7 @@ export interface PurchasingWorkspaceRecords {
   receipts: ReceiptLine[];
   drafts: PurchaseDraft[];
   lines: PurchaseLine[];
+  supplierPrices: PurchasePlanningPrice[];
   ingredients: Ingredient[];
   suppliers: Supplier[];
   packs: SupplierItem[];

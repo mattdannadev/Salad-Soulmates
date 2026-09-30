@@ -64,6 +64,15 @@ async function createDatabase() {
       ('${fixtureId(211)}','${fixtureId(200)}','${fixtureId(101)}','case',5,'gal',true);
     insert into public.products(id,name,product_code,bag_size_gallons,bags_per_case)
       values('${fixtureId(300)}','Preview Italian dressing','TEST-ITALIAN',2,2);
+    insert into public.customers(id,name) values
+      ('${fixtureId(500)}','Production customer'),
+      ('${fixtureId(501)}','Shipping customer');
+    insert into public.customer_product_options(
+      id,customer_id,product_id,label,packaging_mode,unit_name,gallons_per_unit,
+      unit_price,currency,active,is_preferred
+    ) values
+      ('${fixtureId(510)}','${fixtureId(500)}','${fixtureId(300)}','Standard case','product_default','case',4,24,'USD',true,true),
+      ('${fixtureId(511)}','${fixtureId(501)}','${fixtureId(300)}','Standard case','product_default','case',4,24,'USD',true,true);
     insert into public.recipes(id,product_id,name) values('${fixtureId(400)}','${fixtureId(300)}','Preview Italian recipe');
     insert into public.recipe_versions(id,recipe_id,version_number) values('${fixtureId(401)}','${fixtureId(400)}',1);
     insert into public.recipe_sections(id,recipe_version_id,name,sequence) values('${fixtureId(410)}','${fixtureId(401)}','Main',1);
@@ -73,22 +82,6 @@ async function createDatabase() {
     update public.recipe_versions set status='Released',released_by='${gateActor}' where id='${fixtureId(401)}';
     update public.recipes set active_version_id='${fixtureId(401)}' where id='${fixtureId(400)}';
   `);
-  await ['Production customer', 'Shipping customer'].reduce(async (prior, name, index) => {
-    await prior;
-    await db.query('select public.save_customer_product_option($1::jsonb)', [JSON.stringify({
-      id: fixtureId(500 + index),
-      revision: 0,
-      product_id: fixtureId(300),
-      customer_name: name,
-      label: 'Standard case',
-      packaging_mode: 'product_default',
-      unit_name: 'case',
-      gallons_per_unit: 4,
-      unit_price: 24,
-      currency: 'USD',
-      active: true,
-    })]);
-  }, Promise.resolve());
   return db;
 }
 /** A localhost-only bridge to the real migration SQL; synthetic Auth remains separate. */
@@ -102,6 +95,7 @@ function isPurchasingFixtureRequest(url) {
     || endpoint === 'rpc/cancel_customer_order'
     || endpoint === 'rpc/find_serialized_units' || endpoint === 'rpc/order_production_batches'
     || endpoint === 'rpc/worker_spice_preparations'
+    || endpoint === 'rpc/get_workforce_schedule'
     || mutations.has(endpoint.replace('rpc/', ''))
     || endpoint === 'test/purchasing-reset'
   );
@@ -112,7 +106,8 @@ async function executeRequest(url, method, body) {
   const db = await databasePromise;
   const endpoint = url.pathname.replace('/rest/v1/', '');
   if (endpoint === 'test/purchasing-reset') {
-    await db.close();
+    // PGlite's in-memory fixture is replaced wholesale; closing the active
+    // scoped connection rejects on some Windows builds before a test can reset.
     databasePromise = createDatabase();
     await databasePromise;
     return {};
@@ -159,6 +154,20 @@ async function executeRequest(url, method, body) {
   if (endpoint === 'rpc/worker_spice_preparations') {
     const result = await db.query('select public.worker_spice_preparations() as value');
     return z.object({ value: z.unknown() }).parse(result.rows[0]).value;
+  }
+  if (endpoint === 'rpc/get_workforce_schedule') {
+    const args = z.object({
+      payload: z.object({
+        facility_id: z.uuid(),
+        start_on: z.iso.date(),
+        end_on: z.iso.date(),
+      }),
+    }).parse(input).payload;
+    const result = await db.query(
+      'select public.get_workforce_schedule($1::jsonb) as schedule',
+      [JSON.stringify(args)],
+    );
+    return z.object({ schedule: z.unknown() }).parse(result.rows[0]).schedule;
   }
   if (endpoint === 'rpc/cancel_customer_order') {
     const args = z.object({ order_id: z.uuid() }).parse(input);

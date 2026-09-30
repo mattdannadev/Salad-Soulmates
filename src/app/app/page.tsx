@@ -1,15 +1,15 @@
 import Link from 'next/link';
-import {
-  ArrowUpRight, CalendarDays, Truck, Leaf, PackageCheck, ClipboardList,
-} from 'lucide-react';
+import { ArrowUpRight, CalendarDays, Truck, Leaf, PackageCheck, ClipboardList } from 'lucide-react';
 import loadDashboard from '@/lib/dashboard-data';
 import DemandCoveragePanel from '@/components/demand-coverage-panel';
 import DashboardPriorities, { type DashboardPriority } from '@/components/dashboard-priorities';
 import DashboardQuickActions from '@/components/dashboard-quick-actions';
+import DashboardSchedule from '@/components/dashboard-schedule';
 import WorkspaceSetup from '@/components/workspace-setup';
 import loadWorkspaceSetup from '@/services/load-workspace-setup';
 import { facilityDate, formatDate, formatNumber } from '@/domain/format';
 import { purchaseStatusLabel } from '@/domain/supplier-orders';
+import { createDashboardWorkQueues } from '@/services/dashboard-work-queues';
 
 const DASHBOARD_LIMIT = 6;
 
@@ -25,13 +25,17 @@ export default async function Home() {
     coverage,
     openOrders,
     incoming,
+    purchases = incoming,
     suppliers,
     stock,
     production,
+    canViewSchedule,
+    upcomingSchedule,
   } = dashboard;
   const es = profile.preferred_locale === 'es';
   const today = facilityDate();
-  const futurePickups = openOrders.filter((order) => order.needed_on > today)
+  const futurePickups = openOrders
+    .filter((order) => order.needed_on > today)
     .toSorted((a, b) => a.needed_on.localeCompare(b.needed_on) || a.id.localeCompare(b.id));
   const activeOrdersLabel = es ? 'Pedidos activos de clientes' : 'Active customer orders';
   const lateLabel = es ? 'Fecha vencida' : 'Past pickup date';
@@ -46,53 +50,58 @@ export default async function Home() {
   }
   const overdue = openOrders.filter((order) => order.needed_on < today).length;
   const dueToday = openOrders.filter((order) => order.needed_on === today).length;
-  const arrivalsDue = incoming.filter((purchase) => purchase.expected_on <= today);
   const shortages = coverage.filter((line) => line.shortage > 0).length;
-
   const unprepared = openOrders.filter(
     (order) => !production.some((plan) => plan.id === order.id && plan.status === 'Confirmed'),
   );
-  const priorities: DashboardPriority[] = [];
-  if (canOrders && overdue + dueToday > 0) {
-    priorities.push({
-      id: 'pickups',
-      title: es ? 'Revisar recogidas pendientes' : 'Review pickups due',
-      detail: `${dueToday} ${es ? 'para hoy' : 'due today'} · ${overdue} ${es ? 'con fecha vencida' : 'past pickup date'}`,
-      href: '/app/orders',
-      icon: CalendarDays,
-      urgent: overdue > 0,
-    });
-  }
-  if (canPurchases && arrivalsDue.length > 0) {
-    priorities.push({
-      id: 'arrivals',
-      title: es ? 'Revisar entregas pendientes' : 'Check deliveries due',
-      detail: `${es ? 'Previstas para hoy o antes' : 'Expected today or earlier'}: ${arrivalsDue.length}`,
-      href: '#supplier-arrivals',
-      icon: Truck,
-      urgent: arrivalsDue.some((purchase) => purchase.expected_on < today),
-    });
-  }
-  if (canCoverage && shortages > 0) {
-    priorities.push({
-      id: 'ingredients',
-      title: es ? 'Resolver faltantes de ingredientes' : 'Resolve ingredient shortages',
-      detail: `${es ? 'Ingredientes sin cubrir la demanda' : 'Ingredients below demand'}: ${shortages}`,
-      href: '#ingredient-demand',
-      icon: Leaf,
-      urgent: true,
-    });
-  }
-  if (canOrders && unprepared.length > 0) {
-    priorities.push({
-      id: 'preparation',
-      title: es ? 'Preparar próximos pedidos' : 'Prepare open orders',
-      detail: `${es ? 'Pedidos sin preparación confirmada' : 'Orders awaiting confirmed preparation'}: ${unprepared.length}`,
-      href: '#order-preparation',
-      icon: ClipboardList,
-      urgent: false,
-    });
-  }
+  const priorities: DashboardPriority[] = createDashboardWorkQueues({
+    today,
+    canOrders: Boolean(canOrders),
+    canOrderDirectory: Boolean(canCoverage),
+    canPurchases: Boolean(canPurchases),
+    canCoverage: Boolean(canCoverage),
+    openOrders,
+    purchases,
+    coverage,
+    production,
+  }).map((queue) => {
+    const definitions = {
+      'pickups-due': {
+        title: es ? 'Revisar recogidas pendientes' : 'Review pickups due',
+        detail: `${dueToday} ${es ? 'para hoy' : 'due today'} · ${overdue} ${es ? 'con fecha vencida' : 'past pickup date'}`,
+        icon: CalendarDays,
+      },
+      'purchases-unconfirmed': {
+        title: es ? 'Revisar borradores de compra' : 'Review purchase drafts',
+        detail: `${queue.count} ${es ? 'borradores pendientes de confirmación' : 'drafts awaiting confirmation'}`,
+        icon: ClipboardList,
+      },
+      'deliveries-unreceived': {
+        title: es ? 'Revisar entregas pendientes' : 'Review unreceived deliveries',
+        detail: `${queue.count} ${es ? 'compras confirmadas pendientes de recibir' : 'confirmed purchases awaiting receipt'}`,
+        icon: Truck,
+      },
+      'ingredient-shortages': {
+        title: es ? 'Resolver faltantes de ingredientes' : 'Resolve ingredient shortages',
+        detail: `${es ? 'Ingredientes sin cubrir la demanda' : 'Ingredients below demand'}: ${queue.count}`,
+        icon: Leaf,
+      },
+      'planning-readiness': {
+        title: es ? 'Revisar pedidos sin planificar' : 'Review unplanned orders',
+        detail: `${es ? 'Pedidos sin un plan de producción' : 'Orders without a production plan'}: ${queue.count}`,
+        icon: ClipboardList,
+      },
+    } as const;
+    const definition = definitions[queue.id];
+    return {
+      id: queue.id,
+      title: definition.title,
+      detail: definition.detail,
+      href: queue.href,
+      icon: definition.icon,
+      urgent: queue.overdueCount > 0,
+    };
+  });
   const metrics = [
     {
       title: es ? 'Recogidas hoy' : 'Pickups today',
@@ -153,14 +162,16 @@ export default async function Home() {
         </div>
       </header>
       <div className="dashboard-metrics">
-        {metrics.filter((metric) => metric.available).map((metric) => (
-          <Link className="dashboard-metric" href={metric.href} key={metric.title}>
-            <metric.icon size={21} />
-            <span>{metric.title}</span>
-            <strong>{metric.value}</strong>
-            <small>{metric.note}</small>
-          </Link>
-        ))}
+        {metrics
+          .filter((metric) => metric.available)
+          .map((metric) => (
+            <Link className="dashboard-metric" href={metric.href} key={metric.title}>
+              <metric.icon size={21} />
+              <span>{metric.title}</span>
+              <strong>{metric.value}</strong>
+              <small>{metric.note}</small>
+            </Link>
+          ))}
       </div>
       <WorkspaceSetup steps={setupSteps} es={es} />
       {(canOrders || canPurchases || canCoverage) && (
@@ -180,57 +191,58 @@ export default async function Home() {
             <CalendarDays size={24} />
           </div>
           {!canOrders && <p>{unavailable}</p>}
-          {canOrders && (!futurePickups.length ? (
-            <div className="dashboard-empty">
-              <CalendarDays size={30} />
-              <h3>{es ? 'Sin recogidas futuras programadas' : 'No future pickups scheduled'}</h3>
-              <p>
-                {es
-                  ? 'Los pedidos con fechas futuras aparecerán aquí con productos y lotes.'
-                  : 'Orders with future pickup dates appear here with dressing names and batch counts.'}
-              </p>
-              <Link href="/app/orders#new-order">
-                {es ? 'Preparar un pedido →' : 'Prepare an order →'}
-              </Link>
-            </div>
-          ) : (
-            <div className="dashboard-order-list">
-              {futurePickups.map((order) => (
-                <Link
-                  className="dashboard-order"
-                  href={`/app/orders?order=${order.id}`}
-                  key={order.id}
-                >
-                  <div className="dashboard-order-heading">
-                    <strong>{order.customer_name}</strong>
-                    <span className={`badge ${order.needed_on < today ? 'warning' : ''}`}>
-                      {pickupLabel(order.needed_on)}
-                    </span>
-                  </div>
-                  <small>{`${order.reference || order.id.slice(0, 8)} · ${es ? 'Recogida' : 'Pickup'} ${formatDate(order.needed_on)}`}</small>
-                  <ul className="dashboard-products">
-                    {order.items.map((item) => (
-                      <li key={item.product_id}>
-                        <span>{item.product_name}</span>
-                        <strong>{`${formatNumber(item.batch_count)} ${es ? 'lotes' : 'batches'}`}</strong>
-                      </li>
-                    ))}
-                  </ul>
-                  <span className="dashboard-order-total">
-                    {`${formatNumber(order.items.reduce((sum, item) => sum + item.batch_count, 0))} ${es ? 'lotes en total' : 'total batches'}`}
-                    {' '}
-                    <ArrowUpRight size={16} />
-                  </span>
+          {canOrders &&
+            (!futurePickups.length ? (
+              <div className="dashboard-empty">
+                <CalendarDays size={30} />
+                <h3>{es ? 'Sin recogidas futuras programadas' : 'No future pickups scheduled'}</h3>
+                <p>
+                  {es
+                    ? 'Los pedidos con fechas futuras aparecerán aquí con productos y lotes.'
+                    : 'Orders with future pickup dates appear here with dressing names and batch counts.'}
+                </p>
+                <Link href="/app/orders#new-order">
+                  {es ? 'Preparar un pedido →' : 'Prepare an order →'}
                 </Link>
-              ))}
-            </div>
-          ))}
+              </div>
+            ) : (
+              <div className="dashboard-order-list">
+                {futurePickups.map((order) => (
+                  <Link
+                    className="dashboard-order"
+                    href={`/app/orders?order=${order.id}`}
+                    key={order.id}
+                  >
+                    <div className="dashboard-order-heading">
+                      <strong>{order.customer_name}</strong>
+                      <span className={`badge ${order.needed_on < today ? 'warning' : ''}`}>
+                        {pickupLabel(order.needed_on)}
+                      </span>
+                    </div>
+                    <small>{`${order.reference || order.id.slice(0, 8)} · ${es ? 'Recogida' : 'Pickup'} ${formatDate(order.needed_on)}`}</small>
+                    <ul className="dashboard-products">
+                      {order.items.map((item) => (
+                        <li key={item.product_id}>
+                          <span>{item.product_name}</span>
+                          <strong>{`${formatNumber(item.batch_count)} ${es ? 'lotes' : 'batches'}`}</strong>
+                        </li>
+                      ))}
+                    </ul>
+                    <span className="dashboard-order-total">
+                      {`${formatNumber(order.items.reduce((sum, item) => sum + item.batch_count, 0))} ${es ? 'lotes en total' : 'total batches'}`}{' '}
+                      <ArrowUpRight size={16} />
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            ))}
           <Link className="dashboard-footer-link" href="/app/orders">
-            {es ? 'Ver todos los pedidos' : 'View all orders'}
-            {' '}
-            <ArrowUpRight size={16} />
+            {es ? 'Ver todos los pedidos' : 'View all orders'} <ArrowUpRight size={16} />
           </Link>
         </section>
+        {canViewSchedule && (
+          <DashboardSchedule events={upcomingSchedule} locale={profile.preferred_locale} />
+        )}
         <section className="panel" id="supplier-arrivals">
           <div className="dashboard-panel-heading">
             <div>
@@ -240,54 +252,53 @@ export default async function Home() {
             <Truck size={24} />
           </div>
           {!canPurchases && <p>{unavailable}</p>}
-          {canPurchases && (!incoming.length ? (
-            <div className="dashboard-empty">
-              <Truck size={30} />
-              <h3>{es ? 'Sin entregas pendientes' : 'No deliveries outstanding'}</h3>
-              <p>
-                {es
-                  ? 'Las compras confirmadas permanecen aquí hasta su recepción completa.'
-                  : 'Confirmed purchases stay here until every line is received.'}
-              </p>
-            </div>
-          ) : (
-            <div className="dashboard-order-list">
-              {incoming.slice(0, DASHBOARD_LIMIT).map((purchase) => (
-                <Link
-                  className="dashboard-order"
-                  href={`/app/purchasing?plan=${purchase.material_plan_id}&supplier=${purchase.supplier_id}`}
-                  key={purchase.id}
-                >
-                  <div className="dashboard-order-heading">
-                    <strong>
-                      {suppliers.find((supplier) => supplier.id === purchase.supplier_id)?.name
-                        ?? purchase.reference}
-                    </strong>
-                    <span className={`badge ${purchase.expected_on < today ? 'warning' : ''}`}>
-                      {purchase.expected_on < today
-                        ? overdueLabel
-                        : purchaseStatusLabel(purchase.progress.status, profile.preferred_locale)}
-                    </span>
-                  </div>
-                  <small>{`${purchase.reference} · ${es ? 'Entrega prevista' : 'Expected'} ${formatDate(purchase.expected_on)}`}</small>
-                  <ul className="dashboard-products">
-                    {purchase.progress.balances
-                      .filter((balance) => balance.remaining > 0)
-                      .map((balance) => (
-                        <li key={balance.line.id}>
-                          <span>{balance.line.ingredient_name}</span>
-                          <strong>{`${formatNumber(balance.remaining)} ${balance.line.uom}`}</strong>
-                        </li>
-                      ))}
-                  </ul>
-                </Link>
-              ))}
-            </div>
-          ))}
+          {canPurchases &&
+            (!incoming.length ? (
+              <div className="dashboard-empty">
+                <Truck size={30} />
+                <h3>{es ? 'Sin entregas pendientes' : 'No deliveries outstanding'}</h3>
+                <p>
+                  {es
+                    ? 'Las compras confirmadas permanecen aquí hasta su recepción completa.'
+                    : 'Confirmed purchases stay here until every line is received.'}
+                </p>
+              </div>
+            ) : (
+              <div className="dashboard-order-list">
+                {incoming.slice(0, DASHBOARD_LIMIT).map((purchase) => (
+                  <Link
+                    className="dashboard-order"
+                    href={`/app/purchasing?plan=${purchase.material_plan_id}&supplier=${purchase.supplier_id}`}
+                    key={purchase.id}
+                  >
+                    <div className="dashboard-order-heading">
+                      <strong>
+                        {suppliers.find((supplier) => supplier.id === purchase.supplier_id)?.name ??
+                          purchase.reference}
+                      </strong>
+                      <span className={`badge ${purchase.expected_on < today ? 'warning' : ''}`}>
+                        {purchase.expected_on < today
+                          ? overdueLabel
+                          : purchaseStatusLabel(purchase.progress.status, profile.preferred_locale)}
+                      </span>
+                    </div>
+                    <small>{`${purchase.reference} · ${es ? 'Entrega prevista' : 'Expected'} ${formatDate(purchase.expected_on)}`}</small>
+                    <ul className="dashboard-products">
+                      {purchase.progress.balances
+                        .filter((balance) => balance.remaining > 0)
+                        .map((balance) => (
+                          <li key={balance.line.id}>
+                            <span>{balance.line.ingredient_name}</span>
+                            <strong>{`${formatNumber(balance.remaining)} ${balance.line.uom}`}</strong>
+                          </li>
+                        ))}
+                    </ul>
+                  </Link>
+                ))}
+              </div>
+            ))}
           <Link className="dashboard-footer-link" href="/app/purchasing">
-            {es ? 'Ver compras' : 'View purchasing'}
-            {' '}
-            <ArrowUpRight size={16} />
+            {es ? 'Ver compras' : 'View purchasing'} <ArrowUpRight size={16} />
           </Link>
         </section>
         {canCoverage && (
@@ -307,41 +318,40 @@ export default async function Home() {
               : 'Ingredients for open orders come first. Owned stock includes held material; it is not production availability.'}
           </p>
           {!canStock && <p>{unavailable}</p>}
-          {canStock && (!stock.length ? (
-            <p className="empty">
-              {es ? 'Aún no hay ingredientes.' : 'No ingredients recorded yet.'}
-            </p>
-          ) : (
-            <ul className="dashboard-stock">
-              {stock.slice(0, DASHBOARD_LIMIT).map((ingredient) => (
-                <li key={ingredient.id}>
-                  <Link href={`/app/ingredients/${ingredient.id}`}>
-                    <strong>{ingredient.name}</strong>
-                    <small>
-                      {ingredient.demand > 0
-                        ? `${es ? 'Demanda abierta' : 'Open demand'}: ${formatNumber(ingredient.demand)} ${ingredient.inventory_uom}`
-                        : inventoryLabel}
-                    </small>
-                  </Link>
-                  <span
-                    className={
-                      ingredient.balance !== null && ingredient.balance <= 0
-                        ? 'stock-attention'
-                        : ''
-                    }
-                  >
-                    {ingredient.balance === null
-                      ? unrecordedLabel
-                      : `${formatNumber(ingredient.balance)} ${ingredient.inventory_uom}`}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ))}
+          {canStock &&
+            (!stock.length ? (
+              <p className="empty">
+                {es ? 'Aún no hay ingredientes.' : 'No ingredients recorded yet.'}
+              </p>
+            ) : (
+              <ul className="dashboard-stock">
+                {stock.slice(0, DASHBOARD_LIMIT).map((ingredient) => (
+                  <li key={ingredient.id}>
+                    <Link href={`/app/ingredients/${ingredient.id}`}>
+                      <strong>{ingredient.name}</strong>
+                      <small>
+                        {ingredient.demand > 0
+                          ? `${es ? 'Demanda abierta' : 'Open demand'}: ${formatNumber(ingredient.demand)} ${ingredient.inventory_uom}`
+                          : inventoryLabel}
+                      </small>
+                    </Link>
+                    <span
+                      className={
+                        ingredient.balance !== null && ingredient.balance <= 0
+                          ? 'stock-attention'
+                          : ''
+                      }
+                    >
+                      {ingredient.balance === null
+                        ? unrecordedLabel
+                        : `${formatNumber(ingredient.balance)} ${ingredient.inventory_uom}`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ))}
           <Link className="dashboard-footer-link" href="/app/inventory">
-            {es ? 'Revisar todo el inventario' : 'Review all inventory'}
-            {' '}
-            <ArrowUpRight size={16} />
+            {es ? 'Revisar todo el inventario' : 'Review all inventory'} <ArrowUpRight size={16} />
           </Link>
         </section>
         <div className="dashboard-side-stack">
@@ -357,9 +367,7 @@ export default async function Home() {
             {unprepared.slice(0, 3).map((order) => (
               <p key={order.id}>
                 <Link href={`/app/orders?order=${order.id}`}>
-                  {`${order.customer_name} · ${formatDate(order.needed_on)}`}
-                  {' '}
-                  →
+                  {`${order.customer_name} · ${formatDate(order.needed_on)}`} →
                 </Link>
               </p>
             ))}

@@ -119,6 +119,7 @@ beforeAll(async () => {
     insert into public.suppliers(id,name) values('${id(200)}','Synthetic supplier');
     insert into public.supplier_items(id,supplier_id,ingredient_id,purchase_uom,pack_quantity,pack_quantity_uom,is_preferred)
       values('${id(201)}','${id(200)}','${id(100)}','pail',30,'lb',true);
+    insert into public.customers(id,name) values('${id(700)}','Synthetic customer');
     insert into public.products(id,name) values('${id(300)}','Synthetic dressing');
     insert into public.recipes(id,product_id,name) values('${id(400)}','${id(300)}','Synthetic formula');
     insert into public.recipe_versions(id,recipe_id,version_number) values('${id(401)}','${id(400)}',1);
@@ -150,7 +151,7 @@ const orderInput = (orderId = id(800), count = 4) => ({
 const optionInput = (optionId = id(850)) => ({
   id: optionId,
   revision: 0,
-  customer_name: 'Synthetic customer',
+  customer_id: id(700),
   product_id: id(300),
   label: '2-gallon bag',
   packaging_mode: 'custom',
@@ -183,7 +184,7 @@ describe('customer orders and packaging against actual migration SQL', () => {
     await expect(rpc('save_customer_order', orderInput())).rejects.toThrow('active released');
     expect((await query('select * from public.customer_orders')).rows).toHaveLength(0);
     expect((await query('select * from public.material_plans')).rows).toHaveLength(0);
-    expect((await query('select * from public.customers')).rows).toHaveLength(0);
+    expect((await query('select * from public.customers')).rows).toHaveLength(1);
   });
   it('supports multiple units and prices per customer/product and pins the selected price', async () => {
     await rpc('save_customer_product_option', optionInput());
@@ -232,6 +233,20 @@ describe('customer orders and packaging against actual migration SQL', () => {
     expect((await query('select * from public.customer_orders')).rows).toHaveLength(0);
     expect((await query('select * from public.material_plans')).rows).toHaveLength(0);
   });
+  it('requires a tenant customer ID and preserves it through price revisions', async () => {
+    await rpc('save_customer_product_option', optionInput());
+    await expect(rpc('save_customer_product_option', {
+      ...optionInput(id(851)),
+      customer_id: id(999),
+    })).rejects.toThrow('Choose a customer');
+    await rpc('save_customer_product_option', {
+      ...optionInput(), revision: 1, unit_price: 14,
+    });
+    expect((await query(
+      'select customer_id,unit_price::text,revision from public.customer_product_options where id=$1',
+      [id(850)],
+    )).rows[0]).toMatchObject({ customer_id: id(700), unit_price: '14', revision: 2 });
+  });
   it('preserves default product packaging and clearly leaves unconfigured prices unset', async () => {
     await rpc('save_customer_product_option', { ...optionInput(), packaging_mode: 'product_default' });
     expect((await query('select unit_name,gallons_per_unit from public.customer_product_options')).rows[0])
@@ -269,6 +284,46 @@ describe('customer orders and packaging against actual migration SQL', () => {
 });
 
 describe('materials and purchasing against actual migration SQL', () => {
+  it('snapshots effective supplier prices and preserves an explicit missing-price state', async () => {
+    await query(`insert into public.supplier_item_prices
+      (supplier_item_id,unit_price,effective_on,note)
+      values($1,18,'2026-09-01','September price'),
+      ($1,22,'2026-10-01','October price')`, [id(201)]);
+    await rpc('save_material_plan', planInput());
+    await rpc('create_purchase_draft', draftInput());
+    expect((await query(`select estimated_unit_cost::text,estimated_line_cost::text,
+      estimated_as_of::text,supplier_price_id is not null as has_price
+      from public.purchase_draft_lines where purchase_draft_id=$1`, [id(900)])).rows[0])
+      .toEqual({
+        estimated_unit_cost: '18.00',
+        estimated_line_cost: '36.00',
+        estimated_as_of: '2026-09-30',
+        has_price: true,
+      });
+
+    await rpc('create_purchase_draft', {
+      id: id(901),
+      kind: 'standalone',
+      supplier_id: id(200),
+      expected_on: '2026-08-31',
+      lines: [{
+        ingredient_id: id(100),
+        supplier_item_id: id(201),
+        purchase_units: 1,
+        override_reason: '',
+      }],
+    });
+    expect((await query(`select estimated_unit_cost,estimated_line_cost,
+      estimated_as_of::text,supplier_price_id
+      from public.purchase_draft_lines where purchase_draft_id=$1`, [id(901)])).rows[0])
+      .toEqual({
+        estimated_unit_cost: null,
+        estimated_line_cost: null,
+        estimated_as_of: '2026-08-31',
+        supplier_price_id: null,
+      });
+  });
+
   it('creates retry-safe standalone purchase orders without requiring a reason', async () => {
     const purchase = {
       id: id(900),
