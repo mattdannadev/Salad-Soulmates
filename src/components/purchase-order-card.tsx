@@ -19,18 +19,30 @@ export default function PurchaseOrderCard({
 }) {
   const es = locale === 'es';
   const progress = purchaseProgress(draft, lines, receipts);
+  const notRecorded = es ? 'No registrado' : 'Not recorded';
+  const totalCost = draft.total_cost === null
+    ? notRecorded
+    : new Intl.NumberFormat(locale === 'es' ? 'es-US' : 'en-US', {
+      style: 'currency', currency: 'USD',
+    }).format(draft.total_cost);
   return (
     <article className="purchase-group" id={`purchase-${draft.id}`}>
       <div className="section-heading">
         <h3>{supplierName}</h3>
         <span className="badge">{purchaseStatusLabel(progress.status, locale)}</span>
       </div>
-      <p><strong>{draft.reference || `${es ? 'Compra' : 'Purchase'} · ${draft.id.slice(0, 8)}`}</strong></p>
+      <p><strong>{`${es ? 'N.º de pedido' : 'PO #'}: ${draft.reference || draft.id.slice(0, 8)}`}</strong></p>
       {draft.material_plan_id && orderLabel ? <Link href={`/app/orders?estimate=${draft.material_plan_id}`}>{orderLabel}</Link> : <p>{es ? 'Compra independiente de proveedor' : 'Standalone supplier purchase'}</p>}
       <dl className="purchase-dates">
         <div>
-          <dt>{es ? 'Creado' : 'Created'}</dt>
-          <dd>{formatDate(draft.created_at)}</dd>
+          <dt>{es ? 'Fecha de pedido' : 'Date placed'}</dt>
+          <dd>{draft.placed_on ? formatDate(draft.placed_on) : notRecorded}</dd>
+        </div>
+        <div>
+          <dt>{es ? 'Costo total' : 'Total cost'}</dt>
+          <dd>
+            {totalCost}
+          </dd>
         </div>
         <div>
           <dt>{es ? 'Entrega prevista' : 'Expected delivery'}</dt>

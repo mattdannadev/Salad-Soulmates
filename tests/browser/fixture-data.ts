@@ -17,6 +17,7 @@ export const fixtureRecords: Readonly<Record<string, readonly Record<string, unk
     base_role: 'admin',
     is_system: true,
     active: true,
+    operations_copilot_enabled: false,
   }],
   reference_lists: [{
     organization_id: fixtureId(10),
@@ -85,6 +86,25 @@ export const fixtureRecords: Readonly<Record<string, readonly Record<string, unk
     label_en: 'Each',
     label_es: 'Cada uno',
     sort_order: 40,
+    active: true,
+  }],
+  uom_families: [{
+    code: 'mass',
+    label_en: 'Mass / weight',
+    label_es: 'Masa / peso',
+    sort_order: 10,
+    active: true,
+  }],
+  uoms: [{
+    id: fixtureId(507),
+    family_code: 'mass',
+    code: 'lb',
+    label_en: 'Pound (lb)',
+    label_es: 'Libra (lb)',
+    measurement_system: 'imperial',
+    is_inventory_unit: true,
+    is_purchase_unit: false,
+    sort_order: 10,
     active: true,
   }],
   recipe_qc_rules: [{

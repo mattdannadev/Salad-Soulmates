@@ -109,6 +109,8 @@ describe('open PO receiving read model', () => {
     status,
     reference: `PO-${value}`,
     note: '',
+    total_cost: null,
+    placed_on: null,
     revision: 1,
     created_at: '2026-09-21T12:00:00Z',
   });

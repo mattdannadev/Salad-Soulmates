@@ -113,11 +113,6 @@ export function ReferenceOptionForm({
   );
 }
 
-function isMeasurementList(list: ReferenceList) {
-  const identity = `${list.code} ${list.name_en}`.toLowerCase();
-  return identity.includes('unit') || identity.includes('uom') || identity.includes('measure');
-}
-
 export function ReferenceDataManager({
   lists,
   options,
@@ -125,9 +120,10 @@ export function ReferenceDataManager({
   lists: ReferenceList[];
   options: ReferenceOption[];
 }) {
-  const areas = [...new Set(lists.map((list) => list.area))].sort();
+  const visibleLists = lists.filter((list) => list.code !== 'base_unit' && list.code !== 'purchase_unit');
+  const areas = [...new Set(visibleLists.map((list) => list.area))].sort();
   const [selectedArea, setSelectedArea] = useState(areas[0] ?? '');
-  const areaLists = lists.filter((list) => list.area === selectedArea);
+  const areaLists = visibleLists.filter((list) => list.area === selectedArea);
   const [selectedCode, setSelectedCode] = useState(areaLists[0]?.code ?? '');
   const selectedList = areaLists.find((list) => list.code === selectedCode) ?? areaLists[0];
   const selectedOptions = options
@@ -136,14 +132,14 @@ export function ReferenceDataManager({
 
   function selectArea(area: string) {
     setSelectedArea(area);
-    setSelectedCode(lists.find((list) => list.area === area)?.code ?? '');
+    setSelectedCode(visibleLists.find((list) => list.area === area)?.code ?? '');
   }
 
   if (!selectedList) {
     return (
       <section className="panel empty">
-        <h2>No configuration lists yet</h2>
-        <p>Reference data will appear here when it is available.</p>
+        <h2>No dropdown lists yet</h2>
+        <p>Editable dropdown options will appear here when they are available.</p>
       </section>
     );
   }
@@ -152,17 +148,16 @@ export function ReferenceDataManager({
     <section className="configuration-workspace" aria-label="Reference data configuration">
       <div className="configuration-callout">
         <div>
-          <p className="eyebrow">SHARED MEASUREMENT MODEL</p>
-          <h2>One unit catalog, used everywhere</h2>
+          <p className="eyebrow">DROPDOWN SETUP</p>
+          <h2>Other dropdown options</h2>
           <p>
-            Unit families organize compatible metric and imperial units. Purchasing, recipes,
-            inventory, and receiving all use the same catalog.
+            Choose an area, then a list. Open an option to edit its labels, order, or availability.
+            Lists marked editable also let you add values.
           </p>
         </div>
-        <span className="badge">Single source of truth</span>
       </div>
 
-      <div className="configuration-area-tabs" aria-label="Configuration areas">
+      <nav className="configuration-area-tabs" aria-label="Dropdown areas">
         {areas.map((area) => (
           <button
             className={area === selectedArea ? 'configuration-area-tab active' : 'configuration-area-tab'}
@@ -174,11 +169,11 @@ export function ReferenceDataManager({
             {area}
           </button>
         ))}
-      </div>
+      </nav>
 
       <div className="configuration-browser">
-        <nav className="configuration-list-nav" aria-label={`${selectedArea} lists`}>
-          <p className="eyebrow">LISTS</p>
+        <nav className="configuration-list-nav" aria-label={`${selectedArea} dropdown lists`}>
+          <p className="eyebrow">DROPDOWN LISTS</p>
           {areaLists.map((list) => {
             const listOptions = options.filter((option) => option.list_code === list.code);
             const inactiveCount = listOptions.filter((option) => !option.active).length;
@@ -193,7 +188,7 @@ export function ReferenceDataManager({
                 <span>{list.name_en}</span>
                 <small>
                   {listOptions.length}
-                  {' values'}
+                  {' options'}
                   {inactiveCount ? ` · ${inactiveCount} inactive` : ''}
                 </small>
               </button>
@@ -207,41 +202,33 @@ export function ReferenceDataManager({
               <p className="eyebrow">{selectedList.area}</p>
               <h2>
                 {selectedList.name_en}
-                {' '}
-                /
-                {' '}
-                {selectedList.name_es}
               </h2>
+              <p className="configuration-list-translation">{selectedList.name_es}</p>
               <p>
                 {selectedList.allow_custom_values
-                  ? 'Add values or open an existing value to edit its labels and availability.'
-                  : 'Open a value to edit its labels or change its availability.'}
+                  ? 'This dropdown is editable. Add an option below, or open a row to edit its labels, order, and availability.'
+                  : 'This dropdown has a fixed set of options. Open a row to edit its labels, order, and availability.'}
               </p>
             </div>
             <span className={selectedList.allow_custom_values ? 'badge' : 'badge muted'}>
-              {selectedList.allow_custom_values ? 'Custom values allowed' : 'Managed list'}
+              {selectedList.allow_custom_values ? 'Add options enabled' : 'Fixed options'}
             </span>
           </header>
 
-          {isMeasurementList(selectedList) ? (
-            <p className="configuration-context-note">
-              This is shared measurement data. Purchase units come from the same unit catalog;
-              maintain the unit once and reuse it across workflows.
-            </p>
-          ) : null}
-
           <div className="configuration-values">
+            <div className="configuration-values-heading" aria-hidden="true">
+              <span>Option</span>
+              <span>Code</span>
+              <span>Status</span>
+            </div>
             {selectedOptions.map((option) => (
               <details className="configuration-value" key={option.id}>
                 <summary>
-                  <span>
+                  <span className="configuration-option-name">
                     <strong>{option.label_en}</strong>
-                    <small>
-                      {option.label_es}
-                      {' · '}
-                      {option.code}
-                    </small>
+                    <small>{option.label_es}</small>
                   </span>
+                  <code>{option.code}</code>
                   <span className={option.active ? 'badge' : 'badge muted'}>
                     {option.active ? 'Active' : 'Inactive'}
                   </span>
@@ -257,23 +244,23 @@ export function ReferenceDataManager({
             ))}
             {!selectedOptions.length ? (
               <div className="empty configuration-empty">
-                <h3>No values yet</h3>
-                <p>Add the first value to make it available in related dropdowns.</p>
+                <h3>No options yet</h3>
+                <p>{selectedList.allow_custom_values ? 'Add the first option to populate this dropdown.' : 'This list has no options.'}</p>
               </div>
             ) : null}
           </div>
 
           {selectedList.allow_custom_values ? (
             <details className="configuration-add-value">
-              <summary>+ Add a new value</summary>
+              <summary>+ Add dropdown option</summary>
               <div className="configuration-value-form">
                 <ReferenceOptionForm listCode={selectedList.code} allowCustom />
               </div>
             </details>
           ) : null}
           <p className="configuration-lifecycle-note">
-            Values already used in business records should be deactivated instead of deleted.
-            Inactive values remain available for history and can be reactivated at any time.
+            For options already used in records, turn off Active instead of deleting them.
+            Inactive options stay in historical records and can be turned on again.
           </p>
         </div>
       </div>

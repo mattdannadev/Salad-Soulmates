@@ -10,6 +10,7 @@ test('adds a supplier from the directory and preserves purchase-order access', a
   const directory = page.getByRole('region', { name: 'Supplier directory' });
   const grid = directory.getByRole('grid');
   await expect(grid.getByRole('columnheader', { name: 'Open purchase orders' })).toBeVisible();
+  await expect(grid.getByRole('columnheader', { name: 'Status' })).toHaveCount(0);
   await page.goto('/app/suppliers?q=greens&sort=name&page=2');
   await page.getByRole('link', { name: '+ Add supplier', exact: true }).click();
   await expect(page).toHaveURL(/\/app\/suppliers\/new\?returnTo=/);
@@ -29,7 +30,6 @@ test('adds a supplier from the directory and preserves purchase-order access', a
     .filter({ has: page.getByRole('gridcell', { name: 'New directory supplier', exact: true }) });
   await expect(row).toContainText('Test contact');
   await expect(row).toContainText('supplier@example.test');
-  await expect(row).toContainText('Active');
   await expect(row.getByRole('gridcell').last()).toHaveText('0');
   const details = page.locator('details.supplier-orders').filter({ hasText: 'New directory supplier' });
   const detailLink = row.getByRole('link', { name: 'New directory supplier', exact: true });
@@ -56,4 +56,20 @@ test('adds a supplier from the directory and preserves purchase-order access', a
   await page.screenshot({ path: info.outputPath('supplier-directory.png'), fullPage: true });
   const fits = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
   expect(fits).toBe(true);
+});
+
+test('supplier directory uses one vertical scroll area on narrow screens', async ({ page }) => {
+  await page.setViewportSize({ width: 548, height: 780 });
+  await page.goto('/login');
+  await page.getByLabel('Email or phone number').fill('admin@example.test');
+  await page.getByLabel('Password', { exact: true }).fill('local-test-password');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.goto('/app/suppliers');
+  const directory = page.getByRole('region', { name: 'Supplier directory' });
+  await expect(directory.getByRole('link').first()).toBeVisible();
+  await expect(directory.getByRole('grid')).toBeHidden();
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > window.innerWidth,
+  );
+  expect(overflow).toBe(false);
 });

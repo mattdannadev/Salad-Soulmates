@@ -296,7 +296,7 @@ async function confirmedPurchase() {
     }],
   })]);
   await first.query('select public.change_purchase_status($1::jsonb)', [JSON.stringify({
-    id: draftId, revision: 1, status: 'Confirmed', reference: 'TEST-CONFIRMED', note: '',
+    id: draftId, revision: 1, status: 'Confirmed', reference: 'TEST-CONFIRMED', note: '', total_cost: 42.75, placed_on: '2026-09-29',
   })]);
   const result: unknown = await first.query('select id from public.purchase_draft_lines where purchase_draft_id=$1', [draftId]);
   const purchaseLineResult = z.object({ rows: z.tuple([z.object({ id: z.uuid() })]) });
@@ -333,7 +333,7 @@ it('prevents cancelling a confirmed purchase after an overlapping receipt commit
     [JSON.stringify(receipt)],
     'select public.change_purchase_status($1::jsonb)',
     [JSON.stringify({
-      id: draftId, revision: 2, status: 'Cancelled', reference: 'TEST-CONFIRMED', note: 'Cancellation fixture',
+      id: draftId, revision: 2, status: 'Cancelled', reference: 'TEST-CONFIRMED', note: 'Cancellation fixture', total_cost: 42.75, placed_on: '2026-09-29',
     })],
   );
   expect(String(outcome.error)).toContain('Received purchases cannot be cancelled');

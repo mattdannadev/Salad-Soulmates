@@ -167,6 +167,8 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await expect(draft).toContainText('60 lb');
   await draft.getByText('Update status', { exact: true }).click();
   await draft.getByLabel('External order reference').fill(`PO-${info.project.name}`);
+  await draft.getByLabel('Supplier quoted total cost (USD)').fill('24.50');
+  await draft.getByLabel('Date placed with supplier').fill('2026-09-29');
   await draft.getByRole('button', { name: 'Save purchase status' }).click();
   await expect(draft.getByText('Confirmed', { exact: true })).toBeVisible();
   await expect(draft).toContainText('Customer pickup date');

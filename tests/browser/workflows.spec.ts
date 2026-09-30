@@ -37,8 +37,9 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
   await page.screenshot({ path: info.outputPath('recipe-ingredients.png'), fullPage: true });
   await page.getByRole('link', { name: 'Preview garlic powder', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Preview garlic powder');
-  await expect(page.getByRole('heading', { name: 'On hand', exact: true })).toBeVisible();
-  await expect(page.locator('details.ingredient-stock')).toContainText('On hand: Not recorded');
+  await expect(page.getByRole('heading', { name: 'Inventory reference', exact: true })).toBeVisible();
+  await expect(page.getByText('Open purchase-order inbound', { exact: true })).toBeVisible();
+  await expect(page.getByText('Committed to active production plans', { exact: true })).toBeVisible();
   await page.goBack();
   await page.getByRole('link', { name: 'v2 · Draft', exact: true }).click();
   await expect(page.getByText('No preparation sections recorded.', { exact: true })).toBeVisible();
@@ -69,7 +70,9 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
   await page.goto('/app/receiving');
   await expect(page.getByText('No receipts yet', { exact: true })).toBeVisible();
   await page.goto('/app/settings');
-  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Configuration', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Shared unit catalog', exact: true })).toBeVisible();
+  await expect(page.getByText('Pound (lb)', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Invite a new user', exact: true })).toHaveCount(0);
   await page.goto('/app/user-management/users');
   await expect(page.getByRole('heading', { name: 'Invite a new user', exact: true })).toBeVisible();

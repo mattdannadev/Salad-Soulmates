@@ -2,6 +2,7 @@
 
 import { useId } from 'react';
 import type { PurchaseDraft } from '@/domain/purchasing';
+import { facilityDate } from '@/domain/format';
 import PurchasingForm from './purchasing-form';
 
 export function CancelMaterialPlan({ id, locale, customerOrder = false }: {
@@ -42,13 +43,20 @@ export default function PurchaseStatusForm({
       operation="change-status"
       locale={locale}
       label={es ? 'Guardar estado' : 'Save purchase status'}
-      payload={(form) => ({
-        id: draft.id,
-        revision: draft.revision,
-        status: form.get('status'),
-        reference: form.get('reference'),
-        note: form.get('note'),
-      })}
+      payload={(form) => {
+        const submittedCost = form.get('total_cost');
+        return {
+          id: draft.id,
+          revision: draft.revision,
+          status: form.get('status'),
+          reference: form.get('reference'),
+          note: form.get('note'),
+          total_cost: typeof submittedCost === 'string' && submittedCost.trim()
+            ? Number(submittedCost) : null,
+          placed_on: form.get('status') === 'Confirmed'
+            ? form.get('placed_on') : draft.placed_on,
+        };
+      }}
     >
       <p>
         {es
@@ -83,6 +91,28 @@ export default function PurchaseStatusForm({
             name="note"
             maxLength={1000}
             defaultValue={draft.note}
+          />
+        </label>
+        <label htmlFor={`${prefix}-total-cost`}>
+          {es ? 'Costo total cotizado (USD)' : 'Supplier quoted total cost (USD)'}
+          <input
+            id={`${prefix}-total-cost`}
+            name="total_cost"
+            type="number"
+            min="0"
+            max="1000000000"
+            step="0.01"
+            defaultValue={draft.total_cost ?? ''}
+          />
+          <small>{es ? 'Obligatorio para confirmar; se conserva al cancelar.' : 'Required to confirm; retained if cancelled.'}</small>
+        </label>
+        <label htmlFor={`${prefix}-placed-on`}>
+          {es ? 'Fecha de pedido' : 'Date placed with supplier'}
+          <input
+            id={`${prefix}-placed-on`}
+            name="placed_on"
+            type="date"
+            defaultValue={draft.placed_on ?? facilityDate()}
           />
         </label>
       </div>

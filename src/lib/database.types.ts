@@ -8,6 +8,49 @@ export type Database = {
   };
   public: {
     Tables: {
+      provider_role_assignments: {
+        Row: {
+          id: string;
+          user_id: string;
+          role_code: string;
+          assigned_by: string | null;
+          assigned_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      provisioning_jobs: {
+        Row: {
+          id: string;
+          account_id: string;
+          idempotency_key: string;
+          correlation_id: string;
+          requested_by: string;
+          requested_at: string;
+          updated_at: string;
+          started_at: string | null;
+          finished_at: string | null;
+          status: 'draft' | 'provisioning' | 'active' | 'failed';
+          readiness_state: 'not_ready' | 'ready' | 'attention_required';
+          offering_type: 'public_cloud';
+          requested_organization_name: string;
+          requested_organization_slug: string;
+          organization_id: string | null;
+          approved_link_id: string | null;
+          initial_admin_invitation_reference: string | null;
+          initial_admin_auth_user_id: string | null;
+          initial_admin_invitation_state: 'not_started' | 'pending' | 'delivered' | 'expired' | 'failed';
+          initial_admin_invitation_expires_at: string | null;
+          invitation_delivered_at: string | null;
+          attempt_count: number;
+          safe_invitation_failure_code: string | null;
+          safe_failure_code: string | null;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       application_error_logs: {
         Row: {
           error_code: string;
@@ -404,6 +447,8 @@ export type Database = {
           status: string;
           reference: string;
           note: string;
+          total_cost: number | null;
+          placed_on: string | null;
           revision: number;
           created_by: string;
           created_at: string;
@@ -418,6 +463,8 @@ export type Database = {
           status?: string;
           reference?: string;
           note?: string;
+          total_cost?: number | null;
+          placed_on?: string | null;
           revision?: number;
           created_by?: string;
           created_at?: string;
@@ -432,6 +479,8 @@ export type Database = {
           status?: string;
           reference?: string;
           note?: string;
+          total_cost?: number | null;
+          placed_on?: string | null;
           revision?: number;
           created_by?: string;
           created_at?: string;
@@ -1905,6 +1954,115 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      list_provider_provisioning_jobs: {
+        Args: { actor: string };
+        Returns: {
+          id: string;
+          account_id: string;
+          account_name: string;
+          organization_id: string | null;
+          organization_name: string | null;
+          status: 'draft' | 'provisioning' | 'active' | 'failed';
+          readiness_state: 'not_ready' | 'ready' | 'attention_required';
+          offering_type: 'public_cloud';
+          requested_organization_name: string;
+          requested_organization_slug: string;
+          requested_at: string;
+          updated_at: string;
+          initial_admin_invitation_state: 'not_started' | 'pending' | 'delivered' | 'expired' | 'failed';
+          initial_admin_invitation_expires_at: string | null;
+          invitation_delivered_at: string | null;
+          attempt_count: number;
+          safe_invitation_failure_code: string | null;
+          safe_failure_code: string | null;
+        }[];
+      };
+      get_provider_provisioning_job: {
+        Args: { actor: string; target_job_id: string };
+        Returns: {
+          id: string;
+          account_id: string;
+          account_name: string;
+          organization_id: string | null;
+          organization_name: string | null;
+          status: 'draft' | 'provisioning' | 'active' | 'failed';
+          readiness_state: 'not_ready' | 'ready' | 'attention_required';
+          offering_type: 'public_cloud';
+          requested_organization_name: string;
+          requested_organization_slug: string;
+          requested_at: string;
+          updated_at: string;
+          initial_admin_invitation_state: 'not_started' | 'pending' | 'delivered' | 'expired' | 'failed';
+          initial_admin_invitation_expires_at: string | null;
+          invitation_delivered_at: string | null;
+          attempt_count: number;
+          safe_invitation_failure_code: string | null;
+          safe_failure_code: string | null;
+        }[];
+      };
+      has_provider_permission: {
+        Args: { actor: string; permission_code: string };
+        Returns: boolean;
+      };
+      get_provider_tenant_detail: {
+        Args: { actor: string; target_organization_id: string };
+        Returns: {
+          id: string;
+          name: string;
+          slug: string;
+          status: 'active' | 'suspended';
+          created_at: string;
+          enabled_user_count: number;
+          facility_count: number;
+          linked_account_id: string | null;
+          linked_account_name: string | null;
+          linked_account_status: 'active' | 'suspended' | 'archived' | null;
+        }[];
+      };
+      get_provider_customer_account: {
+        Args: { actor: string; target_account_id: string };
+        Returns: {
+          id: string;
+          name: string;
+          status: 'active' | 'suspended' | 'archived';
+          created_at: string;
+          active_tenant_count: number;
+        }[];
+      };
+      list_provider_customer_account_tenants: {
+        Args: { actor: string; target_account_id: string };
+        Returns: {
+          id: string;
+          name: string;
+          slug: string;
+          status: 'active' | 'suspended';
+          created_at: string;
+          enabled_user_count: number;
+          facility_count: number;
+        }[];
+      };
+      list_provider_customer_accounts: {
+        Args: { actor: string };
+        Returns: {
+          id: string;
+          name: string;
+          status: 'active' | 'suspended' | 'archived';
+          created_at: string;
+          active_tenant_count: number;
+        }[];
+      };
+      list_provider_tenants: {
+        Args: { actor: string };
+        Returns: {
+          id: string;
+          name: string;
+          slug: string;
+          status: 'active' | 'suspended';
+          created_at: string;
+          enabled_user_count: number;
+          facility_count: number;
+        }[];
+      };
       list_platform_organizations: {
         Args: { actor_user_id: string };
         Returns: {
@@ -1987,7 +2145,12 @@ export type Database = {
         Returns: Json;
       };
       find_traceability_production_lots: {
-        Args: { product_filter: string; production_lot_code_filter: string; page_number?: number; requested_page_size?: number };
+        Args: {
+          product_filter: string;
+          production_lot_code_filter: string;
+          page_number?: number;
+          requested_page_size?: number;
+        };
         Returns: Json;
       };
       trace_production_lot: {
@@ -1995,7 +2158,12 @@ export type Database = {
         Returns: Json;
       };
       trace_source_material: {
-        Args: { source_lot_filter?: string | null; serialized_unit_filter?: string | null; page_number?: number; requested_page_size?: number };
+        Args: {
+          source_lot_filter?: string | null;
+          serialized_unit_filter?: string | null;
+          page_number?: number;
+          requested_page_size?: number;
+        };
         Returns: Json;
       };
       save_customer_product_option: { Args: { payload: Json }; Returns: string };

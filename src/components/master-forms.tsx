@@ -1,4 +1,5 @@
 import type { Supplier, SupplierItem } from '@/domain/master-data';
+import { returnContextSearchParams } from '@/lib/return-context';
 import { isSupplierDirectoryReturn, supplierReturnContext } from '@/lib/supplier-return-context';
 import { RecordForm, type Field } from './record-form';
 
@@ -13,6 +14,8 @@ export function SupplierForm({
 }) {
   const { href } = supplierReturnContext(returnHref, undefined);
   const directoryReturn = isSupplierDirectoryReturn(href);
+  const afterSave = !supplier && directoryReturn
+    ? `/app/suppliers/created?${returnContextSearchParams({ href })}` : href;
   const cancelHref = supplier && directoryReturn
     ? `${href.split('#', 1)[0]}#supplier-${supplier.id}` : href;
   let submitLabel = locale === 'es' ? 'Crear proveedor' : 'Create supplier';
@@ -21,8 +24,8 @@ export function SupplierForm({
     <RecordForm
       kind="supplier"
       hidden={supplier ? { id: supplier.id } : {}}
-      afterSave={href}
-      afterSaveRecordHashPrefix={directoryReturn ? 'supplier-' : undefined}
+      afterSave={afterSave}
+      afterSaveRecordHashPrefix={supplier && directoryReturn ? 'supplier-' : undefined}
       replaceAfterSave
       cancelHref={cancelHref}
       submit={submitLabel}

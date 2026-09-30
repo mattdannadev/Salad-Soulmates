@@ -34,6 +34,8 @@ const draft = {
   status: 'Confirmed' as const,
   reference: 'EXTERNAL-1',
   note: '',
+  total_cost: 18.75,
+  placed_on: '2026-09-20',
   revision: 2,
   created_at: '2026-09-20T00:00:00Z',
 };
@@ -196,11 +198,17 @@ describe('purchasing input and display calculations', () => {
       revision: 1,
       reference: '',
       note: '',
+      total_cost: null,
+      placed_on: null,
     };
     expect(purchaseStatusInputSchema.safeParse(input).success).toBe(false);
     expect(
-      purchaseStatusInputSchema.safeParse({ ...input, reference: 'PO-1' }).success,
+      purchaseStatusInputSchema.safeParse({
+        ...input, reference: 'PO-1', total_cost: 18.75, placed_on: '2026-09-20',
+      }).success,
     ).toBe(true);
+    expect(purchaseStatusInputSchema.safeParse({ ...input, reference: 'PO-1' }).success).toBe(false);
+    expect(purchaseStatusInputSchema.safeParse({ ...input, reference: 'PO-1', total_cost: 18.751 }).success).toBe(false);
     expect(
       purchaseStatusInputSchema.safeParse({ ...input, status: 'Cancelled' }).success,
     ).toBe(false);

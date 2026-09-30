@@ -82,6 +82,10 @@ async function prepareOtherTenantWorksheet() {
       values('${otherTenant.organization}','Other tenant','other-tenant');
     insert into public.facilities(id,organization_id,name)
       values('${otherTenant.facility}','${otherTenant.organization}','Other facility');
+    insert into public.uom_families(organization_id,code,label_en,label_es,sort_order)
+      values('${otherTenant.organization}','mass','Mass','Masa',10);
+    insert into public.uoms(organization_id,family_code,code,label_en,label_es,measurement_system,is_inventory_unit,is_purchase_unit,sort_order)
+      values('${otherTenant.organization}','mass','lb','Pound','Libra','imperial',true,true,10);
     insert into public.access_profiles(id,organization_id,name,base_role,is_system)
       values('${otherTenant.accessProfile}','${otherTenant.organization}','Administrator','admin',true);
     insert into public.access_profile_permissions(organization_id,access_profile_id,permission_code)

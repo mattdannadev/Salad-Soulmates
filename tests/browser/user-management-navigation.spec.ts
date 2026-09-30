@@ -20,7 +20,12 @@ test('User Management navigation organizes admin screens and preserves legacy ac
     }));
 
   await page.goto('/app/settings');
-  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Configuration', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Shared unit catalog', exact: true })).toBeVisible();
+  const massFamily = page.getByText('Mass / weight / Masa / peso', { exact: true });
+  await massFamily.click();
+  await expect(page.getByText('Pound (lb) · imperial', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'We couldn’t load this workspace page.' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Invite a new user', exact: true })).toHaveCount(0);
 
   await page.goto('/app/user-management/users');

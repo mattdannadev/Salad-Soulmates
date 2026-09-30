@@ -1,5 +1,187 @@
 # Implementation decisions
 
+## 2026-09-29 — Optional inventory stocking locations
+
+An Ingredient remains a single master-data record, regardless of where its
+physical stock is stored. Inventory is the operational record of that ingredient
+at a facility and, when location tracking is enabled, at a specific stocking
+location. A location must support a human-findable hierarchy of **row, section,
+level, and bin** (with a display label assembled from those parts), and it must
+be visible from an ingredient's detail view so staff can find available material.
+Lots, serialized packages, availability status, and quantities remain attached to
+the location-specific inventory position; they are never duplicated by creating
+another Ingredient.
+
+Location tracking is an optional, facility-level capability. It is appropriate
+for warehouse-oriented customers, while SMB customers may keep it disabled and
+continue to see one facility-total quantity per ingredient. The system must use a
+clear implicit "Unspecified" location for disabled or not-yet-assigned stock, so
+total inventory, purchasing, planning, traceability, and historical ledger events
+remain correct. This records product scope only: no schema migration, data
+backfill, or UI behavior is authorized by this decision.
+
+The Ingredient page is also an authorized **reference** surface, not a second
+inventory workspace. For every facility the viewer is allowed to see, it must
+summarize the ingredient's on-hand quantity, remaining quantity on confirmed open
+purchase orders, and quantity committed to active production. It must clearly
+label those measures, exclude draft purchase orders from inbound, and keep held,
+quarantined, expired, and otherwise unavailable material distinct from usable
+stock. A facility total and its optional location breakdown must reconcile. The
+Inventory workspace remains the owner of operational actions, location moves,
+receiving, adjustments, package/lot detail, and event history.
+
+## 2026-09-29 — Multi-offering Provider Console direction
+
+The owner directed that Salad Soulmates plan for public-cloud, private-cloud and
+on-premises offerings managed through one Provider Console. The console is the
+common control plane for commercial, lifecycle, entitlement, deployment-inventory,
+sanitized health and audit information; it is not authorization to centralize
+tenant operational data, credentials, direct database access, or a shared support
+superuser across those offerings.
+
+The current shared Production plus Sandbox baseline remains the only approved
+runtime. Public cloud continues to use logical organization isolation, server-side
+authorization and RLS. Private-cloud and on-premises runtime provisioning,
+customer-network connectivity, deployment agents, remote operations, customer
+data support access and any additional databases remain proposed Stage 0/Stage 1
+design work. They require an approved offering-specific source-of-truth map,
+capability matrix, support/tenant-approval policy, authentication model, recovery
+runbook and verification before implementation or commercial commitment.
+
+The first proposed private-cloud offering is a dedicated customer environment in
+a Salad Soulmates-managed cloud account. A customer-owned cloud account remains a
+distinct future deployment model: it can share cloud technologies with the
+private-cloud offering, but differs from on premises because the runtime is still
+hosted on cloud infrastructure rather than customer-operated local hardware and
+networks.
+
+For on premises, Salad Soulmates will offer both a Salad Soulmates-provided
+appliance and installation on a customer-provided server. All public-cloud,
+private-cloud and on-premises offerings must consume one versioned application
+release train from the same source repository, artifact and compatibility
+contract. The Provider Console must show customers and their linked tenants and
+environments across every offering from one customer-first interface, without
+centralizing tenant operational data or granting cross-environment data access.
+
+The initial cross-offering release standard is Linux `x86_64` OCI container
+images on a Docker-compatible runtime. Salad Soulmates operates the public and
+private cloud targets; the appliance includes the approved runtime; and the
+customer-server installation validates the approved runtime before enrollment.
+Every target consumes the same signed application/agent release and compatibility
+manifest. Kubernetes/Helm and Windows server packaging are deferred. The Provider
+Console may offer an upgrade only after an environment reports compatible version,
+preflight and recovery state; installers or agents perform artifact retrieval and
+verification, never the browser.
+
+Public cloud is the initial commercial and implementation offering. On-premises
+and Salad Soulmates-managed private cloud are secondary offerings that remain on
+the same Provider Console roadmap but are not marketed or exposed as available
+until their deployment, operations and support acceptance gates pass. The launch
+relationship is one customer account to one isolated production organization,
+with one or more linked environments. Customers may use multiple independent
+sandboxes to test releases before promotion to another environment. The control
+plane must retain an explicit customer-to-organization link so a future
+customer-to-many-production-organizations contract can be added without weakening
+organization/RLS isolation.
+
+The offering distinction is explicit: Standard public cloud uses a shared data
+plane with logical organization isolation; dedicated private cloud uses a
+customer-specific application and database environment operated by Salad
+Soulmates; on-premises uses a customer-operated application and database. Shared
+tenancy is not represented as physical isolation. A separate Provider Control
+Plane will hold only cross-offering commercial, deployment and audited metadata
+as the product matures; tenant operational data remains in each tenant data
+plane. Dedicated/private and on-premises provisioning cannot be marketed as
+available until their deployment automation, backup, upgrade and support
+boundaries are implemented and verified.
+
+Sandboxes have two planned classes: empty/sample-data sandbox as the launch
+default and a later approved masked-production-copy sandbox. “Limited data” is a
+selection/masking policy within either class, not a third environment type.
+Unmasked full production clones are excluded by default and require a separate
+exceptional offering decision after masking, customer approval, retention,
+access-audit and incident safeguards have been designed and verified.
+
+The approved Provider Console launch roles are Provider Owner, Provider
+Operations, Provider Support Read-only and Provider Billing. Permissions are
+enforced server-side and are distinct from tenant roles. Provider-role assignment,
+suspension, entitlement downgrade, export, support elevation and future purge
+require a stated reason, recent authentication, explicit permission, immutable
+audit evidence and Provider Owner approval.
+
+The founder is the designated initial Provider Owner. Bootstrap only the exact
+production Auth account explicitly provided by the owner, and only if that
+account exists when the reviewed migration runs. Do not infer provider ownership
+from a tenant role or bulk-promote `platform_admins`. Provider Owner
+assignment/revocation requires server-verifiable reauthentication no older than
+15 minutes. The reusable proof is implemented locally, but role-assignment and
+revocation mutations remain unavailable until their own audited workflows are
+implemented and tested.
+
+The initial server-verifiable fresh-authentication policy is password-only and
+supports either confirmed email/password or confirmed phone/password login. A
+high-impact Provider Owner action must validate the current token's signed
+password authentication-method event, current non-revoked Auth user/session,
+exact current Provider Owner assignment, matching user/session identity, and a
+non-future age strictly below 15 minutes. Token refresh, invitation, recovery,
+email-change, anonymous, missing, malformed, and stale authentication events
+never qualify. This policy does not use a browser timestamp, token issue time,
+or a custom reusable proof cookie/table. MFA is a future enhancement, not a
+launch requirement. Real Supabase Auth sign-in, cookie replacement and
+revocation behavior must be exercised against the production-like Auth project
+before a high-impact mutation is released.
+
+For the Stage 2 customer-account foundation, `customer_accounts` are separate
+commercial control-plane records; they do not reuse tenant-local operational
+`customers` records. Their initial statuses are `active`, `suspended`, and
+`archived`. Provider Owners must explicitly approve each account-to-production-
+organization link, and launch policy allows one active production link per
+account and organization. Contact details are stored for future relationship
+management but are not returned by the Provider Console. Provider Billing has no
+customer-account access at this stage. Organization lifecycle remains
+authoritative for tenant access; account/link status is relationship metadata
+until a separately approved coordinated lifecycle workflow exists.
+
+The approved customer-tenant and environment lifecycle states are `draft`,
+`provisioning`, `active`, `suspended`, `failed` and `archived`. All transitions
+must be server-authorized and immutable/auditable. Suspension is reversible and
+must consistently block or safely pause sessions, APIs, background jobs and
+integrations while preserving history. Archived records retain export/retention
+evidence and are not deleted. Purge remains a future Provider Owner-approved
+workflow after export, retention and recovery obligations are satisfied.
+
+Enabled-user count is an operational visibility and entitlement measure, not a
+selected commercial pricing metric. It counts enabled profiles in an active
+production organization and excludes pending invitations, deactivated profiles
+and sandbox-only accounts. The approved commercial packaging direction is a
+customer-account or operational-facility/site base with operational-scale,
+package and support bands; it rejects a pure per-user or flat-per-facility
+subscription. Final price points and any order/activity allowance remain a
+separate commercial-policy decision. No event-based metric may affect
+entitlement or price until it has passed a reconciled metering decision.
+
+Public-cloud onboarding provisions the organization, its first facility,
+defaults, entitlement, and approved customer link before the initial tenant
+administrator invitation is delivered. The organization stays suspended while
+that invitation is pending or needs recovery. Successful delivery permits an
+authorized transition to active; invitation acceptance is not an activation
+prerequisite. The Provider Console must retain the pending invitation state and
+provide an auditable, recoverable path for expiry or delivery failure. The
+initial public-cloud entitlement is every currently released core product
+capability. No separately marketed premium module, add-on, or restricted
+package has been selected. Existing internal feature entitlements remain their
+own product decisions and must not be presented as a commercial add-on until
+explicitly approved.
+
+Commercial terminology is now explicit: an operational site means a customer
+facility, plant, warehouse, or comparable operating location—not the Salad
+Soulmates web application or subscription. The active `$650`, `$1,250` and
+`$2,500+` per-site figures remain unvalidated planning hypotheses, not approved
+rate-card amounts; no active artifact contains a `$680` figure. A flat
+per-facility price is not selected because materially larger or more complex
+facilities require validated operational-scale/package/support bands or a scoped
+enterprise quote.
+
 ## 2026-09-27 — Editable, tracked customer pickup dates
 
 The saved customer pickup date is now editable from an active order. Every change

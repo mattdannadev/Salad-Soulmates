@@ -95,6 +95,25 @@ client-side state.
    Do not mark SSO sellable until the selected integration, operational runbook,
    and these tests are accepted for the contracted scope.
 
+Inventory location-tracking follow-up: add an optional facility-level location
+capability for warehouse-oriented customers. Model inventory by ingredient,
+facility, stocking location, lot/package, and status, with a human-findable row /
+section / level / bin hierarchy and a composed display label. Ingredient detail
+must show where currently available material can be found. When the capability is
+disabled, retain the SMB-friendly facility-total view and assign unlocated stock to
+an explicit Unspecified location; do not create duplicate ingredient records or
+break ledger, planning, purchasing, traceability, permissions, or historical
+events. Acceptance requires location-level and total balances to reconcile, moves
+to be auditable, and the disabled path to require no warehouse-location setup.
+
+Ingredient-reference follow-up: show a read-only, facility-segmented availability
+summary on each Ingredient page: on hand, confirmed-open-purchase-order inbound,
+and active-production committed quantity. Exclude drafts from inbound; label
+owned/on-hand, usable, and unavailable stock without conflating them. When enabled,
+the optional location breakdown must reconcile to the facility total. Respect
+facility-scoped access and retain Inventory as the single operational workspace for
+receiving, adjustments, moves, package/lot detail, and event history.
+
 Inventory management follow-up: make the Inventory workspace writable for users with
 inventory-adjust permission. Record immutable manual gains, manual shrinks and
 order-fill usage with ingredient, effective date, type and reason; show those

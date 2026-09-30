@@ -75,6 +75,8 @@ async function confirmDraft() {
     revision: 1,
     reference: 'EXTERNAL-123',
     note: '',
+    total_cost: 42.75,
+    placed_on: '2026-09-20',
   });
 }
 async function receiptPayload(quantity = 10, requestId = id(950)) {
@@ -402,6 +404,8 @@ describe('materials and purchasing against actual migration SQL', () => {
       status: 'Confirmed',
       reference: 'SUPPLY',
       note: '',
+      total_cost: 42.75,
+      placed_on: '2026-09-20',
     });
     expect((await requirements())[0]).toMatchObject({
       required: 180,
@@ -460,6 +464,8 @@ describe('materials and purchasing against actual migration SQL', () => {
         status: 'Confirmed',
         reference: '',
         note: '',
+        total_cost: 42.75,
+        placed_on: '2026-09-20',
       }),
     ).rejects.toThrow('external order reference');
     await rpc('change_purchase_status', {
@@ -468,6 +474,8 @@ describe('materials and purchasing against actual migration SQL', () => {
       status: 'Confirmed',
       reference: 'LATE',
       note: '',
+      total_cost: 42.75,
+      placed_on: '2026-09-20',
     });
     expect((await requirements())[0]?.confirmed_inbound).toBe(0);
   });
@@ -508,6 +516,8 @@ describe('materials and purchasing against actual migration SQL', () => {
         status: 'Cancelled',
         reference: 'EXTERNAL-123',
         note: 'Cancel remainder',
+        total_cost: 42.75,
+        placed_on: '2026-09-20',
       }),
     ).rejects.toThrow('cannot be cancelled');
   });
@@ -614,7 +624,13 @@ describe('dated demand and automatic supplier purchases', () => {
     await rpc('save_material_plan', planInput(id(801), 2, '2026-11-01'));
     await rpc('create_purchase_draft', { ...draftInput(), expected_on: '2026-10-15' });
     await rpc('change_purchase_status', {
-      id: id(900), status: 'Confirmed', revision: 1, reference: 'Placed', note: '',
+      id: id(900),
+      status: 'Confirmed',
+      revision: 1,
+      reference: 'Placed',
+      note: '',
+      total_cost: 42.75,
+      placed_on: '2026-09-20',
     });
     expect(await coverage()).toEqual([expect.objectContaining({
       demand: 60, inbound: 0, shortage: 40, neededOn: '2026-10-01', supplyDate: '2026-10-01',

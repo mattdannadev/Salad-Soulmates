@@ -16,6 +16,8 @@ function draft(id: string, supplier: string, status: PurchaseDraft['status']): P
     status,
     reference: 'EXT-1',
     note: '',
+    total_cost: null,
+    placed_on: null,
     revision: 1,
     created_at: '2026-09-01T00:00:00Z',
   };

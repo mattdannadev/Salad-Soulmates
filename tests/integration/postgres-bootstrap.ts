@@ -41,6 +41,7 @@ const migrations = [
   '20260926040616_rate_limit_tenant_signup_requests.sql',
   '20260926040625_spice_preparation_consumption.sql',
   '20260926040633_spice_preparation_issues.sql',
+  '20260926090000_canonical_uom_catalog.sql',
   '20260926202013_platform_control_plane.sql',
   '20260926210000_production_finish_before_pickup.sql',
   '20260927154241_operations_copilot_entitlements.sql',
@@ -53,6 +54,11 @@ const migrations = [
   '20260928201500_customer_pickup_date_changes.sql',
   '20260928213000_production_runs.sql',
   '20260929000000_package_directory_filters.sql',
+  '20260930004335_provider_console_authorization.sql',
+  '20260930005455_provider_tenant_detail_audit.sql',
+  '20260930011136_provider_customer_accounts.sql',
+  '20260930015045_provider_public_cloud_provisioning_foundation.sql',
+  '20260930020001_fix_canonical_uom_trigger.sql',
 ];
 
 /** Apply migrations and synthetic identity data only inside the newly created test database. */

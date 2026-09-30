@@ -94,6 +94,10 @@ export const purchaseStatusInputSchema = z
     status: z.enum(['Confirmed', 'Cancelled']),
     reference: z.string().trim().max(120),
     note: z.string().trim().max(1000),
+    total_cost: z.number().finite().nonnegative().max(1000000000)
+      .multipleOf(0.01)
+      .nullable(),
+    placed_on: z.iso.date().nullable(),
   })
   .refine(
     (draft) => draft.status !== 'Confirmed' || draft.reference.length > 0,
@@ -102,6 +106,14 @@ export const purchaseStatusInputSchema = z
   .refine(
     (draft) => draft.status !== 'Cancelled' || draft.note.length >= 3,
     'Enter a cancellation reason.',
+  )
+  .refine(
+    (draft) => draft.status !== 'Confirmed' || draft.total_cost !== null,
+    'Enter the supplier quoted total cost before confirming.',
+  )
+  .refine(
+    (draft) => draft.status !== 'Confirmed' || draft.placed_on !== null,
+    'Enter the date the purchase order was placed.',
   );
 export const purchaseDraftRowSchema = z.object({
   id: z.uuid(),
@@ -111,6 +123,8 @@ export const purchaseDraftRowSchema = z.object({
   status: z.enum(['Draft', 'Confirmed', 'Cancelled']),
   reference: z.string(),
   note: z.string(),
+  total_cost: z.number().finite().nonnegative().nullable().default(null),
+  placed_on: z.iso.date().nullable().default(null),
   revision: z.number().int().positive(),
   created_at: z.string(),
 });

@@ -149,9 +149,7 @@ it('creates a product-coded Production Run only when confirmed work starts', asy
     ...productionInput(1), id: runOrder, status: 'Confirmed', shortage_reason: 'Ingredients are available.',
   });
   await query('select public.set_product_lot_code($1::jsonb)', [JSON.stringify({ product_id: id(300), product_code: 'IT' })]);
-  const batch = z.object({ id: z.uuid() }).parse((await query(
-    'select id from public.planned_mixer_batches where order_id=$1', [runOrder],
-  )).rows[0]);
+  const batch = z.object({ id: z.uuid() }).parse((await query('select id from public.planned_mixer_batches where order_id=$1', [runOrder])).rows[0]);
   expect((await query('select count(*)::int count from public.production_lots')).rows).toEqual([{ count: 0 }]);
   await query('select public.open_batch_worksheet($1)', [batch.id]);
   expect((await query('select production_lot_code,planned_batch_count from public.production_lots')).rows)
@@ -317,7 +315,7 @@ it('excludes inbound after production starts, then restores the due-date horizon
     }],
   });
   await rpc('change_purchase_status', {
-    id: id(900), revision: 1, status: 'Confirmed', reference: 'PO-test', note: '',
+    id: id(900), revision: 1, status: 'Confirmed', reference: 'PO-test', note: '', total_cost: 42.75, placed_on: '2026-09-29',
   });
   const availability = async () => {
     const result = await query('select public.material_requirements($1) requirements', [id(800)]);

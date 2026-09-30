@@ -35,7 +35,7 @@ export default async function Products({
     db, products, recipes, versions, locale,
   } = await loadRecipeCatalog();
   const [
-    customers, options, canWrite, packagingVersions, sections, lines, ingredients, referenceOptions,
+    customers, options, canWrite, packagingVersions, sections, lines, ingredients, units,
   ] = await Promise.all([
     rows(db, 'customers', customerRowSchema),
     rows(db, 'customer_product_options', customerOptionRowSchema),
@@ -44,7 +44,7 @@ export default async function Products({
     rows(db, 'recipe_sections', recipeSectionRowSchema),
     rows(db, 'recipe_lines', recipeLineRowSchema),
     rows(db, 'ingredients', rowSchemas.ingredients),
-    rows(db, 'reference_options', rowSchemas.reference_options),
+    rows(db, 'uoms', rowSchemas.uoms),
   ]);
   const es = locale === 'es';
   const records = products.map((product) => {
@@ -93,10 +93,10 @@ export default async function Products({
     ...option,
     label: es ? ({ name: 'Nombre A–Z', 'name-desc': 'Nombre Z–A', batch: 'Lote estándar más grande' })[option.value] : option.label,
   }));
-  const orderUnits = referenceOptions
-    .filter((option) => option.list_code === 'purchase_unit' && option.active)
+  const orderUnits = units
+    .filter((unit) => unit.active && unit.is_purchase_unit)
     .sort((left, right) => left.sort_order - right.sort_order)
-    .map((option) => ({ code: option.code, label: es ? option.label_es : option.label_en }));
+    .map((unit) => ({ code: unit.code, label: es ? unit.label_es : unit.label_en }));
   let emptyDescription = es ? 'Ajusta la búsqueda o los filtros.' : 'Try another search or filter.';
   if (query.page > pageCount) {
     emptyDescription = es ? 'Esta página ya no tiene resultados.' : 'This page no longer has results.';

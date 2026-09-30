@@ -23,25 +23,15 @@ it('initializes the native gate fixture with real migration permissions and RLS'
       [gateActor, 'concurrency-fixture'],
     );
     expect(organizations.rows).toEqual([{ slug: 'concurrency-fixture', enabled_user_count: 1 }]);
-    // The canonical catalog lives on main; this release fixture exercises the
-    // provisioning path once its tables have been installed.
-    await db.exec(`
-      create table public.uom_families (
-        organization_id uuid not null references public.organizations,
-        code text not null, label_en text not null, label_es text not null,
-        sort_order integer not null, primary key (organization_id, code)
-      );
-      create table public.uoms (
-        organization_id uuid not null references public.organizations,
-        family_code text not null, code text not null,
-        label_en text not null, label_es text not null,
-        measurement_system text not null, is_inventory_unit boolean not null,
-        is_purchase_unit boolean not null, sort_order integer not null,
-        foreign key (organization_id, family_code)
-          references public.uom_families(organization_id, code),
-        unique (organization_id, code)
-      );
-    `);
+    expect((await db.query(
+      'select code from public.uom_families order by sort_order',
+    )).rows).toEqual(['mass', 'volume', 'count', 'packaging'].map((code) => ({ code })));
+    expect((await db.query(
+      'select code from public.uoms order by family_code,sort_order',
+    )).rows).toEqual(
+      ['each', 'lb', 'oz', 'kg', 'g', 'bag', 'case', 'pail', 'gal', 'fl_oz', 'l', 'ml']
+        .map((code) => ({ code })),
+    );
     const newOrganization = await db.query<{ id: string }>(
       'select public.provision_platform_organization($1,$2,$3,$4,$5) as id',
       [gateActor, 'New Kitchen', 'new-kitchen', 'Main facility', 'America/Chicago'],

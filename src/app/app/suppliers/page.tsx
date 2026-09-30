@@ -5,7 +5,7 @@ import { SupplierForm } from '@/components/master-forms';
 import SupplierPurchases from '@/components/supplier-purchases';
 import Link from 'next/link';
 import ListGrid from '@/components/list-grid';
-import { SupplierHashDetails } from '@/components/supplier-detail-link';
+import SupplierDetailLink, { SupplierHashDetails } from '@/components/supplier-detail-link';
 import { returnContextSearchParams } from '@/lib/return-context';
 import { Suspense } from 'react';
 import DirectoryToolbar from '@/components/directory-toolbar';
@@ -14,6 +14,7 @@ import {
   supplierCreateReturnHref, supplierDirectoryHref, type SupplierSearchParams,
 } from './directory-query';
 import SupplierReturnFocus from './supplier-return-focus';
+import styles from './suppliers.module.css';
 
 const PAGE_SIZE = 20;
 
@@ -146,36 +147,50 @@ export default async function Suppliers({
           </div>
         )}
         {!!visibleSuppliers.length && (
-          <ListGrid
-            label={es ? 'Directorio de proveedores' : 'Supplier directory'}
-            locale={locale}
-            columns={[
-              { key: 'name', label: es ? 'Proveedor' : 'Supplier' },
-              { key: 'contact', label: es ? 'Contacto' : 'Contact', minWidth: 220 },
-              { key: 'status', label: es ? 'Estado' : 'Status' },
-              ...(canReadPurchases ? [{ key: 'purchases', label: es ? 'Compras abiertas' : 'Open purchase orders' }] : []),
-            ]}
-            searchable={false}
-            controlled={{
-              page: directoryQuery.page,
-              pageSize: PAGE_SIZE,
-              totalCount: filteredSuppliers.length,
-              sort: directoryQuery.sort === 'open-purchases'
-                ? { key: 'purchases', direction: 'desc' }
-                : { key: 'name', direction: directoryQuery.sort === 'name-desc' ? 'desc' : 'asc' },
-            }}
-            rows={visibleSuppliers.map(({ supplier, openCount }) => ({
-              id: supplier.id,
-              cells: {
-                name: { text: supplier.name, detailsId: `supplier-${supplier.id}` },
-                contact: { text: supplier.contact_name || '—', secondary: [supplier.email, supplier.phone].filter(Boolean).join('\n') },
-                status: { text: supplier.active ? activeLabel : inactiveLabel, badge: supplier.active ? 'default' as const : 'muted' as const },
-                ...(canReadPurchases ? {
-                  purchases: { text: String(openCount), sortValue: openCount },
-                } : {}),
-              },
-            }))}
-          />
+          <div className={styles.desktopDirectory}>
+            <ListGrid
+              label={es ? 'Directorio de proveedores' : 'Supplier directory'}
+              locale={locale}
+              columns={[
+                { key: 'name', label: es ? 'Proveedor' : 'Supplier' },
+                { key: 'contact', label: es ? 'Contacto' : 'Contact', minWidth: 220 },
+                ...(canReadPurchases ? [{ key: 'purchases', label: es ? 'Compras abiertas' : 'Open purchase orders' }] : []),
+              ]}
+              searchable={false}
+              controlled={{
+                page: directoryQuery.page,
+                pageSize: PAGE_SIZE,
+                totalCount: filteredSuppliers.length,
+                sort: directoryQuery.sort === 'open-purchases'
+                  ? { key: 'purchases', direction: 'desc' }
+                  : { key: 'name', direction: directoryQuery.sort === 'name-desc' ? 'desc' : 'asc' },
+              }}
+              rows={visibleSuppliers.map(({ supplier, openCount }) => ({
+                id: supplier.id,
+                cells: {
+                  name: { text: supplier.name, detailsId: `supplier-${supplier.id}` },
+                  contact: { text: supplier.contact_name || '—', secondary: [supplier.email, supplier.phone].filter(Boolean).join('\n') },
+                  ...(canReadPurchases ? {
+                    purchases: { text: String(openCount), sortValue: openCount },
+                  } : {}),
+                },
+              }))}
+            />
+          </div>
+        )}
+        {!!visibleSuppliers.length && (
+          <div className={styles.mobileDirectory} role="region" aria-label={es ? 'Directorio de proveedores' : 'Supplier directory'}>
+            {visibleSuppliers.map(({ supplier, openCount }) => (
+              <div
+                className={styles.supplierCard}
+                key={supplier.id}
+              >
+                <SupplierDetailLink supplierId={supplier.id} supplierName={supplier.name} />
+                <span>{[supplier.contact_name, supplier.email, supplier.phone].filter(Boolean).join(' · ')}</span>
+                {canReadPurchases && <span>{`${openCount} ${es ? 'compras abiertas' : 'open purchase orders'}`}</span>}
+              </div>
+            ))}
+          </div>
         )}
         {visibleSuppliers.map(({ supplier }) => (
           <details className="supplier-orders" id={`supplier-${supplier.id}`} key={supplier.id}>
