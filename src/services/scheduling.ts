@@ -2,7 +2,7 @@ import 'server-only';
 
 import { z } from 'zod';
 import {
-  readFacilitySchedule, readMySchedule, readWorkQueueContext, writeSchedule,
+  readFacilitySchedule, readMySchedule, readScheduleBatchContext, readScheduleCustomerProducts, readWorkQueueContext, writeSchedule,
 } from '@/data/scheduling';
 import type { ScheduleMutation } from '@/data/scheduling';
 import type { ActionResult } from '@/domain/master-data';
@@ -23,16 +23,23 @@ export default async function loadSchedule(facilityId: string, startOn: string, 
   const [canManage, canManageSettings] = await Promise.all([
     hasPermission(db, 'workforce.manage'), hasPermission(db, 'settings.manage'),
   ]);
-  const [result, context] = await Promise.all([
+  const [result, context, customerProducts, batchContext] = await Promise.all([
     readFacilitySchedule(db, range), readWorkQueueContext(db, range),
+    readScheduleCustomerProducts(db, { facility_id: facilityId }),
+    readScheduleBatchContext(db, { facility_id: facilityId }),
   ]);
   if (result.error) throw operationError('workforce_schedule_load', 'Unable to load the worker schedule.', result.error);
   if (context.error) throw operationError('work_queue_context_load', 'Unable to load available work context.', context.error);
+  if (customerProducts.error) throw operationError('schedule_customer_products_load', 'Unable to load customer products.', customerProducts.error);
+  if (batchContext.error) throw operationError('schedule_batch_context_load', 'Unable to load production batch context.', batchContext.error);
   const schedule = workforceScheduleSchema.parse(result.data);
   const workContext = z.array(scheduleLinkedTaskSchema).parse(context.data);
+  const readableBatchContext = z.array(scheduleLinkedTaskSchema).parse(batchContext.data);
+  const readableLabels = new Map(readableBatchContext.map((task) => [`${task.type}:${task.id}`, task]));
   return {
     ...schedule,
-    linked_tasks: [...schedule.linked_tasks, ...workContext],
+    linked_tasks: [...schedule.linked_tasks, ...workContext].map((task) => readableLabels.get(`${task.type}:${task.id}`) ?? task),
+    customer_product_ids: z.record(z.string(), z.array(z.uuid())).parse(customerProducts.data),
     canManage,
     canManageSettings,
   };
