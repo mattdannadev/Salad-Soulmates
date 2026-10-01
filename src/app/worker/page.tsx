@@ -25,10 +25,11 @@ export default async function Worker() {
   const scheduleEnd = addScheduleDays(utcDay, 92);
   // The work queue is intentionally a near-term operational surface; its RPC
   // rejects broad calendar ranges to keep claim reads bounded.
-  const queueEnd = addScheduleDays(utcDay, 31);
+  const queueStart = utcDay;
+  const queueEnd = addScheduleDays(queueStart, 31);
   const [schedule, workQueue] = await Promise.all([
     loadMyWorkforceSchedule(scheduleStart, scheduleEnd),
-    loadMyWorkQueue(scheduleStart, queueEnd),
+    loadMyWorkQueue(queueStart, queueEnd),
   ]);
   const today = facilityCalendarDateAt(now, schedule.timezone);
   const horizon = addScheduleDays(today, 90);
