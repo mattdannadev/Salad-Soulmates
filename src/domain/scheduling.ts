@@ -186,6 +186,7 @@ export const workforceScheduleSchema = z.object({
   linked_tasks: z.array(scheduleLinkedTaskSchema),
   products: z.array(z.object({ id: z.uuid(), name: z.string() })),
   customers: z.array(z.object({ id: z.uuid(), name: z.string() })),
+  customer_product_ids: z.record(z.string(), z.array(z.uuid())).default({}),
 });
 
 export const myWorkforceScheduleSchema = z.object({

@@ -28,6 +28,14 @@ export function readWorkQueueContext(db: ScheduleDb, payload: {
   return db.rpc('get_workforce_work_context', { payload });
 }
 
+export function readScheduleCustomerProducts(db: ScheduleDb, payload: { facility_id: string }) {
+  return db.rpc('get_schedule_customer_products', { payload });
+}
+
+export function readScheduleBatchContext(db: ScheduleDb, payload: { facility_id: string }) {
+  return db.rpc('get_schedule_batch_context', { payload });
+}
+
 export function writeSchedule(db: ScheduleDb, operation: ScheduleMutation, payload: {
   facility_id: string;
 }) {

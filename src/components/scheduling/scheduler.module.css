@@ -249,6 +249,13 @@
   border-radius: 0.45rem;
   font-weight: 500;
 }
+.employeeList .employeeConflict {
+  align-items: flex-start;
+  border-color: #d9b77c;
+  background: #fffaf1;
+}
+.employeeConflictDetail { margin-left: auto; color: #8a5108; font-size: 0.78rem; text-align: right; }
+.fieldHelp { color: #4c6055; font-size: 0.78rem; font-weight: 500; }
 .personOption {
   width: 100%;
   background: #fff;
@@ -316,17 +323,20 @@
 }
 .calendar {
   overflow: auto;
-  min-height: 650px;
-}
-.calendarHint {
-  margin: 0 0 0.65rem;
-  color: #4c6055;
-  font-size: 0.85rem;
+  min-height: 0;
+  display: grid;
+  gap: 0.75rem;
 }
 .calendar > * {
   min-width: 500px;
-  min-height: 620px;
+  min-height: 540px;
 }
+.calendarOverview { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.45rem; min-height: 0 !important; }
+.calendarDaySummary { display: grid; gap: 0.18rem; padding: 0.55rem 0.65rem; border: 1px solid #dce8df; border-radius: 0.5rem; background: #f7fbf8; font-size: 0.78rem; }
+.calendarDaySummary strong { color: #143b2c; }
+.calendarDaySummary span { color: #4c6055; }
+.calendarDaySummary .covered { color: #176240; font-weight: 650; }
+.calendarDaySummary .gap { color: #9a4c08; font-weight: 650; }
 .summaryHeader {
   display: flex;
   flex-wrap: wrap;
@@ -448,6 +458,7 @@
   justify-content: flex-end;
   gap: 0.5rem;
 }
+.dialogActions button { min-width: 6.5rem; }
 .dialogActions button:first-child:not(:last-child) {
   margin-right: auto;
 }
@@ -468,6 +479,7 @@
 @media (max-width: 650px) {
   .workweekHeading { align-items: flex-start; flex-direction: column; }
   .dayCards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .calendarOverview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sidebar {
     display: block;
   }

@@ -79,6 +79,7 @@ interface Props {
   linkedTasks: LinkedTaskOption[];
   products: { id: string; name: string }[];
   customers: { id: string; name: string }[];
+  customerProductIds: Record<string, string[]>;
   canManage: boolean;
   canManageSettings: boolean;
   initialPeriodStart?: string;
@@ -144,7 +145,7 @@ function conflictsFor(candidate: AssignmentInput, assignments: Assignment[], exc
 
 export default function WorkforceScheduler({
   locale, facilities, employees, assignments, publishedAssignments, publicationRevision, pto,
-  productionBands, linkedTasks, products, customers, canManage, canManageSettings,
+  productionBands, linkedTasks, products, customers, customerProductIds, canManage, canManageSettings,
   initialPeriodStart = '', initialPeriodEnd = '',
 }: Props) {
   const router = useRouter();
@@ -346,6 +347,22 @@ export default function WorkforceScheduler({
   const relevantBands = productionBands.filter((band) => (
     band.startDate < reportEndExclusive && band.endDate >= reportStart
   ));
+  const selectableProducts = useMemo(() => {
+    if (!form.customerId) return [];
+    const ids = new Set(customerProductIds[form.customerId] ?? []);
+    return products.filter((product) => ids.has(product.id));
+  }, [customerProductIds, form.customerId, products]);
+  const employeeSchedulingDetails = useCallback((person: Employee) => {
+    const scheduled = facilityAssignments.filter((item) => item.employeeIds.includes(person.id)
+      && item.startDate <= form.endDate && item.endDate >= form.startDate
+      && item.id !== editingId && item.type !== 'off');
+    if (scheduled.length) return `${es ? 'Ya programado:' : 'Scheduled:'} ${scheduled.map((item) => labels[locale][item.type]).join(', ')}`;
+    if (pto.some((block) => block.employeeId === person.id && block.startDate <= form.endDate && block.endDate >= form.startDate)) return es ? 'Ausencia programada' : 'Time off scheduled';
+    for (let date = form.startDate; date <= form.endDate; date = addDays(date, 1)) {
+      if (!person.availableDays.includes(localDate(date).getDay())) return es ? 'Fuera de disponibilidad' : 'Outside availability';
+    }
+    return null;
+  }, [editingId, es, facilityAssignments, form.endDate, form.startDate, locale, pto]);
   const workweekDays = useMemo(() => Array.from({ length: 5 }, (_, index) => {
     const date = addDays(weekStart, index);
     const work = facilityAssignments.filter((item) => item.startDate <= date && item.endDate >= date
@@ -642,10 +659,6 @@ export default function WorkforceScheduler({
     <div className={styles.workspace}>
       <div className={styles.controlBar}>
       <div className={styles.filters} aria-label={es ? 'Filtros de horario' : 'Schedule filters'}>
-        <div className={styles.controlIntro}>
-          <strong>{es ? 'Semana de trabajo' : 'Plant workweek'}</strong>
-          <span>{es ? 'Planifique el trabajo diario, las entregas y las recolecciones de la semana.' : 'Plan daily work, deliveries, and pickups across the week.'}</span>
-        </div>
         <label>
           {es ? 'Instalación' : 'Facility'}
           <select value={facilityId} onChange={(event) => selectFacility(event.target.value)}>
@@ -664,11 +677,7 @@ export default function WorkforceScheduler({
         </label>
       </div>
       {canManage && <div className={styles.actions} aria-label={es ? 'Acciones de horario' : 'Schedule actions'}>
-        <div className={styles.controlIntro}>
-          <strong>{es ? 'Plan semanal' : 'Weekly plan'}</strong>
-          <span>{es ? 'Agregue trabajo diario y publique la semana.' : 'Add daily work and publish the week.'}</span>
-        </div>
-        <button type="button" className={styles.primary} onClick={() => openForm()}>{es ? 'Agregar trabajo' : 'Add work'}</button>
+        <button type="button" className={styles.primary} onClick={() => document.getElementById('work-queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{es ? 'Crear trabajo' : 'Create work'}</button>
         <button
           type="button"
           disabled={pending}
@@ -717,45 +726,16 @@ export default function WorkforceScheduler({
           <button type="button" disabled={pending} onClick={saveCapacity}>{es ? 'Guardar capacidad' : 'Save capacity'}</button>
         </section>
         )}
-        <section className={styles.workweek} aria-labelledby="workweek-heading">
-          <div className={styles.workweekHeading}>
-            <div>
-              <h2 id="workweek-heading">{es ? 'Resumen de la semana laboral' : 'Workweek at a glance'}</h2>
-              <p>{es
-                ? 'Cada día muestra el trabajo publicado o en borrador, la cobertura de personal y las brechas que requieren atención.'
-                : 'Each day shows draft or published work, crew coverage, and gaps that need attention.'}</p>
-            </div>
-            <span>{es ? 'Capacidad por persona' : 'Per-person capacity'} · {((facility?.weeklyHours ?? 40) / 5).toFixed(1)}h/{es ? 'día' : 'day'}</span>
-          </div>
-          <div className={styles.dayCards}>
-            {workweekDays.map((day) => (
-              <article key={day.date} className={styles.dayCard}>
-                <div className={styles.dayCardTitle}>
-                  <strong>{day.weekday}</strong>
-                  <span>{day.work.length} {es ? 'tareas' : 'tasks'}</span>
-                </div>
-                <dl>
-                  <div><dt>{es ? 'Personal asignado' : 'Crew assigned'}</dt><dd>{day.assignedWorkers}</dd></div>
-                  <div><dt>{es ? 'Mezcla' : 'Mixing'}</dt><dd>{day.mixing}</dd></div>
-                  <div><dt>{es ? 'Capacidad' : 'Capacity'}</dt><dd>{day.dailyCapacity.toFixed(1)}h</dd></div>
-                </dl>
-                {day.unstaffed.length > 0 ? (
-                  <p className={styles.gap}>{day.unstaffed.length} {es ? 'tarea(s) sin personal' : 'unstaffed task(s)'}</p>
-                ) : (
-                  <p className={styles.covered}>{day.work.length ? (es ? 'Cobertura asignada' : 'Crew coverage assigned') : (es ? 'No hay trabajo programado' : 'No work scheduled')}</p>
-                )}
-              </article>
-            ))}
-          </div>
-        </section>
-        <SchedulerWorkQueue
-          key={`${facilityId}-${activeDate}`}
-          facilityId={facilityId}
-          initialDate={activeDate}
-          locale={locale}
-          canManage={canManage}
-          linkedTasks={linkedTasks}
-        />
+        <div id="work-queue">
+          <SchedulerWorkQueue
+            key={`${facilityId}-${activeDate}`}
+            facilityId={facilityId}
+            initialDate={activeDate}
+            locale={locale}
+            canManage={canManage}
+            linkedTasks={linkedTasks}
+          />
+        </div>
         <div className={styles.layout}>
           <aside className={styles.sidebar} aria-label={es ? 'Personal y producción' : 'Staffing and production'}>
             <h2>{es ? 'Personal' : 'Staffing'}</h2>
@@ -805,7 +785,13 @@ export default function WorkforceScheduler({
             </ul>
           </aside>
           <div className={styles.calendar} aria-label={es ? 'Calendario de empleados' : 'Employee calendar'}>
-            <p className={styles.calendarHint}>{es ? 'Seleccione personal y luego haga clic en un día libre para programar. También puede usar Nueva asignación.' : 'Select staff, then click an open day to schedule work. You can also use New assignment.'}</p>
+            <div className={styles.calendarOverview} aria-label={es ? 'Resumen semanal' : 'Workweek summary'}>
+              {workweekDays.map((day) => <div key={day.date} className={styles.calendarDaySummary}>
+                <strong>{day.weekday}</strong>
+                <span>{day.work.length} {es ? 'tareas' : 'tasks'} · {day.assignedWorkers} {es ? 'asignados' : 'assigned'}</span>
+                <span className={day.unstaffed.length ? styles.gap : styles.covered}>{day.unstaffed.length ? `${day.unstaffed.length} ${es ? 'sin personal' : 'unstaffed'}` : `${day.dailyCapacity.toFixed(0)}h ${es ? 'capacidad' : 'capacity'}`}</span>
+              </div>)}
+            </div>
             <ThemeProvider theme={es ? spanishTheme : englishTheme}>
               <EventCalendar
                 events={calendarEvents}
@@ -818,9 +804,12 @@ export default function WorkforceScheduler({
                 visibleDate={visibleDate}
                 onVisibleDateChange={setVisibleDate}
                 dateLocale={es ? esLocale : enUS}
+                defaultPreferences={{ isSidePanelOpen: false, showWeekends: false }}
+                preferencesMenuConfig={false}
+                viewConfig={{ day: { startTime: 6, endTime: 20, initialScrollTime: 6 }, week: { startTime: 6, endTime: 20, initialScrollTime: 6 } }}
                 readOnly={!canManage || pending}
                 areEventsResizable={false}
-                eventCreation={canManage}
+                eventCreation={false}
               />
             </ThemeProvider>
           </div>
@@ -1143,29 +1132,16 @@ export default function WorkforceScheduler({
           <fieldset>
             <legend>{es ? 'Empleados' : 'Employees'}</legend>
             <div className={styles.employeeList}>
-              {facilityEmployees.map((person) => (
-                <label key={person.id}>
+              {facilityEmployees.map((person) => {
+                const detail = employeeSchedulingDetails(person);
+                return <label key={person.id} className={detail ? styles.employeeConflict : undefined}>
                   <input type="checkbox" checked={form.employeeIds.includes(person.id)} onChange={(event) => setForm({ ...form, employeeIds: event.target.checked ? [...form.employeeIds, person.id] : form.employeeIds.filter((id) => id !== person.id) })} />
-                  {person.name}
-                </label>
-              ))}
+                  <span>{person.name}</span>
+                  {detail && <span className={styles.employeeConflictDetail}>{detail}</span>}
+                </label>;
+              })}
             </div>
           </fieldset>
-          <label>
-            {es ? 'Nota' : 'Note'}
-            <textarea value={form.note ?? ''} onChange={(event) => setForm({ ...form, note: event.target.value || null })} rows={3} />
-          </label>
-          <label>
-            {es ? 'Motivo para programar fuera de disponibilidad' : 'Reason for scheduling outside availability'}
-            <textarea
-              value={form.availabilityOverrideReason ?? ''}
-              onChange={(event) => setForm({
-                ...form,
-                availabilityOverrideReason: event.target.value || null,
-              })}
-              rows={2}
-            />
-          </label>
           <label>
             {es ? 'Tarea de producción vinculada' : 'Linked production task'}
             <select
@@ -1190,24 +1166,10 @@ export default function WorkforceScheduler({
             </select>
           </label>
           <label>
-            {es ? 'Producto' : 'Product'}
-            <select
-              value={form.productId ?? ''}
-              onChange={(event) => setForm({ ...form, productId: event.target.value || null })}
-            >
-              <option value="">{es ? 'Sin producto' : 'No product'}</option>
-              {products.map((product) => (
-                <option key={product.id} value={product.id}>
-                  {product.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
             {es ? 'Cliente' : 'Customer'}
             <select
               value={form.customerId ?? ''}
-              onChange={(event) => setForm({ ...form, customerId: event.target.value || null })}
+              onChange={(event) => setForm({ ...form, customerId: event.target.value || null, productId: null })}
             >
               <option value="">{es ? 'Sin cliente' : 'No customer'}</option>
               {customers.map((customer) => (
@@ -1218,15 +1180,12 @@ export default function WorkforceScheduler({
             </select>
           </label>
           <label>
-            {es ? 'Lugar' : 'Location'}
-            <input
-              value={form.locationLabel ?? ''}
-              maxLength={120}
-              onChange={(event) => setForm({
-                ...form,
-                locationLabel: event.target.value || null,
-              })}
-            />
+            {es ? 'Producto pedido' : 'Ordered product'}
+            <select value={form.productId ?? ''} disabled={!form.customerId} onChange={(event) => setForm({ ...form, productId: event.target.value || null })}>
+              <option value="">{form.customerId ? (es ? 'Sin producto' : 'No product') : (es ? 'Primero seleccione un cliente' : 'Select a customer first')}</option>
+              {selectableProducts.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
+            </select>
+            {form.customerId && !selectableProducts.length && <span className={styles.fieldHelp}>{es ? 'Este cliente aún no tiene productos pedidos.' : 'This customer has no ordered products.'}</span>}
           </label>
           {conflictsFor(form, facilityAssignments, editingId ?? undefined).length > 0 && (
           <p className={styles.warning} role="status">
