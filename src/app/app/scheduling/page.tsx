@@ -113,7 +113,6 @@ export default async function Scheduling({ searchParams }: {
         }))}
         products={data.products}
         customers={data.customers}
-        customerProductIds={data.customer_product_ids}
         canManage={data.canManage}
         canManageSettings={data.canManageSettings}
         initialPeriodStart={query.data.start}

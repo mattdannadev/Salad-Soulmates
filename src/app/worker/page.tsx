@@ -12,7 +12,7 @@ import { loadMyWorkforceSchedule } from '@/services/scheduling';
 import { loadMyWorkQueue } from '@/services/work-queue';
 import isMobileOperationsCopilotEnabled from '@/services/mobile-operations-copilot-gate';
 import WorkerWorkQueue from '@/components/worker-work-queue';
-import claimWorkerQueueItem, { unclaimWorkerQueueItem } from '@/app/worker/queue-actions';
+import claimWorkerQueueItem from '@/app/worker/queue-actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,12 +23,9 @@ export default async function Worker() {
   const utcDay = now.toISOString().slice(0, 10);
   const scheduleStart = addScheduleDays(utcDay, -2);
   const scheduleEnd = addScheduleDays(utcDay, 92);
-  // The work queue is intentionally a near-term operational surface; its RPC
-  // rejects broad calendar ranges to keep claim reads bounded.
-  const queueEnd = addScheduleDays(utcDay, 31);
   const [schedule, workQueue] = await Promise.all([
     loadMyWorkforceSchedule(scheduleStart, scheduleEnd),
-    loadMyWorkQueue(scheduleStart, queueEnd),
+    loadMyWorkQueue(scheduleStart, scheduleEnd),
   ]);
   const today = facilityCalendarDateAt(now, schedule.timezone);
   const horizon = addScheduleDays(today, 90);
@@ -73,7 +70,6 @@ export default async function Worker() {
         items={workQueue}
         locale={profile.preferred_locale}
         claim={claimWorkerQueueItem}
-        unclaim={unclaimWorkerQueueItem}
       />
       {days.map(({ day, events: tasks }) => (
         <section

@@ -2182,9 +2182,6 @@ export type Database = {
       get_workforce_schedule: { Args: { payload: Json }; Returns: Json };
       get_my_workforce_schedule: { Args: { payload: Json }; Returns: Json };
       get_workforce_work_context: { Args: { payload: Json }; Returns: Json };
-      get_schedule_customer_products: { Args: { payload: Json }; Returns: Json };
-      get_schedule_batch_context: { Args: { payload: Json }; Returns: Json };
-      unclaim_workforce_work_queue_item: { Args: { payload: Json }; Returns: string };
       get_my_workforce_work_queue: { Args: { payload: Json }; Returns: Json };
       claim_workforce_work_queue_item: { Args: { payload: Json }; Returns: string };
       create_workforce_work_queue_item: { Args: { payload: Json }; Returns: string };

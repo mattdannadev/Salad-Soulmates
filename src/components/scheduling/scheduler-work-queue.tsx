@@ -68,8 +68,8 @@ export default function SchedulerWorkQueue({
 
   return <section className={styles.queueComposer} aria-labelledby="daily-work-heading">
     <div>
-      <h2 id="daily-work-heading">{es ? 'Cola de trabajo' : 'Work queue'}</h2>
-      <p>{es ? 'Cree el trabajo y publíquelo. Los trabajadores lo reclaman por separado; no se asigna a nadie aquí.' : 'Create and publish work. Workers claim it separately; no one is assigned here.'}</p>
+      <h2 id="daily-work-heading">{es ? 'Trabajo diario de planta' : 'Daily plant work'}</h2>
+      <p>{es ? 'Cree borradores, luego publique la lista para que el equipo la reclame.' : 'Create drafts, then publish the day for workers to claim.'}</p>
     </div>
     <div className={styles.queueFields}>
       <label>{es ? 'Fecha' : 'Date'}<input type="date" value={workOn} onChange={(event) => setWorkOn(event.target.value)} /></label>
@@ -82,7 +82,7 @@ export default function SchedulerWorkQueue({
         <option value="">{contextTypes.length ? (es ? 'Seleccione contexto' : 'Choose workflow') : (es ? 'No es necesario' : 'Not required')}</option>
         {compatibleLinks.map((item) => <option value={`${item.type}:${item.id}`} key={`${item.type}:${item.id}`}>{item.label}</option>)}
       </select></label>
-      <label>{es ? 'Trabajadores necesarios' : 'Workers needed'}<input type="number" min="1" max="100" value={crew} onChange={(event) => setCrew(event.target.value)} /></label>
+      <label>{es ? 'Equipo' : 'Crew'}<input type="number" min="1" max="100" value={crew} onChange={(event) => setCrew(event.target.value)} /></label>
       {quotaRequired && <label>{es ? 'Lotes' : 'Batches'}<input type="number" min="1" value={batchQuota} onChange={(event) => setBatchQuota(event.target.value)} /></label>}
       {quotaRequired && <label>{es ? 'Minutos estimados' : 'Estimated minutes'}<input type="number" min="0.25" step="0.25" value={estimatedMinutes} onChange={(event) => setEstimatedMinutes(event.target.value)} /></label>}
       <label className={styles.queueTitle}>{es ? 'Título' : 'Title'}<input value={title} maxLength={120} onChange={(event) => setTitle(event.target.value)} /></label>

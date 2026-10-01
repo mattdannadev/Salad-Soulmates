@@ -2,7 +2,7 @@ import 'server-only';
 
 import { z } from 'zod';
 import {
-  claimWorkQueueItem, createWorkQueueItem, publishWorkQueue, readMyWorkQueue, unclaimWorkQueueItem,
+  claimWorkQueueItem, createWorkQueueItem, publishWorkQueue, readMyWorkQueue,
 } from '@/data/work-queue';
 import {
   createWorkQueueItemSchema, publishWorkQueueSchema, workQueueClaimSchema,
@@ -45,26 +45,6 @@ export async function claimPublishedWorkQueueItem(input: unknown): Promise<Actio
     return { ok: true, id: id.data, message: 'Work claimed.' };
   } catch (error) {
     logFailure('worker_queue_claim', error);
-    return { ok: false, message: 'Connection interrupted. Reload before retrying.' };
-  }
-}
-
-export async function unclaimPublishedWorkQueueItem(input: unknown): Promise<ActionResult> {
-  const parsed = workQueueClaimSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, message: 'This work item is no longer valid. Reload and try again.' };
-  const { db } = await requireProfile({ readOnly: false });
-  try {
-    const result = await unclaimWorkQueueItem(db, parsed.data);
-    if (result.error) {
-      logFailure('worker_queue_unclaim', result.error);
-      return { ok: false, message: result.error.message.includes('You have not claimed this work item')
-        ? 'You have not claimed this work item.' : 'Unable to unclaim this work item. Reload and try again.' };
-    }
-    const id = z.uuid().safeParse(result.data);
-    return id.success ? { ok: true, id: id.data, message: 'Work returned to the queue.' }
-      : { ok: false, message: 'The change could not be confirmed. Reload before retrying.' };
-  } catch (error) {
-    logFailure('worker_queue_unclaim', error);
     return { ok: false, message: 'Connection interrupted. Reload before retrying.' };
   }
 }

@@ -10,10 +10,6 @@ export function claimWorkQueueItem(db: QueueDb, payload: { id: string; revision:
   return db.rpc('claim_workforce_work_queue_item', { payload });
 }
 
-export function unclaimWorkQueueItem(db: QueueDb, payload: { id: string; revision: number }) {
-  return db.rpc('unclaim_workforce_work_queue_item', { payload });
-}
-
 export function createWorkQueueItem(db: QueueDb, payload: Record<string, unknown>) {
   return db.rpc('create_workforce_work_queue_item', { payload: payload as never });
 }
