@@ -14,7 +14,13 @@ import { requireRecipeAccess } from '@/lib/recipe-catalog';
 import { readResult, rows } from '@/lib/data';
 import loadIngredientStock from '@/lib/ingredient-stock';
 import IngredientStock from '@/components/ingredient-stock';
+import RecipeProcessProfile from '@/components/recipe-process-profile';
+import {
+  recipeProcessConfigurationSchema,
+  type RecipeProcessConfiguration,
+} from '@/domain/process-profiles';
 import { resolveReturnContext, returnContextSearchParams } from '@/lib/return-context';
+import hasPermission from '@/lib/permissions';
 
 type RecipeLine = z.infer<typeof recipeLineRowSchema>;
 
@@ -104,6 +110,27 @@ export default async function RecipeDetails({ params, searchParams }: {
   const fromProducts = returnUrl.pathname === '/app/products';
   returnUrl.hash = fromProducts ? `product-${recipe.product_id}` : `recipe-${recipe.id}`;
   const backHref = `${returnUrl.pathname}${returnUrl.search}${returnUrl.hash}`;
+  const [configurationResult, canWriteProcessProfile] = await Promise.all([
+    db.rpc('list_recipe_process_configuration'),
+    hasPermission(db, 'products.write'),
+  ]);
+  let processConfiguration: RecipeProcessConfiguration = {
+    work_types: [],
+    process_profiles: [],
+  };
+  try {
+    processConfiguration = readResult(
+      configurationResult,
+      recipeProcessConfigurationSchema,
+      'recipe_process_configuration',
+    );
+  } catch {
+    // Process-profile setup is optional while its schema is being rolled out.
+    // Keep recipe records usable when that setup is unavailable.
+  }
+  const processProfile = processConfiguration.process_profiles.find(
+    (item) => item.recipe_id === recipe.id,
+  ) ?? null;
   const versions = (await rows(db, 'recipe_versions', recipeVersionRowSchema))
     .filter((version) => version.recipe_id === recipe.id)
     .sort((left, right) => right.version_number - left.version_number);
@@ -132,6 +159,13 @@ export default async function RecipeDetails({ params, searchParams }: {
             {recipeText(locale, fromProducts ? 'View products' : 'All recipes')}
           </Link>
 )}
+      />
+      <RecipeProcessProfile
+        recipeId={recipe.id}
+        profile={processProfile}
+        workTypes={processConfiguration.work_types}
+        canWrite={canWriteProcessProfile}
+        locale={locale}
       />
       <section className="panel">
         <h2>{recipeText(locale, 'Version history')}</h2>

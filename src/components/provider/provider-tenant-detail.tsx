@@ -5,8 +5,7 @@ export interface ProviderTenantDetailSummary extends ProviderTenantSummary {
   linkedCustomerAccount?: { id: string; name: string; status: 'active' | 'suspended' | 'archived' };
 }
 
-export type ProviderTenantDetailState =
-  | { kind: 'loading' }
+export type ProviderTenantDetailState = | { kind: 'loading' }
   | { kind: 'ready'; tenant: ProviderTenantDetailSummary }
   | { kind: 'denied' }
   | { kind: 'not-found' }

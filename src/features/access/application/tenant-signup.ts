@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { languageSchema, regionalLocaleSchema, type RegionalLocale } from '@/domain/user-preferences';
 
 export const tenantSlugSchema = z
   .string()
@@ -10,7 +11,8 @@ export const tenantSlugSchema = z
 const tenantSignupFormSchema = z.object({
   display_name: z.string().trim().min(2).max(120),
   contact: z.string().trim().min(5).max(254),
-  preferred_locale: z.enum(['en', 'es']),
+  preferred_locale: languageSchema,
+  regional_locale: regionalLocaleSchema,
   requested_role: z.enum(['reviewer', 'worker', 'receiver']),
 });
 
@@ -25,6 +27,7 @@ export interface TenantSignupRequest {
   contactKind: 'email' | 'phone';
   contactValue: string;
   preferredLocale: 'en' | 'es';
+  regionalLocale?: RegionalLocale;
   requestedRole: 'reviewer' | 'worker' | 'receiver';
 }
 
@@ -65,6 +68,7 @@ export function validateTenantSignupRequest(
       contactKind: isEmail ? 'email' : 'phone',
       contactValue: isEmail ? fields.data.contact.toLowerCase() : phone,
       preferredLocale: fields.data.preferred_locale,
+      regionalLocale: fields.data.regional_locale,
       requestedRole: fields.data.requested_role,
     },
   };

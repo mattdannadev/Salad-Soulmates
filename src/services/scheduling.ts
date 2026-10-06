@@ -2,7 +2,8 @@ import 'server-only';
 
 import { z } from 'zod';
 import {
-  readFacilitySchedule, readMySchedule, readScheduleBatchContext, readScheduleCustomerProducts, readWorkQueueContext, writeSchedule,
+  readFacilitySchedule, readMySchedule, readScheduleBatchContext, readScheduleCustomerOrders,
+  readScheduleCustomerProducts, readScheduleSupplierDeliveries, readWorkQueueContext, writeSchedule,
 } from '@/data/scheduling';
 import type { ScheduleMutation } from '@/data/scheduling';
 import type { ActionResult } from '@/domain/master-data';
@@ -19,27 +20,64 @@ export default async function loadSchedule(facilityId: string, startOn: string, 
     facility_id: facilityId, start_on: startOn, end_on: endOn,
   });
   const { db, profile } = await requireProfile();
-  if (profile.facility_id !== range.facility_id || !await hasPermission(db, 'workforce.read')) return null;
+  if (profile.facility_id !== range.facility_id
+    || !await hasPermission(db, 'workforce.read')) return null;
   const [canManage, canManageSettings] = await Promise.all([
     hasPermission(db, 'workforce.manage'), hasPermission(db, 'settings.manage'),
   ]);
-  const [result, context, customerProducts, batchContext] = await Promise.all([
+  const [
+    result,
+    context,
+    customerProducts,
+    batchContext,
+    customerOrders,
+    supplierDeliveries,
+  ] = await Promise.all([
     readFacilitySchedule(db, range), readWorkQueueContext(db, range),
     readScheduleCustomerProducts(db, { facility_id: facilityId }),
     readScheduleBatchContext(db, { facility_id: facilityId }),
+    readScheduleCustomerOrders(db, range),
+    readScheduleSupplierDeliveries(db, range),
   ]);
   if (result.error) throw operationError('workforce_schedule_load', 'Unable to load the worker schedule.', result.error);
   if (context.error) throw operationError('work_queue_context_load', 'Unable to load available work context.', context.error);
   if (customerProducts.error) throw operationError('schedule_customer_products_load', 'Unable to load customer products.', customerProducts.error);
   if (batchContext.error) throw operationError('schedule_batch_context_load', 'Unable to load production batch context.', batchContext.error);
+  if (customerOrders.error) throw operationError('schedule_customer_orders_load', 'Unable to load customer orders.', customerOrders.error);
+  if (supplierDeliveries.error) throw operationError('schedule_supplier_deliveries_load', 'Unable to load supplier deliveries.', supplierDeliveries.error);
   const schedule = workforceScheduleSchema.parse(result.data);
   const workContext = z.array(scheduleLinkedTaskSchema).parse(context.data);
   const readableBatchContext = z.array(scheduleLinkedTaskSchema).parse(batchContext.data);
+  const readableCustomerOrders = z.array(z.object({
+    created_on: z.iso.date().optional(),
+    id: z.uuid(),
+    customer_id: z.uuid(),
+    customer_name: z.string(),
+    reference: z.string(),
+    needed_on: z.iso.date(),
+    // Rollups were added after the base order schedule RPC. During a rolling
+    // migration an older response legitimately omits them, so retain the
+    // schedule with zero-valued fallbacks instead of failing the whole page.
+    order_batch_count: z.number().nonnegative().optional().default(0),
+    case_count: z.number().nonnegative().optional().default(0),
+  })).parse(customerOrders.data);
+  const readableSupplierDeliveries = z.array(z.object({
+    id: z.uuid(),
+    supplier_name: z.string(),
+    reference: z.string(),
+    expected_on: z.iso.date(),
+    note: z.string(),
+    lines: z.array(z.object({
+      ingredient_name: z.string(), quantity: z.number(), uom: z.string(),
+    })),
+  })).parse(supplierDeliveries.data);
   const readableLabels = new Map(readableBatchContext.map((task) => [`${task.type}:${task.id}`, task]));
   return {
     ...schedule,
     linked_tasks: [...schedule.linked_tasks, ...workContext].map((task) => readableLabels.get(`${task.type}:${task.id}`) ?? task),
     customer_product_ids: z.record(z.string(), z.array(z.uuid())).parse(customerProducts.data),
+    customer_orders: readableCustomerOrders,
+    supplier_deliveries: readableSupplierDeliveries,
     canManage,
     canManageSettings,
   };
@@ -60,7 +98,11 @@ export async function loadMyWorkforceSchedule(startOn: string, endOn: string) {
 const knownErrors = [
   'Schedule changed; reload and try again', 'Invalid employee selection',
   'Invalid production plan', 'Facility unavailable', 'Schedule event unavailable',
-  'PTO changed; reload and try again', 'Invalid linked task',
+  'PTO changed; reload and try again', 'Invalid linked task', 'Completed work cannot be moved',
+  'Started or completed work cannot be deleted', 'Completed work dependencies cannot be changed',
+  'Completed or cancelled work cannot be changed',
+  'Generated work scope cannot be changed in the planner',
+  'Generated work staffing must be changed through Work',
 ];
 const conflictErrorPrefixes = [
   'Assignment conflicts with ', 'Approved PTO conflicts with ',

@@ -118,7 +118,9 @@ it('retains every seeded administrator permission in the browser preview', async
     .parse(await response.json());
   const migration = readFileSync('supabase/migrations/20260919155843_permissions_and_reference_options.sql', 'utf8');
   const seeded = [...new Set([...migration.matchAll(/\('([a-z_]+\.[a-z_]+)'/g)].map((match) => match[1]))];
-  expect(permissions.map((permission) => permission.permission_code).sort()).toEqual(seeded.sort());
+  expect(permissions.map((permission) => permission.permission_code).sort()).toEqual(
+    [...seeded, 'operations.work_plans.manage'].sort(),
+  );
 });
 
 it('serves synthetic recipe data through the SDK and filters missing records', async () => {

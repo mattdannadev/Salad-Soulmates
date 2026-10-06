@@ -25,7 +25,9 @@ const config: DirectoryQueryConfig = {
     },
   ],
   sortOptions: [{ value: 'name_asc', label: 'Name A–Z' }],
-  dateRange: { fromKey: 'from', toKey: 'to', fromLabel: 'From', toLabel: 'To' },
+  dateRange: {
+    fromKey: 'from', toKey: 'to', fromLabel: 'From', toLabel: 'To',
+  },
 };
 
 describe('directory query contract', () => {

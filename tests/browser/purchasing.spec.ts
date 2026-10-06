@@ -1,8 +1,7 @@
 import { expect, test } from './fixtures';
 
 test.afterEach(async ({ page }, info) => {
-  if (info.status !== info.expectedStatus)
-    console.error('Synthetic browser failure:', await page.locator('main').ariaSnapshot());
+  if (info.status !== info.expectedStatus) console.error('Synthetic browser failure:', await page.locator('main').ariaSnapshot());
 });
 
 test('inventory starts a purchase with its ingredient fixed', async ({ page }, info) => {
@@ -14,7 +13,7 @@ test('inventory starts a purchase with its ingredient fixed', async ({ page }, i
   await page.goto('/app/inventory');
   const mainNavigation = page.getByRole('navigation', { name: 'Main navigation' });
   await expect(
-    mainNavigation.getByRole('link', { name: 'Purchase planning', exact: true }),
+    mainNavigation.getByRole('link', { name: 'Purchasing', exact: true }),
   ).toHaveCount(1);
   await page.getByRole('link', { name: 'Purchase Preview garlic powder' }).click();
   await expect(page).toHaveURL(
@@ -37,10 +36,10 @@ test('inventory starts a purchase with its ingredient fixed', async ({ page }, i
         const centerX = bounds.left + bounds.width / 2;
         const centerY = bounds.top + bounds.height / 2;
         return (
-          document.documentElement.scrollWidth <= viewport.width &&
-          bounds.right <= viewport.width &&
-          bounds.bottom <= viewport.height &&
-          document.elementFromPoint(centerX, centerY) === button
+          document.documentElement.scrollWidth <= viewport.width
+          && bounds.right <= viewport.width
+          && bounds.bottom <= viewport.height
+          && document.elementFromPoint(centerX, centerY) === button
         );
       }),
     ).toBe(true);
@@ -168,7 +167,49 @@ test('customer packaging and order estimates lead to purchasing and partial rece
     .getByRole('link', { name: `Preview customer · Order ${info.project.name}`, exact: false })
     .click();
   await expect(page).toHaveURL(/plan=.*supplier=/);
-  await page.getByRole('button', { name: 'Create draft for Preview supplier' }).click();
+  await expect(page.getByText('Required: 40 lb', { exact: false })).toBeVisible();
+  await expect(page.getByText('On hand: 0 lb', { exact: false })).toBeVisible();
+  await expect(page.getByText('Confirmed inbound: 0 lb', { exact: false })).toBeVisible();
+  await expect(page.getByText('Recommended quantity: 2 pail = 60 lb')).toBeVisible();
+  await expect(page.getByText('20 lb over the raw shortage', { exact: false })).toBeVisible();
+  const orderNow = page.getByLabel('Preview garlic powder · Order now (pail)');
+  const overrideReason = page.getByLabel('Preview garlic powder · Override reason');
+  await orderNow.fill('');
+  await expect(
+    page.getByText('Enter a valid whole-pack quantity to review the ordered base quantity.'),
+  ).toBeVisible();
+  await orderNow.fill('1.5');
+  await expect(
+    page.getByText('Enter a valid whole-pack quantity to review the ordered base quantity.'),
+  ).toBeVisible();
+  await orderNow.fill('1');
+  await expect(page.getByText('10 lb under the raw shortage', { exact: false })).toBeVisible();
+  await expect(overrideReason).toHaveAttribute('required', '');
+  await expect(
+    page.getByText('Explain why Order now differs from the recommended quantity.', {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await overrideReason.fill('  a  ');
+  expect(await overrideReason.evaluate(
+    (input) => input instanceof HTMLInputElement && input.checkValidity(),
+  )).toBe(false);
+  await overrideReason.fill(' a b ');
+  expect(await overrideReason.evaluate(
+    (input) => input instanceof HTMLInputElement && input.checkValidity(),
+  )).toBe(true);
+  await overrideReason.fill('Use remaining stock before ordering another pail');
+  await orderNow.fill('2');
+  await expect(overrideReason).not.toHaveAttribute('required', '');
+  await expect(overrideReason).toHaveValue('');
+  await expect(
+    page.getByText('Explain why Order now differs from the recommended quantity.', {
+      exact: false,
+    }),
+  ).toHaveCount(0);
+  await page
+    .getByRole('button', { name: 'Create purchase draft for Preview supplier' })
+    .click();
   await expect(page.getByRole('article').getByText('Draft', { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Back to suppliers', exact: true }).click();
   await supplier.locator(':scope > summary').click();
@@ -223,7 +264,8 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   ).toBeVisible();
   await expect(supplier.getByRole('article')).toContainText('50 lb');
   await expect(
-    page.getByRole('row').filter({ hasText: 'Preview supplier' }).first().getByRole('cell').last(),
+    page.getByRole('row').filter({ hasText: 'Preview supplier' }).first().getByRole('cell')
+      .last(),
   ).toHaveText('1');
   const fitsScreen = await page.evaluate(
     () => document.documentElement.scrollWidth <= window.innerWidth,

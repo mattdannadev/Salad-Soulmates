@@ -42,7 +42,7 @@ export default function PurchaseOrderCard({
         <h3>{supplierName}</h3>
         <span className="badge">{purchaseStatusLabel(progress.status, locale)}</span>
       </div>
-      <p><strong>{`${es ? 'N.º de pedido' : 'PO #'}: ${draft.reference || draft.id.slice(0, 8)}`}</strong></p>
+      <p><strong>{`${es ? 'N.º de pedido' : 'PO #'}: ${draft.reference || draft.id.slice(-8).toUpperCase()}`}</strong></p>
       {draft.material_plan_id && orderLabel ? <Link href={`/app/orders?estimate=${draft.material_plan_id}`}>{orderLabel}</Link> : <p>{es ? 'Compra independiente de proveedor' : 'Standalone supplier purchase'}</p>}
       <dl className="purchase-dates">
         <div>

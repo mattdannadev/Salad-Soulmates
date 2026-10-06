@@ -1,4 +1,6 @@
 import PendingSerialization from '@/components/pending-serialization';
+import Link from 'next/link';
+import CreationDialog from '@/components/creation-dialog';
 import { serializationRowSchema } from '@/domain/receiving';
 import SerializedInventory from '@/components/serialized-inventory';
 import { outstandingInbound } from '@/domain/purchasing';
@@ -12,7 +14,17 @@ import ReceiptHistory from '@/components/receipt-history';
 import PurchaseReceiving from '@/components/purchase-receiving';
 import loadPurchaseReceivingData from '@/lib/purchase-receiving-data';
 
-export default async function Receiving() {
+export default async function Receiving({ searchParams }: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const rawQuery = await searchParams;
+  const receiptParams = new URLSearchParams();
+  Object.entries(rawQuery).forEach(([key, value]) => {
+    if (typeof value === 'string' && key !== 'create') receiptParams.set(key, value);
+  });
+  const closeReceiptHref = `/app/receiving${receiptParams.size ? `?${receiptParams}` : ''}`;
+  receiptParams.set('create', '1');
+  const newReceiptHref = `/app/receiving?${receiptParams}`;
   const { db, profile } = await requireAdminShell();
   const [ingredients, receipts, packs, serializations, purchasing, canReceive] = await Promise.all([
     rows(db, 'ingredients', rowSchemas.ingredients),
@@ -41,6 +53,11 @@ export default async function Receiving() {
             ? 'Registra cada entrega con su proveedor y fecha. La cantidad recibida actualiza el inventario automáticamente.'
             : 'Record each delivery with its supplier and date. Posted quantities update inventory automatically.'
         }
+        action={canReceive ? (
+          <Link className="button button--compact" href={newReceiptHref} scroll={false}>
+            {es ? 'Recibir sin pedido de compra' : 'Receive without a purchase order'}
+          </Link>
+        ) : undefined}
       />
       <PurchaseReceiving
         orders={orders}
@@ -49,8 +66,12 @@ export default async function Receiving() {
         recoveryScope={`${profile.id}:${profile.facility_id}`}
       />
       {canReceive && (
-        <details className="panel">
-          <summary>{es ? 'Recibir sin pedido de compra' : 'Receive without a purchase order'}</summary>
+        <CreationDialog
+          open={rawQuery.create === '1'}
+          title={es ? 'Recibir sin pedido de compra' : 'Receive without a purchase order'}
+          closeHref={closeReceiptHref}
+          closeLabel={es ? 'Cerrar recepción' : 'Close receiving form'}
+        >
           <ReceiptForm
             packs={packs}
             inbound={outstandingInbound(purchaseDrafts, purchaseLines, lines)}
@@ -58,7 +79,7 @@ export default async function Receiving() {
             suppliers={suppliers.filter((s) => s.active)}
             locale={profile.preferred_locale}
           />
-        </details>
+        </CreationDialog>
       )}
       <SerializedInventory db={db} locale={profile.preferred_locale} />
       {canReceive && (

@@ -10,6 +10,7 @@ import {
   purchaseLineRowSchema,
 } from '@/domain/purchasing';
 import { supplierPriceRowSchema } from '@/features/supplier-pricing/domain';
+import { demandCoverageSchema } from '@/domain/demand-coverage';
 import { mixerBatchSchema, productionLotSchema, productionPlanSchema } from '@/domain/production';
 import {
   productRowSchema,
@@ -27,6 +28,13 @@ export default function createSupabasePurchasingRepository(
   db: SupabaseClient<Database>,
 ): PurchasingRepository {
   return {
+    async loadDemandCoverage() {
+      return readResult(
+        await db.rpc('demand_coverage'),
+        z.array(demandCoverageSchema),
+        'purchasing_demand_coverage',
+      );
+    },
     async loadWorkspaceRecords() {
       const [
         plans,

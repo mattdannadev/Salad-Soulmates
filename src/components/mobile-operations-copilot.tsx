@@ -123,7 +123,8 @@ export default function MobileOperationsCopilot({
                 </div>
                 <p className={styles.meta}>
                   <CalendarDays size={16} aria-hidden="true" />
-                  {record.assignedOn ? formatDate(record.assignedOn) : (es ? 'Al comenzar' : 'At start')}
+                  {record.assignedOn && formatDate(record.assignedOn)}
+                  {!record.assignedOn && (es ? 'Al comenzar' : 'At start')}
                 </p>
                 <div className={styles.progressText}>
                   <span>{es ? 'Ingredientes listos' : 'Ingredients complete'}</span>

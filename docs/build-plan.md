@@ -1,6 +1,6 @@
 # Salad Soulmates — current build plan
 
-Updated: September 24, 2026
+Updated: October 5, 2026
 
 ## UI/UX overhaul — approved cross-cutting work
 
@@ -13,6 +13,36 @@ required context for all user-facing implementation work. It does not authorize
 production deployment, shared-database sample data, or changes to existing domain
 and authorization safeguards.
 
+### Purchasing action follow-up — approved 2026-10-04
+
+Use the Compact primary action hierarchy for Purchasing: the page header exposes
+a permission-gated New purchase order action, while back/navigation remains
+secondary. Keep Purchasing and Receiving as distinct workflows under the shared
+Purchasing & receiving navigation section. Acceptance requires the standalone
+purchase composer to remain available through the action, desktop controls to be
+slimmer without weakening the 44px coarse-pointer target, and existing purchase
+and receiving authorization rules to remain intact.
+
+### Orders operational-grid follow-up — approved 2026-10-04
+
+Replace the whitespace-heavy grouped order cards with the shared AG Grid wrapper.
+Keep URL-backed search, filters, sorting, pagination, deep links, permissions,
+empty states and return context as the single source of truth. The grid must
+make View order the dominant action while retaining quiet navigation to
+purchasing, production planning and pickup preparation. On narrow screens, keep
+the dense grid horizontally scrollable inside its own region rather than
+reintroducing card layouts.
+
+### In-context primary creation follow-up — approved 2026-10-04
+
+Primary entity creation opens in a shared, URL-addressable modal that preserves
+directory filters, origin and draft context. It applies to Orders, purchase
+orders, manual receiving, Customers, Suppliers and Ingredients; direct creation
+routes remain recovery/deep-link fallbacks. Acceptance requires focus restoration,
+Escape/close behavior, touch-safe dialog sizing, existing authorization and
+return-context preservation, and no nested dialog conversion for contextual
+sub-record forms.
+
 ## Native mobile companion plan
 
 The standalone Expo/React Native delivery plan is
@@ -23,6 +53,102 @@ work separately. It does not authorize a second backend, direct privileged
 database access from a device, production credentials, deployment, or release.
 
 ## Current checkpoint
+
+### CRM, commercial intelligence and analytics — approved later delivery slice
+
+Build a commercial system of record that progresses from account and contact
+management through opportunities and activities to versioned estimates, then
+to approved, effective-dated pricing agreements for future orders. An accepted
+estimate may create one linked draft order or pricing agreement through an
+idempotent, auditable conversion; the selected agreement's price is snapshotted
+on the order. CRM must not replace the operational order/fulfillment record or
+the accounting-system financial ledger.
+
+Deliver in this sequence:
+
+1. Establish organization-scoped account, contact, relationship, opportunity
+   and activity services, roles, audit events, duplicate/merge behavior and
+   commercial navigation.
+2. Add versioned estimates and approval/send/acceptance states. Preserve line,
+   pricing, tax/fee, terms, delivery and validity assumptions in immutable
+   commercial snapshots.
+3. Add approved, versioned pricing agreements with effective dates, account and
+   product/UOM eligibility, quantity tiers/minimums, expiry/review and
+   permissioned, reasoned order-price overrides.
+4. Integrate the sole accepted-estimate conversion path with the existing order
+   service; protect it with idempotency, retry reconciliation and durable source
+   links. Do not add a second operational order-entry model.
+5. Add authorization-safe commercial and operational reporting: pipeline,
+   activity, estimate, agreement, order, fulfillment, production, inventory,
+   purchasing, shipment and invoice-candidate views with metric definitions,
+   freshness, drill-down and audited exports.
+6. Add AI assistance only after the Operations Copilot security gates are met.
+   Initial capabilities are grounded summaries, follow-up/estimate drafts,
+   report explanations and proposed next steps. AI is server-mediated,
+   least-privilege, source-linked and audited; it cannot send communications or
+   create/change estimates, agreements, prices, orders or operations without an
+   authorized human's explicit confirmation through the existing service path.
+
+Exit criteria: account/contact/opportunity/activity, estimate and agreement
+authorization tests; immutable-version and conversion idempotency tests;
+order-price snapshot/override tests; tenant/facility negative tests for reports,
+exports and AI retrieval; metric-definition/freshness coverage; and a human-
+confirmation test for every AI-proposed write or external communication.
+
+### Planning Intelligence — approved product direction
+
+Planning Intelligence is a dedicated planning and scheduling skill on the
+product-wide agent platform. It uses deterministic, facility-scoped planning and
+scheduling services for facts and feasibility; an LLM may interpret objectives,
+compare typed scenarios, explain constraints, and create reviewable change
+proposals. An authorized planner may apply only an explicitly confirmed,
+freshly revalidated proposal through existing service/RPC boundaries. The first
+write scope is limited to draft tasks and worker assignments; publishing,
+purchasing, pickup-date changes, production/inventory actions, and food-safety
+or commercial decisions remain separately authorized actions. The complete
+scope, prompts, acceptance gates, and delivery sequence are in the
+[Planning Intelligence build plan](planning-intelligence-build-plan.md).
+
+### Production-batch execution and traceability — approved architecture plan
+
+The next physical-production foundation is the dedicated
+[production-batch execution and traceability plan](production-batch-execution-traceability.md).
+It separates planned batches, ingredient preparation, actual mixer execution,
+finished recall lots, and later packaging genealogy. It authorizes design and
+non-production implementation only; migrations, merge, deployment and any
+shared operational data change require their normal separate gates.
+
+### Work planning and execution — approved architecture plan
+
+The [work planning and execution build plan](work-planning-and-execution-build-plan.md)
+adds a general-purpose, versioned Work Plan workflow above transactional Applied
+Plans and scheduled Work Packages, while retaining Work Orders as the actual
+physical units of accountability. It moves preparation-to-mixing linkage to
+actual quantity-bearing allocation, keeps individual batch work out of the
+planner workflow, and defines the required master-data, navigation, worker,
+traceability, migration, and verification work. It authorizes design and
+non-production implementation only; every migration, merge, deployment, and
+shared operating-data change needs its normal separate authorization.
+
+Implementation checkpoint (2026-10-05): Phase 1 functionality is implemented
+locally, including lifecycle transitions, durable clone retries, optional-step
+metadata, revision-safe editing, and authorized product/recipe navigation.
+Independent review, 35 disposable native PostgreSQL tests, eight desktop/phone
+browser cases, and the full integrated check (974 tests plus production build)
+passed before the latest visual redesign. The focused directory/editor redesign
+has now passed independent source/visual review, all eight refreshed desktop/phone
+browser cases, and a new full integrated check (974 tests plus production build).
+The owner retains visual acceptance. Optional steps will be explicitly
+selected by a manager when creating an Applied Plan in Phase 2. No merge,
+hosted migration, deployment, or visual acceptance is claimed. See the dedicated
+plan for the current handoff and acceptance gates.
+
+Approved next slice: generate multi-day prep, mixing, and packaging commitments
+from demand and a reusable workflow shell, then review/edit directly in the
+existing Gantt. Templates remain in Settings. Applied snapshots and aggregate
+package records are created behind this interaction, not through a separate
+per-run setup workflow. Coordinate this boundary with the scheduling-board work;
+reuse existing production proposals and do not build a second planning interface.
 
 ### Plant operations configuration — approved next delivery slice
 
@@ -417,9 +543,13 @@ Dashboard additions must reuse the facility-scoped scheduling, authorization,
 audit, localization, orders, purchasing, inventory, workforce, and invoicing
 contracts rather than creating a separate calendar, duplicate status record, or
 bypass of an underlying operational workflow. Acceptance includes clear
-empty/loading/error states, chronological event ordering, facility attribution,
-desktop and phone usability, and permission negative tests for cross-facility
-access. See the durable owner direction in `decisions.md` whenever dashboard
+empty/loading/error states, facility attribution, desktop and phone usability,
+and permission negative tests for cross-facility access. Production work is
+ordered by scheduled day and start time. Every production card names its
+customer and order; mixing cards also show the product and batch count. Cards
+also name every assigned person and state the assigned versus required worker
+count. Compact customer/order headings appear only when more than one order is
+present. See the durable owner direction in `decisions.md` whenever dashboard
 scope is modified.
 
 This owner correction changes workflow and sequencing, not confirmed recipe,
@@ -478,6 +608,16 @@ No production deployment, merge or shared-database changes are authorized.
 
 ## Retained later scope from the original handoff
 
+### Scheduling capacity hierarchy — deferred
+
+Move weekly employee capacity configuration to organization settings, with an
+organization default, an optional facility override, and an optional employee
+override. Resolve effective capacity using employee override, then facility
+override, then organization default. Show inherited values and allow overrides
+to be cleared. Use the resolved value in scheduling utilization calculations;
+retain permission checks, validation, and audit history. The scheduling-page
+capacity editor is removed pending this settings workflow.
+
 The reattached original PRD/mockups retain full admin access on desktop and phone,
 prep/lot genealogy, customers and packaging/label configuration, holds/releases,
 trace/recall evidence and exports, and QuickBooks invoicing. The later build
@@ -510,3 +650,21 @@ readable on phones, show missing-value fallbacks, and preserve existing order li
 Implementation, automated validation, merge, deployment, and owner acceptance are
 separate gates. This release incorporates prior worker execution
 work and has been reconciled with main f66102e before release.
+
+## Equipment registry foundation — implementation candidate
+
+The additive Equipment registry foundation defines one durable record per
+serialized physical piece, scoped to a facility and optionally arranged in a
+recursive parent/child assembly. Stable equipment codes and creation identity
+are immutable; operational changes are revisioned and audited. Mixer and tank
+records carry explicit usable-capacity quantity and canonical mass/volume unit
+fields rather than an open-ended attribute document. Database constraints and
+tests cover same-facility parents, cycle rejection, retirement consistency,
+facility RLS, permissions and invoker-scoped recursive reads.
+
+This candidate is registry infrastructure only. Parts, preventive maintenance,
+user interface, scheduling or dashboard integration, production-batch equipment
+selection and asset exposure remain later work. The identifiers and facility
+keys are intentionally compatible with those future relationships. Disposable
+database and focused domain verification are required before integration; this
+entry does not mark a product phase complete or authorize deployment.

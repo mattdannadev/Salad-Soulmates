@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { Suspense } from 'react';
 import { PageHeader } from '@/components/shell';
 import CustomerForm from '@/components/customer-form';
+import CreationDialog from '@/components/creation-dialog';
 import loadCustomerWorkspace from '@/lib/customer-data';
 import { formatDate } from '@/domain/format';
 import { formatPrice } from '@/domain/customer-pricing';
@@ -26,6 +27,7 @@ export default async function Customers({
   if (!query.success) notFound();
   const directoryHref = customerDirectoryHref(params);
   const origin = customerReturnContext(directoryHref, params.focusRow);
+  const createOrigin = customerReturnContext(params.returnTo ?? directoryHref, params.focusRow);
   const focusRow = z.uuid().safeParse(params.focusRow);
   const workspace = await loadCustomerWorkspace();
   const {
@@ -151,7 +153,7 @@ export default async function Customers({
                 pickup: { text: own[0] ? formatDate(own[0].needed_on) : '—', sortValue: own[0]?.needed_on ?? '' },
                 action: {
                   text: es ? 'Seleccionar para pedido →' : 'Select for order →',
-                  href: `/app/orders?customer=${customer.id}#new-order`,
+                  href: `/app/orders?create=order&customer=${customer.id}`,
                 },
               },
             };
@@ -176,7 +178,7 @@ export default async function Customers({
         <section className="panel">
           <h2>{selected.name}</h2>
           <p>
-            <Link className="button" href={`/app/orders?customer=${selected.id}#new-order`}>
+            <Link className="button" href={`/app/orders?create=order&customer=${selected.id}`}>
               {es ? 'Nuevo pedido' : 'New order'}
             </Link>
           </p>
@@ -245,6 +247,17 @@ export default async function Customers({
             </p>
           )}
         </section>
+      )}
+      {params.create === 'customer' && canEdit && (
+        <CreationDialog
+          open
+          title={es ? 'Agregar cliente' : 'Add customer'}
+          description={es ? 'Guarda los datos del cliente antes de preparar un pedido.' : 'Save customer details before preparing an order.'}
+          closeHref={customerReturnHref(createOrigin)}
+          closeLabel={es ? 'Cerrar creación de cliente' : 'Close customer creation'}
+        >
+          <CustomerForm locale={locale} returnContext={createOrigin} />
+        </CreationDialog>
       )}
     </>
   );

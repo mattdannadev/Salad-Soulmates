@@ -1,5 +1,204 @@
 # Implementation decisions
 
+## 2026-10-05 — Operational tasks are outside the Gantt scheduling model
+
+The owner clarified that **Work Tasks** themselves do not need to participate in
+Gantt scheduling. The Gantt remains a planning view for aggregate production
+commitments, capacity, dates, and staffing; it may be backed by Applied Plans
+and Work Packages, but it must not schedule individual task records. Work Tasks
+remain operational execution detail within their Work Order and are surfaced in
+the worker and supervisor flows at the appropriate time. Do not add task bars,
+task-level calendar controls, or a task-level scheduling lifecycle to the
+planner merely to expose the new work model.
+
+## 2026-10-05 — Gantt-first planning uses reusable workflow shells
+
+The owner clarified that Work Plans provide the starting workflow shell:
+Intake, Purchasing, Receiving, Prep, Mixing (Pre-Op, Mixing, Post-Op),
+Packaging, Loading, and Maintenance. Configure reusable templates in Settings,
+not in the Gantt and not separately for every production run. The primary
+delivery is demand-driven generation of the right prep, mixing, and packaging
+commitments across production days, then review and adjustment directly on the
+existing production scheduling board. Creating a production commitment from the
+Gantt automatically creates its underlying applied snapshot and aggregate work
+records; package setup is not a prerequisite or a second planning interface.
+
+Use configured dependencies, timing offsets, calendars, yields, and capacity,
+not hard-coded day-before/next-day assumptions. Intake, purchasing, receiving,
+loading, and maintenance retain their canonical transaction/trigger ownership;
+do not blindly duplicate every shell stage for every order. Confirm each trigger
+mapping during implementation. Mixing pre/post-op are task/checklist defaults
+unless separate scheduling or resources justify independent commitments.
+Generated planning records never assert actual completion or material readiness.
+Preserve manager-selected optional steps and quantity-bearing prep consumption.
+This supersedes the earlier package-first setup and default-hidden package-layer
+presentation, not the underlying planning/execution separation.
+
+## 2026-10-05 — Mixing pre- and post-operation work is independently accountable
+
+Pre-Op and Post-Op are separate Work Orders with their own planner projections
+and dependency records around each generated Mixing commitment. They are not
+checklist-only tasks within Mixing. This preserves distinct scheduling,
+assignment, lifecycle, and audit boundaries while retaining the same aggregate
+batch commitment for the production run.
+
+## 2026-10-05 — Managers choose optional steps when applying a Work Plan
+
+An administrator may mark a Work Plan step optional. When an Applied Plan is
+created, the manager explicitly chooses whether to include those optional steps.
+This is the first-version meaning of conditional work; automatic product/process
+rules are deferred. The applied snapshot must retain the selections and validate
+its dependency graph before publication. An optional marker does not itself skip
+an execution step or waive a required predecessor. Selection and dependency
+evaluation belong to Phase 2; Phase 1 stores the versioned template setting only.
+
+## 2026-10-05 — Generic work planning separates workflow, scheduling, and execution
+
+Use **Work Plan** for versioned reusable workflow definition only. A Work Plan
+contains typed steps, dependencies, templates, qualification/gate rules, and
+materialization policy; it has no dates, quantities, workers, customer order, or
+operational status. A concrete demand context creates an **Applied Plan** that
+snapshots the released Work Plan version. A planner schedules aggregate **Work
+Packages** from that Applied Plan. Work Packages own planned quantity/capacity
+and scheduled windows; they are not physical batches.
+
+The existing canonical Work Order store remains the operational record. A Work
+Order is the smallest traceable physical output, such as one prep container or
+one mixer charge; a **Work Task** is the smallest independently assignable or
+completable step within it. Calendar entries remain projections, never a second
+lifecycle. Work Plans belong in Settings as Operations configuration, Applied
+Plans and Work Packages belong in Production Planning, workers act through the
+worker/mobile and dashboard surfaces, and genealogy/recall stays in
+Traceability.
+
+Planners create aggregate work only. Individual prep and mixing Work Orders are
+materialized atomically when a worker/lead starts, reserves, or bulk-updates
+physical work. Bulk actions create/update one Work Order and execution record
+per physical unit while retaining a single auditable bulk action and per-unit
+exceptions.
+
+The planner calendar remains aggregate by default: its Work Package and Work
+Order layers are initially hidden. An authorized planner can independently
+toggle either layer on to inspect planned or materialized work in situ. The
+toggle is presentation-only and URL/return-context aware where appropriate; it
+does not grant execution mutation controls or create a second schedule/work
+lifecycle.
+
+Preparation execution is not pre-paired to a planned or actual mixing batch.
+Each prep output remains independently identifiable and may be unallocated until
+actual mixing. The worker records explicit quantity-bearing allocations to the
+selected mixing batch(es); no allocation, operator, equipment, or source
+genealogy is inferred from matching dates, product, or counts. This supersedes
+the 2026-10-01 v1 default of one preparation execution per production batch,
+while preserving facility-configured one-to-one, one-to-many, and many-to-one
+process profiles and existing recall-lot policy.
+
+Preparation output is also a consumable material-readiness supply, not merely a
+workflow predecessor. A mixing commitment declares required prep quantity; the
+planner shows eligible approved prep quantity, allocated/consumed quantity, and
+shortfall. A prep output is eligible only while approved, compatible, in its
+allowed use window, not held or voided, and carrying unallocated quantity. A
+mixing execution may start only after its explicit prep allocations cover the
+required quantity. Allocation atomically reserves/draws down the source amount,
+so a plan for 12 mixing charges with prep capacity for only 10 reports a
+two-charge-equivalent shortfall and cannot over-consume prep through concurrent
+or retried requests. Bucket counts are a presentation aid; quantity in the
+applicable canonical unit is authoritative.
+
+## 2026-10-04 — Planning Intelligence is a product-wide agent skill
+
+Planning Intelligence is the planning-and-scheduling skill on a shared
+product-wide agent platform, not a second standalone Copilot or an unrestricted
+chat interface. The platform owns server-side identity and tenant/facility
+context, entitlements, provider configuration, audit/retention, rate/cost
+limits, redaction, citations, confirmation, and kill switches. The Planning
+Intelligence skill owns only bounded planning and scheduling tools, permissions,
+scenario rules, and its planner-facing UI.
+
+The deterministic planning and scheduling services remain authoritative for
+quantities, material availability, capacity, task dependencies, worker
+availability, PTO, conflicts, authorization, and publishing. The model may
+interpret an objective, compare typed scenarios, explain deterministic results,
+and create a typed proposal. It can change data only when the authorized planner
+reviews and explicitly confirms one proposal; the server then rechecks current
+state and applies it through the canonical service/RPC with idempotency and audit
+records. The initial write scope is draft-task and worker-assignment changes.
+Publishing, purchasing, pickup-date changes, production/inventory records, and
+food-safety or commercial decisions remain separately named, authorized actions.
+
+Provider enablement and every write release remain subject to the Operations
+Copilot security-first gates and independent review. The full product scope and
+prompt examples are in [Planning Intelligence build plan](planning-intelligence-build-plan.md).
+
+## 2026-10-04 — Primary record creation stays in context
+
+Primary record creation for Orders, purchase orders, manual receipts, Customers,
+Suppliers and Ingredients opens in an accessible, URL-addressable modal from its
+own workspace. The dialog preserves the current directory's filter, selection,
+draft and return context; closing removes only the creation state. Native
+creation routes remain supported for direct links and recovery. Contextual
+sub-record forms remain embedded when a nested modal would interrupt a focused
+workflow or create inaccessible dialog nesting.
+
+## 2026-10-04 — Orders directory uses a compact operational grid
+
+The Orders directory is a compact, URL-filtered AG Grid workspace rather than a
+stack of customer card panels. It retains the existing customer, product,
+production-status, pickup-date, historical-view, sorting, pagination, deep-link
+and return-context contracts. Each row has one clear View order action and quiet
+links to the relevant downstream purchasing, production-planning and pickup
+workflows; consequential mutations remain on the order detail workflow.
+
+Grid-local filtering and sorting must not compete with the URL-backed directory
+state. Narrow screens scroll the table within its bounded region rather than
+returning to whitespace-heavy cards.
+
+## 2026-10-04 — Compact primary actions and procurement navigation
+
+The approved action direction is **Compact primary**: desktop primary and
+secondary actions use a slimmer shared control height, with a filled primary
+action reserved for the dominant task and quieter secondary actions for
+navigation or alternatives. Coarse-pointer and narrow-screen controls retain a
+44px minimum target.
+
+Purchasing and Receiving stay distinct, authorized workflows, but appear
+together in navigation as **Purchasing & receiving**. Purchasing remains
+contextual rather than becoming a standalone top-level destination. Its
+workspace must expose a permission-gated **New purchase order** action that
+opens the existing standalone purchase composer without bypassing supplier,
+pack, draft, confirmation, or receiving rules.
+
+## 2026-10-01 — Calendar-integrated scheduling controls
+
+Keep the scheduler's primary controls inside the calendar panel: facility and
+customer context, time-off entry, and publishing. Bryntum's own toolbar remains
+the single home for date navigation. Do not present separate work-type,
+employee, view, and date-navigation controls as an oversized page-level strip;
+they obscure the calendar's working context and duplicate native calendar
+controls.
+
+## 2026-10-01 — Native calendar event movement and resizing
+
+Timed schedule events use Bryntum Calendar's native `CalendarDrag` feature for
+both moving an event by its body and adjusting it from either edge. Its native
+drag tooltip remains enabled so the proposed start and end times are visible
+while the pointer moves. A completed gesture persists through the existing
+authorized, revision-checked schedule update path; a refresh redraws from the
+saved record rather than accepting a client-only calendar mutation.
+
+## 2026-10-01 — Dashboard production schedule context and grouping
+
+Every production work card on the dashboard schedule identifies the customer
+order it supports. Mixing cards also state the product being mixed and the
+applicable batch count; a card linked to one planned mixer batch shows one batch,
+while plan-level work shows the saved order quota for the applicable product.
+
+Order production work by customer, then order, then scheduled day and start
+time. Show compact customer/order group headings only when the schedule contains
+more than one customer order; a single-order schedule keeps that context on each
+card without adding a redundant grouping tier. Missing references or production
+context are labeled explicitly rather than inferred from unrelated text.
+
 ## 2026-09-30 — Dashboard is the digital production floor
 
 The main dashboard is the plant's **digital production floor**, not a summary
@@ -863,3 +1062,54 @@ of a used ingredient may therefore affect the full finished product scope for
 that day; the product must not claim bucket-level recall narrowing it cannot
 support. Unique prep-container identity and quantity-bearing bucket-to-mix
 allocation remain later, evidence-gated roadmap work.
+
+## 2026-10-01 — Dashboard schedule execution ordering and staffing detail
+
+The operations-week schedule is ordered by scheduled day and start time so the
+production floor can scan work in execution order. Each work card must clearly
+name its assigned people and show assigned versus required workers; a count alone
+is insufficient when several people are assigned. This supersedes the earlier
+dashboard ordering direction to group production work first by customer and
+order, while preserving customer/order context on each applicable card.
+
+## 2026-10-01 — Planned batches, production batches and production-day recall lots
+
+Planned batches remain demand/capacity records. A physical mixer charge is a
+separate production batch with immutable execution, input, yield and quality
+evidence. Salad Soulmates v1 defaults to one planned batch and one preparation
+execution per production batch, while preserving allocation-capable boundaries
+for future plants. The initial finished recall lot groups output by facility,
+product and facility-local production date, so a recall expands to all relevant
+same-product batches made that day. Internal batch UUIDs and readable run codes
+are separate from finished/recall-lot identity. Routine rework is deferred.
+
+## 2026-10-01 — Equipment identity and hierarchy foundation
+
+Use **Equipment** as the product and implementation term. Every serialized
+physical piece is an independent, facility-scoped Equipment record with a stable
+equipment code, even when it is a child in an assembly. Parent relationships
+must remain within the same organization and facility and cannot form cycles.
+Equipment identity is retained through retirement, not deletion; allowed
+operational changes are revisioned and audited.
+
+Mixer and tank usable capacity is modeled as typed quantity and canonical unit
+columns. Do not introduce an arbitrary equipment-attributes JSON document.
+Parts, preventive maintenance, UI, scheduling/dashboard integration,
+production-batch selection and asset exposure are explicitly deferred; future
+work links to the stable Equipment and facility identifiers established here.
+
+## 2026-10-01 — Work orders coordinate work; executions record facts
+
+Use **Work Order** for the reusable unit of planned and assigned plant work:
+Mixing, Ingredient Prep, Receiving, Shipment Loading, Pre-Op, Post-Op,
+Packaging, Cleaning and future Maintenance. It owns schedule, staffing,
+instructions, operational status and planning context. The existing worker work
+queue is the canonical work-order store; the calendar is a scheduling projection,
+not a second work lifecycle.
+
+Do not store physical genealogy, source lots, equipment snapshots, yield, quality
+or finished-lot evidence on a Work Order. A Mixing work order can have many actual
+Production Batches, and a Prep work order can have actual Preparation Executions.
+At the start of each Mixing event, the worker confirms that work order, mixer and
+tank; the resulting batch snapshots them immutably. Day-level equipment choices
+may be retained solely as convenience defaults and must never be required evidence.

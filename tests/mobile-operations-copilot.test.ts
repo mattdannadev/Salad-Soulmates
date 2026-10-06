@@ -25,6 +25,7 @@ function profile(role: 'worker' | 'receiver'): Profile & { role: 'worker' | 'rec
     access_profile_id: uuid(4),
     display_name: 'Mobile Teammate',
     preferred_locale: 'en',
+    regional_locale: 'en-US',
     active: true,
     role,
   };

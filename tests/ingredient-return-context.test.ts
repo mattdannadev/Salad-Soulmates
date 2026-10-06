@@ -53,6 +53,8 @@ describe('ingredient return context', () => {
       focusRow: ingredientId,
     });
     const supplierQuery = new URL(recovery, 'https://return.invalid').searchParams;
+    expect(new URL(recovery, 'https://return.invalid').pathname).toBe('/app/suppliers');
+    expect(supplierQuery.get('create')).toBe('supplier');
     const resumedIngredient = supplierReturnContext(supplierQuery.get('returnTo'), undefined).href;
     const resumedUrl = new URL(resumedIngredient, 'https://return.invalid');
 

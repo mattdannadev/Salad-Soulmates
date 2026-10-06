@@ -30,9 +30,9 @@ describe('navigation registry', () => {
   });
 
   it('has valid section references and no duplicate sidebar destinations', () => {
-    const sidebarDestinationIds = navigationSections.flatMap((section) =>
-      getSectionDestinations(section).map(({ destination }) => destination.id),
-    );
+    const sidebarDestinationIds = navigationSections.flatMap((section) => (
+      getSectionDestinations(section).map(({ destination }) => destination.id)
+    ));
 
     expect(new Set(sidebarDestinationIds)).toHaveLength(sidebarDestinationIds.length);
     expect(sidebarDestinationIds).toContain('purchasing');
@@ -55,9 +55,10 @@ describe('navigation registry', () => {
     const administration = navigationSections.find(({ id }) => id === 'administration');
     expect(customers).toBeDefined();
     expect(administration).toBeDefined();
+    if (!customers || !administration) throw new Error('Required navigation registry entry missing');
 
-    expect(isNavigationDestinationCurrent(customers!, '/app/customers/123')).toBe(true);
-    expect(isNavigationSectionCurrent(administration!, '/app/customers/123', ['orders.read'])).toBe(
+    expect(isNavigationDestinationCurrent(customers, '/app/customers/123')).toBe(true);
+    expect(isNavigationSectionCurrent(administration, '/app/customers/123', ['orders.read'])).toBe(
       false,
     );
   });
@@ -83,21 +84,20 @@ describe('navigation registry', () => {
   it('keeps purchasing together with deliveries while preserving its breadcrumb', () => {
     const procurement = navigationSections.find(({ id }) => id === 'procurement');
     expect(procurement).toBeDefined();
+    if (!procurement) throw new Error('Required procurement registry entry missing');
     expect(
-      getVisibleSectionDestinations(procurement!, [
+      getVisibleSectionDestinations(procurement, [
         'orders.read',
         'planning.read',
         'inventory.read',
         'products.read',
         'master_data.read',
-      ]).map(
-        ({ destination }) => destination.id,
-      ),
+      ]).map(({ destination }) => destination.id),
     ).toEqual(['purchasing', 'receiving', 'suppliers']);
     expect(getNavigationBreadcrumb('/app/purchasing', 'en')).toEqual([
       { label: 'Dashboard', href: '/app' },
-      { label: 'Purchasing & deliveries' },
-      { label: 'Purchase planning' },
+      { label: 'Purchasing & receiving' },
+      { label: 'Purchasing' },
     ]);
   });
 });

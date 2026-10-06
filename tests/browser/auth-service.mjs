@@ -45,10 +45,25 @@ const mutations = new Set([
   'receive_purchase_delivery',
   'serialize_receipt_line',
   'change_serialized_unit',
+  'save_workforce_schedule_event',
+  'delete_workforce_schedule_event',
+  'create_work_plan',
+  'save_work_plan_draft',
+  'release_work_plan_version',
+  'create_work_plan_draft_version',
+  'transition_work_plan_version',
+]);
+const scheduleReads = new Set([
+  'get_workforce_work_context',
+  'get_schedule_customer_products',
+  'get_schedule_batch_context',
+  'get_schedule_customer_orders',
+  'get_schedule_supplier_deliveries',
 ]);
 /** @type {Promise<PGlite> | undefined} */
 let databasePromise;
 let pending = Promise.resolve();
+let workPlanPermission = true;
 async function createDatabase() {
   const db = new PGlite();
   await initializeGateDatabase((sql) => db.exec(sql));
@@ -96,8 +111,11 @@ function isPurchasingFixtureRequest(url) {
     || endpoint === 'rpc/find_serialized_units' || endpoint === 'rpc/order_production_batches'
     || endpoint === 'rpc/worker_spice_preparations'
     || endpoint === 'rpc/get_workforce_schedule'
+    || endpoint === 'rpc/list_work_plan_versions'
+    || scheduleReads.has(endpoint.replace('rpc/', ''))
     || mutations.has(endpoint.replace('rpc/', ''))
     || endpoint === 'test/purchasing-reset'
+    || endpoint === 'test/work-plan-permission'
   );
 }
 /** @param {URL} url @param {string} method @param {string} body */
@@ -106,10 +124,16 @@ async function executeRequest(url, method, body) {
   const db = await databasePromise;
   const endpoint = url.pathname.replace('/rest/v1/', '');
   if (endpoint === 'test/purchasing-reset') {
+    workPlanPermission = true;
     // PGlite's in-memory fixture is replaced wholesale; closing the active
     // scoped connection rejects on some Windows builds before a test can reset.
     databasePromise = createDatabase();
     await databasePromise;
+    return {};
+  }
+  if (endpoint === 'test/work-plan-permission') {
+    const permission = z.object({ allowed: z.boolean() }).strict().parse(JSON.parse(body));
+    workPlanPermission = permission.allowed;
     return {};
   }
   if (tables.has(endpoint) && method === 'GET') {
@@ -137,6 +161,10 @@ async function executeRequest(url, method, body) {
     return result.rows[0] ?? null;
   }
   const input = JSON.parse(body);
+  if (endpoint === 'rpc/list_work_plan_versions') {
+    const result = await db.query('select public.list_work_plan_versions() as value');
+    return z.object({ value: z.unknown() }).parse(result.rows[0]).value;
+  }
   if (endpoint === 'suppliers' && method === 'POST') {
     const supplier = supplierSchema.parse(input);
     const result = await db.query(
@@ -168,6 +196,14 @@ async function executeRequest(url, method, body) {
       [JSON.stringify(args)],
     );
     return z.object({ schedule: z.unknown() }).parse(result.rows[0]).schedule;
+  }
+  if (scheduleReads.has(endpoint.replace('rpc/', ''))) {
+    const name = endpoint.replace('rpc/', '');
+    const args = z.object({ payload: z.record(z.string(), z.unknown()) }).parse(input).payload;
+    const result = await db.query(`select public.${name}($1::jsonb) as value`, [
+      JSON.stringify(args),
+    ]);
+    return z.object({ value: z.unknown() }).parse(result.rows[0]).value;
   }
   if (endpoint === 'rpc/cancel_customer_order') {
     const args = z.object({ order_id: z.uuid() }).parse(input);
@@ -220,6 +256,13 @@ async function executeRequest(url, method, body) {
       'receive_purchase_delivery',
       'serialize_receipt_line',
       'change_serialized_unit',
+      'save_workforce_schedule_event',
+      'delete_workforce_schedule_event',
+      'create_work_plan',
+      'save_work_plan_draft',
+      'release_work_plan_version',
+      'create_work_plan_draft_version',
+      'transition_work_plan_version',
     ])
     .parse(endpoint.replace('rpc/', ''));
   const { payload } = z.object({ payload: z.unknown() }).parse(input);
@@ -394,7 +437,8 @@ createServer((request, response) => {
     }
     if (url.pathname.endsWith('/rpc/has_permission')) {
       const { requested } = JSON.parse(payload);
-      response.end(JSON.stringify(ADMIN_PERMISSIONS.includes(requested)));
+      response.end(JSON.stringify(ADMIN_PERMISSIONS.includes(requested)
+        && (requested !== 'operations.work_plans.manage' || workPlanPermission)));
       return;
     }
     if (url.pathname.endsWith('/rpc/login_event_user_names')) {

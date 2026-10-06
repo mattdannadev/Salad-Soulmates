@@ -1,23 +1,22 @@
-export type DashboardWorkQueueId =
-  | 'pickups-due'
+export type DashboardWorkQueueId = | 'pickups-due'
   | 'purchases-unconfirmed'
   | 'deliveries-unreceived'
   | 'ingredient-shortages'
   | 'planning-readiness';
 
-export type DashboardWorkQueue = {
+export interface DashboardWorkQueue {
   id: DashboardWorkQueueId;
   count: number;
   overdueCount: number;
   href: string;
-};
+}
 
-type DatedRecord = { id: string; needed_on: string };
-type PurchaseRecord = { expected_on: string; status: string; progress?: { open: boolean } };
-type CoverageRecord = { shortage: number };
-type ProductionRecord = { id: string; status: string };
+interface DatedRecord { id: string; needed_on: string }
+interface PurchaseRecord { expected_on: string; status: string; progress?: { open: boolean } }
+interface CoverageRecord { shortage: number }
+interface ProductionRecord { id: string; status: string }
 
-export type DashboardWorkQueueInput = {
+export interface DashboardWorkQueueInput {
   today: string;
   canOrders: boolean;
   canOrderDirectory: boolean;
@@ -27,7 +26,7 @@ export type DashboardWorkQueueInput = {
   purchases: readonly PurchaseRecord[];
   coverage: readonly CoverageRecord[];
   production: readonly ProductionRecord[];
-};
+}
 
 /**
  * Computes permission-scoped queue counts and canonical directory URLs.
@@ -35,7 +34,6 @@ export type DashboardWorkQueueInput = {
  */
 export function createDashboardWorkQueues({
   today,
-  canOrders,
   canOrderDirectory,
   canPurchases,
   canCoverage,

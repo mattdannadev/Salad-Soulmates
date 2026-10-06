@@ -8,7 +8,7 @@ import RecipeDetails from '../src/app/app/recipes/[id]/page';
 import { fixtureId, fixtureRecords } from './browser/fixture-data';
 
 const mocks = vi.hoisted(() => ({
-  context: vi.fn(), permission: vi.fn(), rows: vi.fn(), single: vi.fn(),
+  context: vi.fn(), permission: vi.fn(), rows: vi.fn(), rpc: vi.fn(), single: vi.fn(),
 }));
 vi.mock('server-only', () => ({}));
 vi.mock('next/navigation', () => ({
@@ -32,9 +32,13 @@ beforeEach(() => {
   query.select.mockReturnValue(query);
   query.eq.mockReturnValue(query);
   mocks.context.mockResolvedValue({
-    db: { from: () => query }, profile: { preferred_locale: 'en' },
+    db: { from: () => query, rpc: mocks.rpc }, profile: { preferred_locale: 'en' },
   });
   mocks.permission.mockResolvedValue(true);
+  mocks.rpc.mockResolvedValue({
+    data: { process_profiles: [], work_types: [] },
+    error: null,
+  });
   mocks.rows.mockImplementation((db: unknown, table: string) => (
     Promise.resolve(fixtureRecords[table] ?? [])
   ));
@@ -87,6 +91,48 @@ describe('recipe and product screens', () => {
     expect(html).not.toContain('On hand: Not recorded');
     expect(html).not.toContain('<details class="ingredient-stock">');
     expect(html).toContain('Preparation example');
+    expect(html).toContain('No Work Types are ready to use');
+    expect(html).toContain('href="/app/settings/work-types"');
+  });
+  it('shows the recipe Work Type and its work orders in execution order', async () => {
+    mocks.rpc.mockResolvedValue({
+      data: {
+        process_profiles: [{
+          id: fixtureId(601),
+          recipe_id: fixtureId(400),
+          work_type_id: fixtureId(602),
+          active: true,
+          revision: 1,
+        }],
+        work_types: [{
+          id: fixtureId(602),
+          code: 'mixing',
+          name: 'Mixing',
+          description: 'Standard mixing flow.',
+          active: true,
+          revision: 1,
+          work_order_types: [{
+            id: fixtureId(604),
+            code: 'batch_production',
+            name: 'Batch production',
+            queue_kind: 'mixing',
+            sequence: 2,
+          }, {
+            id: fixtureId(603),
+            code: 'pre_op',
+            name: 'Pre-op',
+            queue_kind: 'pre_op',
+            sequence: 1,
+          }],
+        }],
+      },
+      error: null,
+    });
+    const html = renderToStaticMarkup(await details());
+    expect(html).toContain('<h2');
+    expect(html).toContain('Process profile');
+    expect(html).toContain('Standard mixing flow.');
+    expect(html.indexOf('Pre-op')).toBeLessThan(html.indexOf('Batch production'));
   });
   it('labels imported worksheet blocks as ingredients without changing quantities', async () => {
     mocks.rows.mockImplementation((db: unknown, table: string) => Promise.resolve(

@@ -100,7 +100,7 @@ export default function SupplierPurchases({ supplier, workspace }: {
                   {linked.map((draft) => (
                     <p key={draft.id}>
                       <Link href={`/app/purchasing?supplier=${supplier.id}&plan=${order.id}#purchase-${draft.id}`}>
-                        {draft.reference || draft.id.slice(0, 8)}
+                        {draft.reference || draft.id.slice(-8).toUpperCase()}
                       </Link>
                       {` · ${purchaseStatusLabel(purchaseProgress(draft, lines, receipts).status, locale)} · ${es ? 'Entrega prevista' : 'Expected delivery'}: ${formatDate(draft.expected_on)}`}
                     </p>

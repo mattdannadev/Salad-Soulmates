@@ -55,6 +55,8 @@ export default async function AccessRequestsPage() {
                       {request.preferred_locale === 'es' ? 'Español' : 'English'}
                     </span>
                     {' '}
+                    <span className="badge">{request.regional_locale}</span>
+                    {' '}
                     <span className="badge">{request.status}</span>
                   </p>
                   <small>

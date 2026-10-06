@@ -1,5 +1,7 @@
 import Link from 'next/link';
-import { ArrowUpRight, CalendarDays, Truck, Leaf, PackageCheck, ClipboardList } from 'lucide-react';
+import {
+  ArrowUpRight, CalendarDays, Truck, Leaf, PackageCheck, ClipboardList,
+} from 'lucide-react';
 import loadDashboard from '@/lib/dashboard-data';
 import DemandCoveragePanel from '@/components/demand-coverage-panel';
 import DashboardPriorities, { type DashboardPriority } from '@/components/dashboard-priorities';
@@ -11,8 +13,9 @@ import loadWorkspaceSetup from '@/services/load-workspace-setup';
 import { facilityDate, formatDate, formatNumber } from '@/domain/format';
 import { purchaseStatusLabel } from '@/domain/supplier-orders';
 import { createDashboardWorkQueues } from '@/services/dashboard-work-queues';
-import { addScheduleDays } from '@/domain/scheduling';
-import { dashboardProductionPlans } from '@/services/dashboard-production-plans';
+import {
+  dashboardProductionPlans, dashboardScheduleOrderContexts,
+} from '@/services/dashboard-production-plans';
 
 const DASHBOARD_LIMIT = 6;
 
@@ -46,6 +49,7 @@ export default async function Home() {
   const overdueLabel = es ? 'Atrasada' : 'Overdue';
   const inventoryLabel = es ? 'Inventario de ingredientes' : 'Ingredient inventory';
   const unrecordedLabel = es ? 'Sin registrar' : 'Not recorded';
+  const unassignedLabel = es ? 'Asignar a un miembro del equipo' : 'Assign a team member';
   function pickupLabel(date: string) {
     if (date < today) return lateLabel;
     if (date === today) return todayLabel;
@@ -58,9 +62,15 @@ export default async function Home() {
     (order) => !production.some((plan) => plan.id === order.id && plan.status === 'Confirmed'),
   );
   const pickupReadiness: PickupReadinessData[] = futurePickups.slice(0, 3).map((order) => {
-    const plan = production.find((candidate) => candidate.id === order.id && candidate.status === 'Confirmed');
-    const hasIngredientShortage = coverage.some((line) => line.planId === order.id && line.shortage > 0);
-    const inboundSupplyExpected = incoming.some((purchase) => purchase.material_plan_id === order.id);
+    const plan = production.find(
+      (candidate) => candidate.id === order.id && candidate.status === 'Confirmed',
+    );
+    const hasIngredientShortage = coverage.some(
+      (line) => line.planId === order.id && line.shortage > 0,
+    );
+    const inboundSupplyExpected = incoming.some(
+      (purchase) => purchase.material_plan_id === order.id,
+    );
     const scheduledCleaning = upcomingSchedule.find(
       (event) => event.kind === 'cleaning' && event.productionPlanId === order.id,
     );
@@ -88,8 +98,26 @@ export default async function Home() {
       },
     };
   });
-  const weeklyProductionPlans = dashboardProductionPlans(production, openOrders, today,
-    addScheduleDays(today, 7), DASHBOARD_LIMIT);
+  const scheduleProductionPlans = dashboardProductionPlans(
+    production,
+    openOrders,
+    today,
+    dashboard.scheduleEndOn,
+    Number.MAX_SAFE_INTEGER,
+  );
+  const weeklyProductionPlans = scheduleProductionPlans.slice(0, DASHBOARD_LIMIT);
+  const workforceOrderContexts = dashboardScheduleOrderContexts(
+    dashboard.scheduleOrders,
+    dashboard.scheduleProducts,
+    upcomingSchedule,
+  );
+  const fullContextsById = new Map(scheduleProductionPlans.map((plan) => [plan.id, plan]));
+  const schedulePlanContexts = [
+    ...workforceOrderContexts.map((context) => fullContextsById.get(context.id) ?? context),
+    ...scheduleProductionPlans.filter((plan) => (
+      !workforceOrderContexts.some((context) => context.id === plan.id)
+    )),
+  ];
   const todayHandoffs = [
     ...upcomingSchedule
       .filter((event) => event.startOn <= today && event.endOn > today && event.kind !== 'off')
@@ -98,7 +126,7 @@ export default async function Home() {
         title: event.title || (es ? 'Trabajo programado' : 'Scheduled work'),
         detail: event.assigneeNames.length
           ? event.assigneeNames.join(', ')
-          : es ? 'Asignar a un miembro del equipo' : 'Assign a team member',
+          : unassignedLabel,
         href: '/app/scheduling',
         blocked: event.employeeCount === 0,
       })),
@@ -106,7 +134,7 @@ export default async function Home() {
       id: 'pickups',
       title: es ? 'Preparar recogidas de hoy' : 'Prepare today’s pickups',
       detail: `${dueToday} ${es ? 'pedido(s) vence(n) hoy' : 'order(s) due today'}`,
-      href: '/app/orders?pickupTo=' + today,
+      href: `/app/orders?pickupTo=${today}`,
       blocked: overdue > 0,
     }] : []),
     ...(shortages > 0 ? [{
@@ -226,7 +254,14 @@ export default async function Home() {
       </header>
       {canViewSchedule && (
         <div className="dashboard-primary-schedule">
-          <DashboardSchedule events={upcomingSchedule} plans={weeklyProductionPlans} locale={profile.preferred_locale} />
+          <DashboardSchedule
+            events={upcomingSchedule}
+            plans={weeklyProductionPlans}
+            planContexts={schedulePlanContexts}
+            scheduleStartOn={dashboard.scheduleStartOn}
+            scheduleEndOn={dashboard.scheduleEndOn}
+            locale={profile.preferred_locale}
+          />
         </div>
       )}
       {(canOrders || canPurchases || canCoverage) && (
@@ -257,7 +292,11 @@ export default async function Home() {
             </div>
             <div className="dashboard-readiness-list">
               {pickupReadiness.map((pickup) => (
-                <PickupReadiness key={pickup.id} pickup={pickup} locale={profile.preferred_locale} />
+                <PickupReadiness
+                  key={pickup.id}
+                  pickup={pickup}
+                  locale={profile.preferred_locale}
+                />
               ))}
             </div>
           </section>
@@ -300,8 +339,8 @@ export default async function Home() {
             <CalendarDays size={24} />
           </div>
           {!canOrders && <p>{unavailable}</p>}
-          {canOrders &&
-            (!futurePickups.length ? (
+          {canOrders
+            && (!futurePickups.length ? (
               <div className="dashboard-empty">
                 <CalendarDays size={30} />
                 <h3>{es ? 'Sin recogidas futuras programadas' : 'No future pickups scheduled'}</h3>
@@ -338,7 +377,8 @@ export default async function Home() {
                       ))}
                     </ul>
                     <span className="dashboard-order-total">
-                      {`${formatNumber(order.items.reduce((sum, item) => sum + item.batch_count, 0))} ${es ? 'lotes en total' : 'total batches'}`}{' '}
+                      {`${formatNumber(order.items.reduce((sum, item) => sum + item.batch_count, 0))} ${es ? 'lotes en total' : 'total batches'}`}
+                      {' '}
                       <ArrowUpRight size={16} />
                     </span>
                   </Link>
@@ -346,7 +386,9 @@ export default async function Home() {
               </div>
             ))}
           <Link className="dashboard-footer-link" href="/app/orders">
-            {es ? 'Ver todos los pedidos' : 'View all orders'} <ArrowUpRight size={16} />
+            {es ? 'Ver todos los pedidos' : 'View all orders'}
+            {' '}
+            <ArrowUpRight size={16} />
           </Link>
         </section>
         <section className="panel" id="supplier-arrivals">
@@ -358,8 +400,8 @@ export default async function Home() {
             <Truck size={24} />
           </div>
           {!canPurchases && <p>{unavailable}</p>}
-          {canPurchases &&
-            (!incoming.length ? (
+          {canPurchases
+            && (!incoming.length ? (
               <div className="dashboard-empty">
                 <Truck size={30} />
                 <h3>{es ? 'Sin entregas pendientes' : 'No deliveries outstanding'}</h3>
@@ -379,8 +421,8 @@ export default async function Home() {
                   >
                     <div className="dashboard-order-heading">
                       <strong>
-                        {suppliers.find((supplier) => supplier.id === purchase.supplier_id)?.name ??
-                          purchase.reference}
+                        {suppliers.find((supplier) => supplier.id === purchase.supplier_id)?.name
+                          ?? purchase.reference}
                       </strong>
                       <span className={`badge ${purchase.expected_on < today ? 'warning' : ''}`}>
                         {purchase.expected_on < today
@@ -404,7 +446,9 @@ export default async function Home() {
               </div>
             ))}
           <Link className="dashboard-footer-link" href="/app/purchasing">
-            {es ? 'Ver compras' : 'View purchasing'} <ArrowUpRight size={16} />
+            {es ? 'Ver compras' : 'View purchasing'}
+            {' '}
+            <ArrowUpRight size={16} />
           </Link>
         </section>
         {canCoverage && (
@@ -424,8 +468,8 @@ export default async function Home() {
               : 'Ingredients for open orders come first. Owned stock includes held material; it is not production availability.'}
           </p>
           {!canStock && <p>{unavailable}</p>}
-          {canStock &&
-            (!stock.length ? (
+          {canStock
+            && (!stock.length ? (
               <p className="empty">
                 {es ? 'Aún no hay ingredientes.' : 'No ingredients recorded yet.'}
               </p>
@@ -457,7 +501,9 @@ export default async function Home() {
               </ul>
             ))}
           <Link className="dashboard-footer-link" href="/app/inventory">
-            {es ? 'Revisar todo el inventario' : 'Review all inventory'} <ArrowUpRight size={16} />
+            {es ? 'Revisar todo el inventario' : 'Review all inventory'}
+            {' '}
+            <ArrowUpRight size={16} />
           </Link>
         </section>
         <div className="dashboard-side-stack">
@@ -473,7 +519,9 @@ export default async function Home() {
             {unprepared.slice(0, 3).map((order) => (
               <p key={order.id}>
                 <Link href={`/app/orders?order=${order.id}`}>
-                  {`${order.customer_name} · ${formatDate(order.needed_on)}`} →
+                  {`${order.customer_name} · ${formatDate(order.needed_on)}`}
+                  {' '}
+                  →
                 </Link>
               </p>
             ))}

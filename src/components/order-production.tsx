@@ -19,6 +19,10 @@ export default function OrderProduction({
   const es = locale === 'es';
   const shortageCount = requirements.filter((requirement) => requirement.shortage > 0).length;
   const batchCount = order.items.reduce((total, item) => total + item.batch_count, 0);
+  const allLinesAreCases = order.items.every((item) => item.unit_name === 'case');
+  const casesOrdered = allLinesAreCases
+    ? order.items.reduce((total, item) => total + item.unit_count, 0)
+    : null;
   const coveredLabel = es ? 'Los ingredientes están cubiertos por existencias y compras confirmadas para el inicio.' : 'Ingredients are covered by usable stock and confirmed inbound by the start date.';
   const shortageLabel = es ? 'ingredientes con faltantes para la fecha de inicio. Revisa las compras antes de producir.' : 'ingredients have shortages by the start date. Review purchasing before production.';
   const status = plan?.status ?? 'Unplanned';
@@ -48,6 +52,12 @@ export default function OrderProduction({
           <strong>{formatNumber(batchCount * 40)}</strong>
           <span>{es ? 'Galones previstos' : 'Planned gallons'}</span>
         </div>
+        {casesOrdered !== null && (
+          <div>
+            <strong>{formatNumber(casesOrdered)}</strong>
+            <span>{es ? 'Cajas solicitadas' : 'Cases ordered'}</span>
+          </div>
+        )}
       </div>
       <dl className="production-dates">
         <div>

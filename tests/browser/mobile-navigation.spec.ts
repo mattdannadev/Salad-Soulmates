@@ -80,7 +80,7 @@ test('Inventory keeps receiving discoverable while purchasing stays contextual',
     .getByRole('button', { name: 'More sections' })
     .click();
   const navigation = page.getByRole('navigation', { name: 'Main navigation' });
-  await expect(navigation.getByRole('link', { name: 'Purchase planning' })).toHaveCount(1);
+  await expect(navigation.getByRole('link', { name: 'Purchasing' })).toHaveCount(1);
   await navigation.getByRole('link', { name: 'Receive deliveries' }).click();
 
   await expect(page).toHaveURL(/\/app\/receiving$/);
@@ -134,30 +134,28 @@ test('390px shell controls stay inside the viewport and the drawer dismisses by 
   const feedback = page.getByRole('button', { name: 'Feedback', exact: true });
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect
-    .poll(() =>
-      page.evaluate(() => {
-        const viewport = window.visualViewport;
-        const toggleRect = document
-          .querySelector('.mobile-navigation-toggle')
-          ?.getBoundingClientRect();
-        const bottomRect = document.querySelector('.mobile-navigation')?.getBoundingClientRect();
-        const feedbackRect = document.querySelector('.feedback-button')?.getBoundingClientRect();
-        if (!viewport || !toggleRect || !bottomRect || !feedbackRect) return false;
-        return (
-          document.documentElement.scrollWidth <= viewport.width &&
-          toggleRect.width >= 48 &&
-          toggleRect.height >= 48 &&
-          toggleRect.left >= 0 &&
-          toggleRect.right <= viewport.width &&
-          bottomRect.left >= 0 &&
-          bottomRect.right <= viewport.width &&
-          bottomRect.bottom <= viewport.height &&
-          feedbackRect.left >= 0 &&
-          feedbackRect.right <= viewport.width &&
-          feedbackRect.bottom <= bottomRect.top
-        );
-      }),
-    )
+    .poll(() => page.evaluate(() => {
+      const viewport = window.visualViewport;
+      const toggleRect = document
+        .querySelector('.mobile-navigation-toggle')
+        ?.getBoundingClientRect();
+      const bottomRect = document.querySelector('.mobile-navigation')?.getBoundingClientRect();
+      const feedbackRect = document.querySelector('.feedback-button')?.getBoundingClientRect();
+      if (!viewport || !toggleRect || !bottomRect || !feedbackRect) return false;
+      return (
+        document.documentElement.scrollWidth <= viewport.width
+          && toggleRect.width >= 48
+          && toggleRect.height >= 48
+          && toggleRect.left >= 0
+          && toggleRect.right <= viewport.width
+          && bottomRect.left >= 0
+          && bottomRect.right <= viewport.width
+          && bottomRect.bottom <= viewport.height
+          && feedbackRect.left >= 0
+          && feedbackRect.right <= viewport.width
+          && feedbackRect.bottom <= bottomRect.top
+      );
+    }))
     .toBe(true);
 
   await toggle.click();
@@ -166,22 +164,20 @@ test('390px shell controls stay inside the viewport and the drawer dismisses by 
   await expect(drawer).toHaveAttribute('aria-modal', 'true');
   await expect(drawer.getByRole('button', { name: 'Close navigation' })).toBeFocused();
   await expect
-    .poll(() =>
-      page.evaluate(() => {
-        const viewport = window.visualViewport;
-        const drawerRect = document.querySelector('.sidebar')?.getBoundingClientRect();
-        const scrimRect = document.querySelector('.navigation-scrim')?.getBoundingClientRect();
-        if (!viewport || !drawerRect || !scrimRect) return false;
-        return (
-          drawerRect.left >= 0 &&
-          drawerRect.right <= viewport.width &&
-          drawerRect.bottom <= viewport.height &&
-          scrimRect.left >= 0 &&
-          scrimRect.right <= viewport.width &&
-          scrimRect.bottom <= viewport.height
-        );
-      }),
-    )
+    .poll(() => page.evaluate(() => {
+      const viewport = window.visualViewport;
+      const drawerRect = document.querySelector('.sidebar')?.getBoundingClientRect();
+      const scrimRect = document.querySelector('.navigation-scrim')?.getBoundingClientRect();
+      if (!viewport || !drawerRect || !scrimRect) return false;
+      return (
+        drawerRect.left >= 0
+          && drawerRect.right <= viewport.width
+          && drawerRect.bottom <= viewport.height
+          && scrimRect.left >= 0
+          && scrimRect.right <= viewport.width
+          && scrimRect.bottom <= viewport.height
+      );
+    }))
     .toBe(true);
   await page.locator('.navigation-scrim').click({ position: { x: 380, y: 100 } });
   await expect(drawer).toBeHidden();
@@ -202,19 +198,17 @@ test('390px shell controls stay inside the viewport and the drawer dismisses by 
   await feedback.click();
   await expect(page.getByRole('button', { name: 'Close feedback' })).toBeVisible();
   await expect
-    .poll(() =>
-      page.evaluate(() => {
-        const viewport = window.visualViewport;
-        const bounds = document.querySelector('.feedback-drawer')?.getBoundingClientRect();
-        return (
-          !!viewport &&
-          !!bounds &&
-          bounds.left >= 0 &&
-          bounds.right <= viewport.width &&
-          bounds.bottom <= viewport.height
-        );
-      }),
-    )
+    .poll(() => page.evaluate(() => {
+      const viewport = window.visualViewport;
+      const bounds = document.querySelector('.feedback-drawer')?.getBoundingClientRect();
+      return (
+        !!viewport
+          && !!bounds
+          && bounds.left >= 0
+          && bounds.right <= viewport.width
+          && bounds.bottom <= viewport.height
+      );
+    }))
     .toBe(true);
 });
 

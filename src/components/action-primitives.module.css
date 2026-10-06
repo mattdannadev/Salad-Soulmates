@@ -1,6 +1,6 @@
 .button,
 .cancelLink {
-  min-height: 44px;
+  min-height: 36px;
   border-radius: 8px;
   font: inherit;
   font-weight: 600;
@@ -65,7 +65,7 @@
 }
 
 .iconOnly {
-  width: 44px;
+  width: 36px;
   padding: 9px;
 }
 
@@ -163,5 +163,17 @@
 
   .footerActions > * {
     width: 100%;
+  }
+}
+
+@media (any-pointer: coarse), (max-width: 760px) {
+  .button,
+  .cancelLink,
+  .backLink {
+    min-height: 44px;
+  }
+
+  .iconOnly {
+    width: 44px;
   }
 }

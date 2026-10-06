@@ -1,10 +1,14 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import {
+  describe, expect, it, vi,
+} from 'vitest';
 import Home from '../src/app/app/page';
 
 const mocks = vi.hoisted(() => ({ load: vi.fn() }));
 vi.mock('../src/lib/dashboard-data', () => ({ default: mocks.load }));
-vi.mock('../src/services/load-workspace-setup', () => ({ default: vi.fn(async () => []) }));
+vi.mock('../src/services/load-workspace-setup', () => ({
+  default: vi.fn(() => Promise.resolve([])),
+}));
 vi.mock('../src/components/demand-purchase-button', () => ({ default: () => null }));
 vi.mock('../src/domain/format', async (original) => ({
   ...(await original<typeof import('../src/domain/format')>()),
@@ -21,6 +25,12 @@ const base = {
   suppliers: [],
   stock: [],
   production: [],
+  canViewSchedule: false,
+  upcomingSchedule: [],
+  scheduleOrders: [],
+  scheduleProducts: [],
+  scheduleStartOn: '2026-09-20',
+  scheduleEndOn: '2026-09-27',
 };
 describe('operations dashboard', () => {
   it.each([

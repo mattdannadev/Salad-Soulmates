@@ -22,6 +22,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
       name={profile.display_name}
       role={profile.role}
       locale={profile.preferred_locale}
+      regionalLocale={profile.regional_locale}
       permissions={permissionRows.map((row) => row.permission_code)}
       feedbackTypes={feedbackTypes}
     >

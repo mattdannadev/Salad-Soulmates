@@ -22,6 +22,7 @@ import {
 } from './directory-query';
 import ProductFocus from './product-focus';
 import productSetupReturnHref from './return-context';
+import { organizationMeasurementSystem, selectableUoms } from '@/services/uoms';
 
 export default async function Products({
   searchParams,
@@ -37,6 +38,7 @@ export default async function Products({
   } = await loadRecipeCatalog();
   const [
     customers, options, canWrite, packagingVersions, sections, lines, ingredients, units,
+    canManageSettings, canManageWorkPlans, measurementSystem,
   ] = await Promise.all([
     rows(db, 'customers', customerRowSchema),
     rows(db, 'customer_product_options', customerOptionRowSchema),
@@ -46,6 +48,9 @@ export default async function Products({
     rows(db, 'recipe_lines', recipeLineRowSchema),
     rows(db, 'ingredients', rowSchemas.ingredients),
     rows(db, 'uoms', rowSchemas.uoms),
+    hasPermission(db, 'settings.manage'),
+    hasPermission(db, 'operations.work_plans.manage'),
+    organizationMeasurementSystem(db),
   ]);
   const es = locale === 'es';
   const records = products.map((product) => {
@@ -94,7 +99,7 @@ export default async function Products({
     ...option,
     label: es ? ({ name: 'Nombre A–Z', 'name-desc': 'Nombre Z–A', batch: 'Lote estándar más grande' })[option.value] : option.label,
   }));
-  const orderUnits = units
+  const orderUnits = selectableUoms(units, measurementSystem)
     .filter((unit) => unit.active && unit.is_purchase_unit)
     .sort((left, right) => left.sort_order - right.sort_order)
     .map((unit) => ({ code: unit.code, label: es ? unit.label_es : unit.label_en }));
@@ -111,9 +116,18 @@ export default async function Products({
         eyebrow={recipeText(locale, 'CATALOG')}
         title={recipeText(locale, 'Products')}
         description={recipeText(locale, 'Finished dressings, their configured packaging and associated recipes.')}
-        action={setupReturnHref
-          ? <Link className="button secondary" href={setupReturnHref}>{returnLabel}</Link>
-          : <Link className="button secondary" href="/app/recipes">{recipeText(locale, 'View recipes')}</Link>}
+        action={(
+          <div className="page-header-actions">
+            {setupReturnHref
+              ? <Link className="button secondary" href={setupReturnHref}>{returnLabel}</Link>
+              : <Link className="button secondary" href="/app/recipes">{recipeText(locale, 'View recipes')}</Link>}
+            {canManageSettings && canManageWorkPlans ? (
+              <Link className="button secondary" href="/app/settings/work-types">
+                {es ? 'Configurar tipos de trabajo' : 'Configure Work Types'}
+              </Link>
+            ) : null}
+          </div>
+        )}
       />
       <section className="panel">
         <ProductFocus
@@ -219,7 +233,11 @@ export default async function Products({
                         locale={locale}
                       />
                     )}
-                    <ProductLaborEstimates product={product} canWrite={canWrite && product.active} locale={locale} />
+                    <ProductLaborEstimates
+                      product={product}
+                      canWrite={canWrite && product.active}
+                      locale={locale}
+                    />
                     <PackagingSetup
                       product={product}
                       versions={packagingVersions.filter(

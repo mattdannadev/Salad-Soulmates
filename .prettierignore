@@ -1,5 +1,6 @@
 next-env.d.ts
 .next/
+.next-scheduling-test/
 node_modules/
 docs/requirements/
 docs/mockups/

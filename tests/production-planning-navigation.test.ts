@@ -1,6 +1,8 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  beforeEach, describe, expect, it, vi,
+} from 'vitest';
 import { Shell } from '../src/components/shell';
 
 const mocks = vi.hoisted(() => ({ pathname: '/app', push: vi.fn() }));
@@ -45,10 +47,15 @@ describe('Inventory navigation', () => {
     expect(html).not.toContain('href="/worker"');
   });
 
-  it('provides the planning destination when planning permission is present', () => {
-    const html = renderNavigation('es', ['planning.read']);
+  it('provides the production schedule when workforce read permission is present', () => {
+    const html = renderNavigation('es', ['workforce.read']);
     expect(html).toContain('Planificación de producción');
-    expect(html).toContain('href="/app/planning"');
+    expect(html).toContain('href="/app/scheduling"');
     expect(html).not.toContain('Preparaciones de especias');
+  });
+
+  it('does not expose workforce planning through material planning permission', () => {
+    const html = renderNavigation('es', ['planning.read']);
+    expect(html).not.toContain('href="/app/scheduling"');
   });
 });

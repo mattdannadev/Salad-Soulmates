@@ -3,7 +3,10 @@ import Link from 'next/link';
 import { z } from 'zod';
 import { redirect } from 'next/navigation';
 import { requireAdminShell } from '@/lib/auth';
-import { rows } from '@/lib/data';
+import { rows, readResult } from '@/lib/data';
+import hasPermission from '@/lib/permissions';
+import IngredientForm from '@/components/ingredient-form';
+import CreationDialog from '@/components/creation-dialog';
 import { PageHeader } from '@/components/shell';
 import inventoryBalances, { inventoryUnits } from '@/domain/inventory';
 import IngredientActivityAction from '@/components/ingredient-activity-action';
@@ -16,6 +19,7 @@ import {
   ingredientDirectoryFilters, ingredientDirectorySorts,
   parseIngredientDirectoryQuery, type IngredientSearchParams,
 } from './directory-query';
+import { organizationMeasurementSystem, selectableUoms } from '@/services/uoms';
 
 const PAGE_SIZE = 20;
 
@@ -49,10 +53,43 @@ export default async function Ingredients({
   if (page > 1) directoryQuery.set('page', String(page));
   const directoryHref = `/app/ingredients${directoryQuery.size ? `?${directoryQuery}` : ''}`;
   const returnContext = ingredientReturnContext(query.returnTo, undefined, directoryHref);
-  const [allIngredients, events] = await Promise.all([
+  const createQuery = new URLSearchParams(directoryQuery);
+  createQuery.set('create', 'ingredient');
+  createQuery.set('returnTo', returnContext.href);
+  const addIngredientHref = `/app/ingredients?${createQuery}`;
+  const [allIngredients, events, canWrite] = await Promise.all([
     rows(db, 'ingredients', rowSchemas.ingredients),
     rows(db, 'inventory_events', rowSchemas.inventory_events),
+    hasPermission(db, 'master_data.write'),
   ]);
+  const canCreate = profile.role === 'admin' && canWrite;
+  const creationData = query.create === 'ingredient' && canCreate ? await (async () => {
+    const [allergens, categoryResult, measurementSystem, unitsResult] = await Promise.all([
+      rows(db, 'allergens', rowSchemas.allergens),
+      db.from('reference_options').select('code,label_en,label_es')
+        .eq('list_code', 'ingredient_category').eq('active', true)
+        .order('sort_order'),
+      organizationMeasurementSystem(db),
+      db.from('uoms').select('code,label_en,label_es,family_code,measurement_system')
+        .eq('active', true).eq('is_inventory_unit', true)
+        .order('sort_order'),
+    ]);
+    return {
+      allergens,
+      categories: readResult(
+        categoryResult,
+        rowSchemas.reference_options.pick({ code: true, label_en: true, label_es: true }).array(),
+        'ingredient_categories',
+      ),
+      baseUnits: selectableUoms(readResult(
+        unitsResult,
+        rowSchemas.uoms.pick({
+          code: true, label_en: true, label_es: true, family_code: true, measurement_system: true,
+        }).array(),
+        'inventory_uoms',
+      ), measurementSystem),
+    };
+  })() : undefined;
   const balances = inventoryBalances(events);
   const inventoryUnitsByIngredient = inventoryUnits(events);
   const locale = profile.preferred_locale;
@@ -124,8 +161,8 @@ export default async function Ingredients({
           ? 'Ingredientes reales y medidas claras para todas las recetas.'
           : 'Real ingredients. Clear measurements. A shared foundation for every recipe.'}
         action={
-          profile.role === 'admin' && (
-            <Link className="button" href={ingredientLinkHref('/app/ingredients/new', returnContext)}>
+          canCreate && (
+            <Link className="button" href={addIngredientHref}>
               {es ? '+ Agregar ingrediente' : '+ Add ingredient'}
             </Link>
           )
@@ -222,14 +259,32 @@ export default async function Ingredients({
             <h2>{emptyHeading}</h2>
             <p>{emptyDescription}</p>
             {allIngredients.length && <Link href="/app/ingredients">{es ? 'Borrar filtros' : 'Clear all'}</Link>}
-            {!allIngredients.length && profile.role === 'admin' && (
-              <Link href={ingredientLinkHref('/app/ingredients/new', returnContext)}>
+            {!allIngredients.length && canCreate && (
+              <Link href={addIngredientHref}>
                 {es ? 'Crear ingrediente' : 'Create ingredient'}
               </Link>
             )}
           </div>
         )}
       </section>
+      {creationData && (
+        <CreationDialog
+          open
+          title={es ? 'Agregar ingrediente' : 'Add ingredient'}
+          description={es ? 'Elige la unidad de inventario y revisa el nombre en español antes de guardar.' : 'Choose your inventory unit and review the Spanish name before saving.'}
+          closeHref={returnContext.href}
+          closeLabel={es ? 'Cerrar creación de ingrediente' : 'Close ingredient creation'}
+        >
+          <IngredientForm
+            allergens={creationData.allergens}
+            categories={creationData.categories}
+            baseUnits={creationData.baseUnits}
+            locale={locale}
+            returnContext={returnContext}
+            directEntry={false}
+          />
+        </CreationDialog>
+      )}
     </>
   );
 }

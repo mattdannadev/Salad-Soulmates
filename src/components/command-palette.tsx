@@ -73,13 +73,18 @@ export default function CommandPalette({
         <kbd>⌘K</kbd>
       </button>
       {open && (
-        <div className="command-palette-backdrop" role="presentation" onMouseDown={close}>
+        <div
+          className="command-palette-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) close();
+          }}
+        >
           <section
             className="command-palette"
             role="dialog"
             aria-modal="true"
             aria-label={es ? 'Comandos' : 'Commands'}
-            onMouseDown={(event) => event.stopPropagation()}
           >
             <div className="command-palette-search">
               <Search size={18} aria-hidden />
@@ -98,16 +103,20 @@ export default function CommandPalette({
                 <X size={18} aria-hidden />
               </button>
             </div>
-            <p>{es ? 'DESTINOS DISPONIBLES' : 'AVAILABLE DESTINATIONS'} <span>{destinations.length}</span></p>
+            <p>
+              {es ? 'DESTINOS DISPONIBLES' : 'AVAILABLE DESTINATIONS'}
+              {' '}
+              <span>{destinations.length}</span>
+            </p>
             <ul>
               {destinations.map((destination, index) => {
                 const Icon = destination.icon;
                 return (
-                <li key={destination.id}>
-                  <button
-                    type="button"
-                    className={index === activeIndex ? 'is-active' : undefined}
-                    onMouseEnter={() => setActiveIndex(index)}
+                  <li key={destination.id}>
+                    <button
+                      type="button"
+                      className={index === activeIndex ? 'is-active' : undefined}
+                      onMouseEnter={() => setActiveIndex(index)}
                       onClick={() => {
                         router.push(destination.href);
                         close();

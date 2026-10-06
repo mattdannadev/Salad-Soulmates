@@ -71,6 +71,10 @@ export default async function UserDetail({
               <dd>{user.preferredLocale === 'es' ? 'Español' : 'English'}</dd>
             </div>
             <div>
+              <dt>Regional format</dt>
+              <dd>{user.regionalLocale === 'es-MX' ? 'Mexico (es-MX)' : 'United States (en-US)'}</dd>
+            </div>
+            <div>
               <dt>Facility</dt>
               <dd>{user.facilityName}</dd>
             </div>

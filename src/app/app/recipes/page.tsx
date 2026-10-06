@@ -7,6 +7,7 @@ import { formatNumber } from '@/domain/format';
 import ListGrid from '@/components/list-grid';
 import DirectoryToolbar from '@/components/directory-toolbar';
 import { returnContextSearchParams } from '@/lib/return-context';
+import hasPermission from '@/lib/permissions';
 import {
   parseRecipeDirectoryQuery, recipeDirectoryFilters, recipeDirectorySorts,
   recipeDirectoryHref, recipeDirectoryRows, type RecipeSearchParams,
@@ -21,8 +22,12 @@ export default async function Recipes({
   const rawQuery = await searchParams ?? {};
   const query = parseRecipeDirectoryQuery(rawQuery);
   const {
-    products, recipes, versions, locale,
+    db, products, recipes, versions, locale,
   } = await loadRecipeCatalog();
+  const [canManageSettings, canManageWorkPlans] = await Promise.all([
+    hasPermission(db, 'settings.manage'),
+    hasPermission(db, 'operations.work_plans.manage'),
+  ]);
   const es = locale === 'es';
   const filteredRows = recipeDirectoryRows(recipes, products, versions, query, locale);
   const visibleRows = filteredRows.slice((query.page - 1) * PAGE_SIZE, query.page * PAGE_SIZE);
@@ -78,7 +83,16 @@ export default async function Recipes({
         eyebrow={recipeText(locale, 'PRODUCTION MASTER DATA')}
         title={recipeText(locale, 'Recipes')}
         description={recipeText(locale, 'Review recipe ingredients, preparation sections, quality checks and version history.')}
-        action={<Link className="button secondary" href="/app/products">{recipeText(locale, 'View products')}</Link>}
+        action={(
+          <div className="page-header-actions">
+            <Link className="button secondary" href="/app/products">{recipeText(locale, 'View products')}</Link>
+            {canManageSettings && canManageWorkPlans ? (
+              <Link className="button secondary" href="/app/settings/work-plans">
+                {es ? 'Configurar planes de trabajo' : 'Configure Work Plans'}
+              </Link>
+            ) : null}
+          </div>
+        )}
       />
       <section className="panel">
         <RecipeReturnFocus

@@ -108,11 +108,18 @@ function UnitForm({
 export default function UomCatalogManager({
   families,
   units,
-}: { families: Family[]; units: Unit[] }) {
+  measurementSystem,
+  embedded = false,
+}: {
+  families: Family[];
+  units: Unit[];
+  measurementSystem: 'metric' | 'imperial';
+  embedded?: boolean;
+}) {
   const orderedFamilies = [...families].sort((a, b) => a.sort_order - b.sort_order);
 
   return (
-    <section className="panel unit-catalog" id="units" aria-labelledby="unit-catalog-title">
+    <section className={embedded ? 'unit-catalog unit-catalog-embedded' : 'panel unit-catalog'} id="units" aria-labelledby="unit-catalog-title">
       <div className="unit-catalog-intro">
         <div>
           <p className="eyebrow">MEASUREMENT SETUP</p>
@@ -127,6 +134,23 @@ export default function UomCatalogManager({
           <span>Ingredient quantities and supplier purchases are selected per unit.</span>
         </div>
       </div>
+
+      <RecordForm
+        kind="measurement-system"
+        submit="Save measurement system"
+        fields={[{
+          name: 'measurement_system',
+          label: 'Organization measurement system',
+          type: 'select',
+          required: true,
+          value: measurementSystem,
+          options: [
+            { value: 'imperial', label: 'Imperial' },
+            { value: 'metric', label: 'Metric' },
+          ],
+          hint: 'Ingredient and supplier selectors show this system plus universal count and packaging units. Existing records keep their stored units.',
+        }]}
+      />
 
       <div className="unit-type-grid">
         {orderedFamilies.map((family) => {
@@ -171,7 +195,9 @@ export default function UomCatalogManager({
                         {unit.is_inventory_unit && unit.is_purchase_unit ? ' · ' : ''}
                         {unit.is_purchase_unit ? 'Purchase' : ''}
                       </span>
-                      <span className={unit.active ? 'badge' : 'badge muted'}>{unit.active ? 'Active' : 'Inactive'}</span>
+                      <span className={unit.active && (unit.measurement_system === measurementSystem || unit.measurement_system === 'universal') ? 'badge' : 'badge muted'}>
+                        {!unit.active ? 'Inactive' : unit.measurement_system === measurementSystem || unit.measurement_system === 'universal' ? 'Available' : 'Other system'}
+                      </span>
                     </summary>
                     <div className="unit-row-form"><UnitForm unit={unit} families={families} /></div>
                   </details>

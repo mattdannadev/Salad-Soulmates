@@ -1,39 +1,37 @@
 import Link from 'next/link';
-import {
-  ArrowRight, CalendarDays, CircleAlert, UserRoundCheck, Users,
-} from 'lucide-react';
-import { inclusiveScheduleEnd, scheduleKindLabel } from '@/domain/scheduling';
-import type { DashboardProductionPlan } from '@/services/dashboard-production-plans';
+import { ArrowRight, CalendarDays } from 'lucide-react';
+import type { DashboardProductionPlan, DashboardScheduleOrderContext } from '@/services/dashboard-production-plans';
+import { dashboardScheduleSummary } from '@/services/dashboard-schedule-summary';
+import type { DashboardBatchEvent } from '@/services/dashboard-schedule-summary';
 import styles from './dashboard-schedule.module.css';
 
-interface UpcomingScheduleItem {
-  id: string;
-  startOn: string;
-  endOn: string;
-  kind: 'pre_op' | 'post_op' | 'ingredient_prep' | 'mixing' | 'receiving' | 'shipment_loading' | 'packaging' | 'cleaning' | 'off' | 'other';
-  title: string;
-  productionPlanId: string | null;
-  employeeCount: number;
-  assigneeNames: string[];
-  ptoNames: string[];
+function countLabel(count: number, unknown: boolean, es: boolean): string {
+  const singular = es ? 'lote' : 'batch';
+  const plural = es ? 'lotes' : 'batches';
+  const unit = count === 1 ? singular : plural;
+  if (unknown && count === 0) return es ? 'Cantidad no disponible' : 'Batch count unavailable';
+  const pending = es ? ' + cantidad pendiente' : ' + unknown quantity';
+  return `${count} ${unit}${unknown ? pending : ''}`;
 }
 
-/** Facility-scoped schedule summary for the operations dashboard. */
+/** Daily batch totals, nested by customer and order, for the operations dashboard. */
 export default function DashboardSchedule({
-  events,
-  plans,
-  locale,
+  events, plans, planContexts = plans,
+  scheduleStartOn = undefined, scheduleEndOn = undefined, locale,
 }: {
-  events: UpcomingScheduleItem[];
+  events: DashboardBatchEvent[];
   plans: DashboardProductionPlan[];
+  planContexts?: DashboardScheduleOrderContext[];
+  scheduleStartOn?: string;
+  scheduleEndOn?: string;
   locale: 'en' | 'es';
 }) {
   const es = locale === 'es';
-  const staffingGaps = events.filter((event) => event.kind !== 'off' && event.employeeCount === 0).length;
-  const timeOff = events.filter((event) => event.kind === 'off').length;
-  const dayFormatter = new Intl.DateTimeFormat(locale === 'es' ? 'es-US' : 'en-US', {
-    weekday: 'short',
-    timeZone: 'UTC',
+  const missingProductsLabel = es ? 'Productos no disponibles' : 'Products unavailable';
+  const unassignedLabel = es ? 'Sin asignar' : 'Unassigned';
+  const customers = dashboardScheduleSummary(events, planContexts, plans);
+  const formatter = new Intl.DateTimeFormat(es ? 'es-US' : 'en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC',
   });
   const pickupFormatter = new Intl.DateTimeFormat(es ? 'es-US' : 'en-US', {
     month: 'short', day: 'numeric', timeZone: 'UTC',
@@ -45,121 +43,83 @@ export default function DashboardSchedule({
           <p className="eyebrow">{es ? 'PRÓXIMOS SIETE DÍAS' : 'NEXT SEVEN DAYS'}</p>
           <h2 id="dashboard-schedule-heading">{es ? 'Semana de operaciones' : 'Operations week'}</h2>
           <p className={styles.intro}>
-            {es
-              ? 'Preparación, mezcla, producción y ausencias en una sola vista.'
-              : 'Preparation, mixing, production, and time off in one view.'}
+            {es ? 'Lotes preparados y producidos cada día, por cliente y pedido.' : 'Batches prepped and produced each day, by customer and order.'}
           </p>
         </div>
         <CalendarDays size={24} aria-hidden />
       </div>
-      <div className={styles.summary} aria-label={es ? 'Resumen del programa' : 'Schedule summary'}>
-        <span>
-          <CalendarDays size={15} aria-hidden />
-          <strong>{events.length}</strong>
-          {' '}
-          {es ? 'actividades' : 'scheduled'}
-        </span>
-        <span className={staffingGaps > 0 ? styles.attention : undefined}>
-          <CircleAlert size={15} aria-hidden />
-          <strong>{staffingGaps}</strong>
-          {' '}
-          {es ? 'sin personal' : 'staffing gaps'}
-        </span>
-        <span>
-          <UserRoundCheck size={15} aria-hidden />
-          <strong>{timeOff}</strong>
-          {' '}
-          {es ? 'ausencias' : 'time off'}
-        </span>
-      </div>
-      {plans.length > 0 && (
-        <section className={styles.productionPlans} aria-labelledby="weekly-production-plans-heading">
-          <div>
-            <p className="eyebrow">{es ? 'PLANES DE PEDIDOS' : 'ORDER PRODUCTION PLANS'}</p>
-            <h3 id="weekly-production-plans-heading">{es ? 'Qué se está produciendo esta semana' : 'What is being produced this week'}</h3>
-          </div>
-          <ol>
-            {plans.map((plan) => (
-              <li key={plan.id} className={plan.status === 'Draft' ? styles.draft : undefined}>
-                <span>
-                  <strong>{plan.customerName || (es ? 'Pedido de cliente' : 'Customer order')}</strong>
-                  {plan.products.map((product) => (
-                    <small key={product.name} className={styles.productQuota}>
-                      {product.name}
-                      {' '}
-                      ·
-                      {product.batchCount}
-                      {' '}
-                      {es
-                        ? (product.batchCount === 1 ? 'lote' : 'lotes')
-                        : (product.batchCount === 1 ? 'batch' : 'batches')}
-                    </small>
-                  ))}
-                  {plan.products.length === 0 && <small>{es ? 'Productos no disponibles' : 'Product details unavailable'}</small>}
-                  <small>
-                    {plan.spansOutsideWindow
-                      ? (es ? 'Cantidad del plan completo · distribución semanal pendiente' : 'Full-plan quantity · weekly allocation pending')
-                      : (es ? 'Planificados esta semana' : 'Planned this week')}
-                  </small>
-                </span>
-                <span>
-                  <strong>{plan.status === 'Confirmed' ? (es ? 'Confirmado' : 'Confirmed') : (es ? 'Borrador' : 'Draft')}</strong>
-                  <small>
-                    {`${es ? 'Recogida' : 'Pickup'} ${plan.pickupOn
-                      ? pickupFormatter.format(new Date(`${plan.pickupOn}T12:00:00Z`))
-                      : (es ? 'sin fecha' : 'date unavailable')}`}
-                  </small>
-                </span>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
-      {events.length ? (
-        <ol className="dashboard-schedule-list">
-          {events.map((event) => (
-            <li className={event.employeeCount === 0 && event.kind !== 'off' ? styles.unstaffed : undefined} key={event.id}>
-              <span className="dashboard-schedule-date">
-                <strong>{event.startOn.slice(8)}</strong>
-                <small>{dayFormatter.format(new Date(`${event.startOn}T12:00:00Z`))}</small>
-              </span>
-              <span className="dashboard-schedule-copy">
-                <strong>{event.title || scheduleKindLabel(event.kind, locale)}</strong>
-                <small>
-                  {scheduleKindLabel(event.kind, locale)}
-                  {' '}
-                  ·
-                  {' '}
-                  {event.startOn === inclusiveScheduleEnd(event.endOn)
-                    ? event.startOn
-                    : `${event.startOn} – ${inclusiveScheduleEnd(event.endOn)}`}
-                </small>
-                {event.assigneeNames.length > 0 && <small>{event.assigneeNames.join(', ')}</small>}
-                {event.ptoNames.length > 0 && <small>{`${es ? 'Ausencia' : 'Time off'}: ${event.ptoNames.join(', ')}`}</small>}
-              </span>
-              <span className={`dashboard-schedule-staff ${styles.staff}`}>
-                <Users size={15} aria-hidden />
-                {event.employeeCount > 0
-                  ? `${event.employeeCount} ${es ? 'asignados' : 'assigned'}`
-                  : es
-                    ? 'Sin asignar'
-                    : 'Unassigned'}
-              </span>
+      {customers.length > 0 ? (
+        <ul className={styles.customers}>
+          {customers.map((customer) => (
+            <li key={customer.key} className={styles.customer}>
+              <h3>{customer.name || (es ? 'Cliente no disponible' : 'Customer unavailable')}</h3>
+              <ul className={styles.orders}>
+                {customer.orders.map((order) => (
+                  <li key={order.key} className={styles.order}>
+                    <div className={styles.orderHeading}>
+                      <h4>{`${es ? 'Pedido' : 'Order'}: ${order.reference || (es ? 'sin referencia' : 'no reference')}`}</h4>
+                      {order.pickupOn && (
+                        <span>{`${es ? 'Recogida' : 'Pickup'} ${pickupFormatter.format(new Date(`${order.pickupOn}T12:00:00Z`))}`}</span>
+                      )}
+                    </div>
+                    <div className={styles.orderDetails}>
+                      <p>
+                        {order.products.length > 0
+                          ? order.products.map((product) => (
+                            `${product.name} · ${countLabel(product.batchCount ?? 0, product.batchCount === null, es)}`
+                          )).join(' / ')
+                          : missingProductsLabel}
+                      </p>
+                      <p>{`${es ? 'Total del pedido' : 'Order total'}: ${countLabel(order.totalBatchCount ?? 0, order.totalBatchCount === null, es)}`}</p>
+                    </div>
+                    {order.days.length > 0 ? (
+                      <div className={styles.tableContainer}>
+                        <table className={styles.dailyTable}>
+                          <caption className={styles.visuallyHidden}>
+                            {`${customer.name} · ${order.reference || (es ? 'Pedido' : 'Order')} · ${es ? 'Lotes diarios' : 'Daily batches'}`}
+                          </caption>
+                          <thead>
+                            <tr>
+                              <th scope="col">{es ? 'Día' : 'Day'}</th>
+                              <th scope="col">{es ? 'Preparación' : 'Prep'}</th>
+                              <th scope="col">{es ? 'Producción' : 'Production'}</th>
+                              <th scope="col">{es ? 'Recursos' : 'Resources'}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {order.days.map((day) => (
+                              <tr key={day.date}>
+                                <th scope="row"><time dateTime={day.date}>{formatter.format(new Date(`${day.date}T12:00:00Z`))}</time></th>
+                                <td>{countLabel(day.prep, day.prepUnknown, es)}</td>
+                                <td>{countLabel(day.production, day.productionUnknown, es)}</td>
+                                <td>{day.resources.length > 0 ? day.resources.join(', ') : unassignedLabel}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className={styles.emptyOrder}>{es ? 'Distribución diaria de lotes pendiente.' : 'Daily batch allocation pending.'}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
             </li>
           ))}
-        </ol>
+        </ul>
       ) : (
         <div className="dashboard-empty dashboard-schedule-empty">
           <CalendarDays size={28} aria-hidden />
-          <h3>{es ? 'No hay trabajo programado' : 'No work scheduled yet'}</h3>
-          <p>
-            {es
-              ? 'Programa el próximo turno para dar al equipo una ruta clara.'
-              : 'Schedule the next shift to give the team a clear path forward.'}
-          </p>
+          <h3>{es ? 'No hay lotes programados' : 'No batches scheduled yet'}</h3>
+          <p>{es ? 'Programa la preparación y producción de pedidos para ver los totales diarios.' : 'Schedule order prep and production to see daily batch totals.'}</p>
         </div>
       )}
-      <Link className="dashboard-footer-link" href="/app/scheduling">
+      <Link
+        className="dashboard-footer-link"
+        href={scheduleStartOn && scheduleEndOn
+          ? `/app/scheduling?start=${scheduleStartOn}&end=${scheduleEndOn}`
+          : '/app/scheduling'}
+      >
         {es ? 'Abrir programación completa' : 'Open full schedule'}
         <ArrowRight size={17} aria-hidden />
       </Link>

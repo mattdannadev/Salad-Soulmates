@@ -5,6 +5,7 @@ import tseslint from 'typescript-eslint';
 export default defineConfig([
   globalIgnores([
     '.next/**',
+    '.next-scheduling-test/**',
     '.vercel/**',
     'next-env.d.ts',
     'src/lib/database.types.ts',

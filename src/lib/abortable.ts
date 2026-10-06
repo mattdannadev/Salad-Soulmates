@@ -5,7 +5,7 @@ export default function abortable<T>(operation: PromiseLike<T>, signal?: AbortSi
   let onAbort: () => void = () => undefined;
   const cancelled = new Promise<T>((_resolve, reject) => {
     onAbort = () => {
-      const { reason }: { reason: unknown } = signal;
+      const reason: unknown = signal.reason;
       reject(reason instanceof Error ? reason : new DOMException('Aborted', 'AbortError'));
     };
     signal.addEventListener('abort', onAbort, { once: true });

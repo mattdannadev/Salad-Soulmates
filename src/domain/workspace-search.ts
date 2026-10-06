@@ -1,11 +1,11 @@
-export type WorkspaceSearchResult = {
+export interface WorkspaceSearchResult {
   id: string;
   type: string;
   title: string;
   detail: string;
   href: string;
   score: number;
-};
+}
 
 /** Normalizes human input without changing the stored/displayed record value. */
 export function normalizeWorkspaceSearch(value: string) {
@@ -25,10 +25,12 @@ export function workspaceSearchScore(query: string, candidate: string) {
   if (normalizedCandidate.startsWith(normalizedQuery)) return 80;
   if (normalizedCandidate.includes(normalizedQuery)) return 60;
   let position = 0;
-  for (const letter of normalizedQuery) {
+  const matched = Array.from(normalizedQuery).every((letter) => {
     position = normalizedCandidate.indexOf(letter, position);
-    if (position < 0) return 0;
+    if (position < 0) return false;
     position += 1;
-  }
+    return true;
+  });
+  if (!matched) return 0;
   return normalizedQuery.length / normalizedCandidate.length >= 0.45 ? 30 : 0;
 }

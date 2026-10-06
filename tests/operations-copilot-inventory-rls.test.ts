@@ -33,6 +33,11 @@ beforeAll(async () => {
       values('${id(20)}','Outside organization','outside-rls-test');
     insert into public.facilities(id,organization_id,name)
       values('${id(21)}','${id(20)}','Outside facility');
+    insert into public.uom_families(organization_id,code,label_en,label_es)
+      values('${id(20)}','mass','Mass','Masa');
+    insert into public.uoms(organization_id,family_code,code,label_en,label_es,
+      measurement_system,is_inventory_unit)
+      values('${id(20)}','mass','lb','Pound','Libra','imperial',true);
     insert into public.access_profiles(id,organization_id,name,base_role,is_system)
       values('${id(22)}','${id(20)}','Outside administrator','admin',true);
     insert into public.access_profile_permissions(organization_id,access_profile_id,permission_code)

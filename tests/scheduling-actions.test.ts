@@ -17,9 +17,13 @@ const event = {
   id,
   facility_id: id,
   revision: 0,
+  start_at: '2026-09-28T08:00:00.000Z',
+  end_at: '2026-09-29T08:00:00.000Z',
+  all_day: true,
   start_on: '2026-09-28',
   end_on: '2026-09-29',
   kind: 'mixing',
+  required_worker_count: 2,
   title: '',
   production_plan_id: null,
   employee_ids: [id],
@@ -32,7 +36,10 @@ beforeEach(() => {
 });
 
 it('rejects malformed assignments before authentication', async () => {
-  expect((await saveScheduleEvent({ ...event, end_on: event.start_on })).ok).toBe(false);
+  expect((await saveScheduleEvent({ ...event, end_at: event.start_at })).ok).toBe(false);
+  const { required_worker_count: omittedRequiredCount, ...withoutRequiredCount } = event;
+  expect(omittedRequiredCount).toBe(2);
+  expect((await saveScheduleEvent(withoutRequiredCount)).ok).toBe(false);
   expect(mocks.profile).not.toHaveBeenCalled();
 });
 it('rejects edits outside the caller facility and without workforce permission', async () => {
@@ -46,6 +53,8 @@ it('saves, deletes, and changes capacity through separate scoped RPCs', async ()
   expect(mocks.rpc).toHaveBeenCalledWith('save_workforce_schedule_event', {
     payload: {
       ...event,
+      completed: false,
+      planned_batch_count: null,
       linked_task_type: null,
       linked_task_id: null,
       availability_override_reason: null,

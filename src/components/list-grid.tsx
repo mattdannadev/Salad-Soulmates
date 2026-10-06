@@ -1,14 +1,30 @@
 'use client';
 
 import Link from 'next/link';
+import { ChevronDown } from 'lucide-react';
 import { AG_GRID_LOCALE_ES } from '@ag-grid-community/locale';
 import {
-  useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type ReactNode,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
 } from 'react';
 import {
-  ClientSideRowModelModule, LocaleModule, PaginationModule, QuickFilterModule,
-  RenderApiModule, RowApiModule, RowAutoHeightModule, TextFilterModule,
-  themeQuartz, type ColDef, type GridApi, type ICellRendererParams,
+  ClientSideRowModelModule,
+  LocaleModule,
+  PaginationModule,
+  QuickFilterModule,
+  RenderApiModule,
+  RowApiModule,
+  RowAutoHeightModule,
+  TextFilterModule,
+  themeQuartz,
+  type ColDef,
+  type GridApi,
+  type ICellRendererParams,
 } from 'ag-grid-community';
 import { AgGridProvider, AgGridReact } from 'ag-grid-react';
 import styles from './list-grid.module.css';
@@ -17,11 +33,20 @@ import styles from './list-grid.module.css';
 export interface ListGridCell {
   text: string;
   href?: string;
+  actions?: ListGridAction[];
+  actionsLabel?: string;
   detailsId?: string;
   secondary?: string;
   badge?: 'default' | 'muted' | 'warning';
   sortValue?: string | number;
   slot?: string;
+}
+
+/** Compact, per-row navigation actions. Mutations remain on their owning detail workflow. */
+export interface ListGridAction {
+  label: string;
+  href: string;
+  ariaLabel?: string;
 }
 
 export interface ListGridRow {
@@ -72,6 +97,7 @@ const modules = [
 ];
 const emptyCellSlots: Record<string, ReactNode> = {};
 const subscribe = () => () => {};
+type GridCellParams = ICellRendererParams<ListGridRow, ListGridCell>;
 
 interface FocusPageApi {
   getRowNode: (rowId: string) => { rowIndex: number | null } | undefined;
@@ -102,12 +128,69 @@ function cellText(cell: ListGridCell | undefined): string {
   return cell?.text ?? '';
 }
 
+function RowActionMenu({ label, actions }: { label: string; actions: ListGridAction[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={styles.actionMenu}>
+      <button
+        type="button"
+        className={styles.actionMenuTrigger}
+        aria-expanded={open}
+        onMouseDown={(event) => event.stopPropagation()}
+        onClick={(event) => {
+          event.stopPropagation();
+          setOpen((value) => !value);
+        }}
+      >
+        {label}
+        <ChevronDown
+          className={open ? styles.actionMenuChevronOpen : undefined}
+          size={15}
+          aria-hidden
+        />
+      </button>
+      {open && (
+        <div className={styles.actionMenuItems}>
+          {actions.map((action) => (
+            <Link href={action.href} aria-label={action.ariaLabel} key={action.href}>
+              {action.label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function cellContent(value: ListGridCell | undefined, cellSlots: Record<string, ReactNode>) {
   if (!value) return null;
   if (value.slot) return cellSlots[value.slot] ?? null;
-  const content = value.badge
-    ? <span className={`badge${value.badge === 'default' ? '' : ` ${value.badge}`}`}>{value.text}</span>
-    : value.text;
+  if (value.actions) {
+    const [primaryAction, ...secondaryActions] = value.actions;
+    return (
+      <div className={styles.actions}>
+        {primaryAction && (
+          <Link
+            className={styles.primaryAction}
+            href={primaryAction.href}
+            aria-label={primaryAction.ariaLabel}
+          >
+            {primaryAction.label}
+          </Link>
+        )}
+        {!!secondaryActions.length && (
+          <RowActionMenu label={value.actionsLabel ?? 'More actions'} actions={secondaryActions} />
+        )}
+      </div>
+    );
+  }
+  const content = value.badge ? (
+    <span className={`badge${value.badge === 'default' ? '' : ` ${value.badge}`}`}>
+      {value.text}
+    </span>
+  ) : (
+    value.text
+  );
   let main = content;
   if (value.href) main = <Link href={value.href}>{content}</Link>;
   if (value.detailsId) {
@@ -125,16 +208,43 @@ function cellContent(value: ListGridCell | undefined, cellSlots: Record<string, 
     );
   }
   return (
-    <span className={styles.cell}>
+    <div className={styles.cell}>
       {main}
       {value.secondary && <span className={styles.secondary}>{value.secondary}</span>}
-    </span>
+    </div>
   );
 }
 
+function renderGridCell(params: GridCellParams, cellSlots: Record<string, ReactNode>) {
+  return cellContent(params.value ?? undefined, cellSlots);
+}
+
+function gridCellRenderer(cellSlots: Record<string, ReactNode>) {
+  return (params: GridCellParams) => renderGridCell(params, cellSlots);
+}
+
 function StaticTable({
-  label, columns, rows, cellSlots, loading, emptyMessage, locale, pageSize = 20, controlled,
-}: Pick<ListGridProps, 'label' | 'columns' | 'rows' | 'cellSlots' | 'loading' | 'emptyMessage' | 'locale' | 'pageSize' | 'controlled'>) {
+  label,
+  columns,
+  rows,
+  cellSlots,
+  loading,
+  emptyMessage,
+  locale,
+  pageSize = 20,
+  controlled,
+}: Pick<
+  ListGridProps,
+  | 'label'
+  | 'columns'
+  | 'rows'
+  | 'cellSlots'
+  | 'loading'
+  | 'emptyMessage'
+  | 'locale'
+  | 'pageSize'
+  | 'controlled'
+>) {
   let statusText = emptyMessage;
   if (loading) statusText = locale === 'es' ? 'Cargando…' : 'Loading…';
   const initialRows = controlled ? rows : rows.slice(0, pageSize);
@@ -146,7 +256,15 @@ function StaticTable({
       {!loading && rows.length > initialRows.length && (
         <caption className={styles.fallbackSummary}>{pageSummary}</caption>
       )}
-      <thead><tr>{columns.map((column) => <th scope="col" key={column.key}>{column.label}</th>)}</tr></thead>
+      <thead>
+        <tr>
+          {columns.map((column) => (
+            <th scope="col" key={column.key}>
+              {column.label}
+            </th>
+          ))}
+        </tr>
+      </thead>
       <tbody>
         {loading || rows.length === 0 ? (
           <tr>
@@ -154,13 +272,15 @@ function StaticTable({
               {statusText}
             </td>
           </tr>
-        ) : initialRows.map((row) => (
-          <tr key={row.id}>
-            {columns.map((column) => (
-              <td key={column.key}>{cellContent(row.cells[column.key], cellSlots ?? {})}</td>
-            ))}
-          </tr>
-        ))}
+        ) : (
+          initialRows.map((row) => (
+            <tr key={row.id}>
+              {columns.map((column) => (
+                <td key={column.key}>{cellContent(row.cells[column.key], cellSlots ?? {})}</td>
+              ))}
+            </tr>
+          ))
+        )}
       </tbody>
     </table>
   );
@@ -168,11 +288,23 @@ function StaticTable({
 
 /** Client-side grid by default; controlled callers own the complete directory query. */
 export default function ListGrid({
-  label, columns, rows, locale = 'en', pageSize = 20, cellSlots = emptyCellSlots,
-  searchable = true, loading = false, emptyMessage = undefined,
-  focusRowId = undefined, controlled = undefined,
+  label,
+  columns,
+  rows,
+  locale = 'en',
+  pageSize = 20,
+  cellSlots = emptyCellSlots,
+  searchable = true,
+  loading = false,
+  emptyMessage = undefined,
+  focusRowId = undefined,
+  controlled = undefined,
 }: ListGridProps) {
-  const mounted = useSyncExternalStore(subscribe, () => true, () => false);
+  const mounted = useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false,
+  );
   const descriptionId = useId();
   const gridApiRef = useRef<GridApi<ListGridRow> | null>(null);
   const [search, setSearch] = useState('');
@@ -185,28 +317,30 @@ export default function ListGrid({
   }, [label]);
   const es = locale === 'es';
   const emptyText = emptyMessage ?? (es ? 'No hay registros para mostrar.' : 'No records to display.');
-  const columnDefs = useMemo<ColDef<ListGridRow, ListGridCell>[]>(() => columns.map((column) => ({
-    colId: column.key,
-    headerName: column.label,
-    minWidth: column.minWidth ?? 140,
-    flex: column.flex ?? 1,
-    sortable: !externallyControlled && (column.sortable ?? true),
-    filter: externallyControlled || column.filterable === false ? false : 'agTextColumnFilter',
-    valueGetter: (params) => params.data?.cells[column.key],
-    filterValueGetter: (params) => cellText(params.data?.cells[column.key]),
-    getQuickFilterText: (params) => cellText(params.value ?? undefined),
-    comparator: (left, right) => {
-      const a = left?.sortValue ?? cellText(left ?? undefined);
-      const b = right?.sortValue ?? cellText(right ?? undefined);
-      if (typeof a === 'number' && typeof b === 'number') return a - b;
-      return String(a).localeCompare(String(b), locale, { numeric: true, sensitivity: 'base' });
-    },
-    cellRenderer: (params: ICellRendererParams<ListGridRow, ListGridCell>) => (
-      cellContent(params.value ?? undefined, cellSlots)
-    ),
-    autoHeight: true,
-    wrapText: true,
-  })), [cellSlots, columns, externallyControlled, locale]);
+  const columnDefs = useMemo<ColDef<ListGridRow, ListGridCell>[]>(
+    () => columns.map((column) => ({
+      colId: column.key,
+      headerName: column.label,
+      minWidth: column.minWidth ?? 140,
+      flex: column.flex ?? 1,
+      resizable: true,
+      sortable: !externallyControlled && (column.sortable ?? true),
+      filter: externallyControlled || column.filterable === false ? false : 'agTextColumnFilter',
+      valueGetter: (params) => params.data?.cells[column.key],
+      filterValueGetter: (params) => cellText(params.data?.cells[column.key]),
+      getQuickFilterText: (params) => cellText(params.data?.cells[column.key]),
+      comparator: (left, right) => {
+        const a = left?.sortValue ?? cellText(left ?? undefined);
+        const b = right?.sortValue ?? cellText(right ?? undefined);
+        if (typeof a === 'number' && typeof b === 'number') return a - b;
+        return String(a).localeCompare(String(b), locale, { numeric: true, sensitivity: 'base' });
+      },
+      cellRenderer: gridCellRenderer(cellSlots),
+      autoHeight: true,
+      wrapText: true,
+    })),
+    [cellSlots, columns, externallyControlled, locale],
+  );
 
   const shown = externallyControlled ? rows.length : (displayedCount ?? rows.length);
   let countText = es ? `${rows.length} registros` : `${rows.length} records`;
@@ -220,12 +354,21 @@ export default function ListGrid({
       ? 'No se encontraron resultados. Prueba otra búsqueda o filtro.'
       : 'No matching results. Try another search or filter.';
   }
-  const controlledPage = controlled && Number.isSafeInteger(controlled.page) && controlled.page > 0
-    ? controlled.page : 1;
-  const controlledPageSize = controlled && Number.isSafeInteger(controlled.pageSize)
-    && controlled.pageSize > 0 ? controlled.pageSize : effectivePageSize;
-  const controlledTotal = controlled && Number.isSafeInteger(controlled.totalCount)
-    && controlled.totalCount >= 0 ? controlled.totalCount : rows.length;
+  const controlledPage = (
+    controlled && Number.isSafeInteger(controlled.page) && controlled.page > 0
+      ? controlled.page
+      : 1
+  );
+  const controlledPageSize = (
+    controlled && Number.isSafeInteger(controlled.pageSize) && controlled.pageSize > 0
+      ? controlled.pageSize
+      : effectivePageSize
+  );
+  const controlledTotal = (
+    controlled && Number.isSafeInteger(controlled.totalCount) && controlled.totalCount >= 0
+      ? controlled.totalCount
+      : rows.length
+  );
   const start = rows.length === 0 ? 0 : (controlledPage - 1) * controlledPageSize + 1;
   const end = rows.length === 0 ? 0 : start + rows.length - 1;
   const sortColumn = columns.find((column) => column.key === controlled?.sort?.key);
@@ -250,11 +393,15 @@ export default function ListGrid({
       aria-busy={loading}
     >
       {controlledDescription && (
-        <span id={descriptionId} className={styles.visuallyHidden}>{controlledDescription}</span>
+        <span id={descriptionId} className={styles.visuallyHidden}>
+          {controlledDescription}
+        </span>
       )}
       {!externallyControlled && (
         <div className={styles.toolbar}>
-          <span className={styles.count} role="status" aria-live="polite">{countText}</span>
+          <span className={styles.count} role="status" aria-live="polite">
+            {countText}
+          </span>
           {searchable && (
             <div className={styles.searchBox}>
               <span className={styles.searchIcon} aria-hidden="true" />
@@ -277,6 +424,7 @@ export default function ListGrid({
             <AgGridReact<ListGridRow>
               key={locale}
               columnDefs={columnDefs}
+              defaultColDef={{ resizable: true }}
               domLayout="autoHeight"
               getRowId={(params) => params.data.id}
               headerHeight={44}
@@ -318,7 +466,9 @@ export default function ListGrid({
         )}
       </div>
       {mounted && !loading && shown === 0 && (
-        <p className={styles.empty} role="status">{noResultsText}</p>
+        <p className={styles.empty} role="status">
+          {noResultsText}
+        </p>
       )}
     </div>
   );

@@ -2,11 +2,18 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { setPreferredLocale } from '@/app/actions';
+import { setPreferredLocale, setRegionalLocale } from '@/app/actions';
 import { logFailure } from '@/lib/operation-error';
+import { regionalLocaleOptions, type RegionalLocale } from '@/domain/user-preferences';
 
 /** Capture the changed value before React restores a controlled select's saved value. */
-export default function LocaleSwitcher({ locale }: { locale: 'en' | 'es' }) {
+export default function LocaleSwitcher({
+  locale,
+  regionalLocale,
+}: {
+  locale: 'en' | 'es';
+  regionalLocale: RegionalLocale;
+}) {
   const [pending, start] = useTransition();
   const [selection, setSelection] = useState<string>(locale);
   const [error, setError] = useState('');
@@ -14,17 +21,17 @@ export default function LocaleSwitcher({ locale }: { locale: 'en' | 'es' }) {
   const es = locale === 'es';
   return (
     <div className="locale-switcher">
-      <label className="sr-only" htmlFor="locale">{es ? 'Idioma' : 'Language'}</label>
+      <label className="sr-only" htmlFor="language">{es ? 'Idioma' : 'Language'}</label>
       <select
-        id="locale"
-        name="locale"
+        id="language"
+        name="language"
         value={pending ? selection : locale}
         disabled={pending}
         aria-describedby={pending || error ? 'locale-status' : undefined}
         onChange={(event) => {
           const { value } = event.currentTarget;
           const form = new FormData();
-          form.set('locale', value);
+          form.set('language', value);
           setSelection(value);
           setError('');
           start(async () => {
@@ -46,6 +53,37 @@ export default function LocaleSwitcher({ locale }: { locale: 'en' | 'es' }) {
       >
         <option value="en">EN</option>
         <option value="es">ES</option>
+      </select>
+      <label className="sr-only" htmlFor="regional-locale">
+        {es ? 'Formato regional' : 'Regional format'}
+      </label>
+      <select
+        id="regional-locale"
+        name="regional_locale"
+        value={regionalLocale}
+        disabled={pending}
+        aria-label={es ? 'Formato regional' : 'Regional format'}
+        onChange={(event) => {
+          const form = new FormData();
+          form.set('regional_locale', event.currentTarget.value);
+          setError('');
+          start(async () => {
+            try {
+              const result = await setRegionalLocale(form);
+              if (!result.ok) setError(result.message);
+              else router.refresh();
+            } catch (failure) {
+              logFailure('regional_locale_submit', failure);
+              setError(es
+                ? 'No se pudo guardar el formato regional. Vuelve a intentarlo.'
+                : 'Could not save the regional format. Please try again.');
+            }
+          });
+        }}
+      >
+        {regionalLocaleOptions.map((option) => (
+          <option key={option.value} value={option.value}>{option.value}</option>
+        ))}
       </select>
       {pending && <span id="locale-status" role="status">{es ? 'Guardando…' : 'Saving…'}</span>}
       {error && <span id="locale-status" role="alert">{error}</span>}

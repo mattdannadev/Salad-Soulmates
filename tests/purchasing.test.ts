@@ -3,6 +3,7 @@ import {
   materialPlanInputSchema,
   effectivePurchasePrice,
   estimatePurchaseCosts,
+  orderDemandGap,
   purchaseDraftInputSchema,
   purchaseStatusInputSchema,
   recommendPurchase,
@@ -44,6 +45,11 @@ const draft = {
 };
 
 describe('purchasing input and display calculations', () => {
+  it('uses only this order\'s demand and on-hand stock for the purchase gap', () => {
+    expect(orderDemandGap(1354.5, 468.75)).toBe(885.75);
+    expect(orderDemandGap(189, 275)).toBe(0);
+  });
+
   it('uses the latest supplier price effective by the expected delivery date', () => {
     const prices = [
       {

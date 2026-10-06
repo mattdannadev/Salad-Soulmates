@@ -4,10 +4,11 @@ import type { ReturnContext } from '@/lib/return-context';
 
 const DIRECTORY_PATH = '/app/ingredients';
 const HOME_PATH = '/app';
+const INVENTORY_PATH = '/app/inventory';
 const DETAIL_PATH = /^\/app\/ingredients\/([^/]+)$/u;
 
 function isIngredientDestination(pathname: string): boolean {
-  if (pathname === HOME_PATH || pathname === DIRECTORY_PATH) return true;
+  if ([HOME_PATH, DIRECTORY_PATH, INVENTORY_PATH].includes(pathname)) return true;
   const match = DETAIL_PATH.exec(pathname);
   return Boolean(match && z.uuid().safeParse(match[1]).success);
 }
@@ -48,5 +49,5 @@ export function ingredientSupplierRecoveryHref(
     : new URLSearchParams();
   detailQuery.set('addPack', '1');
   const detailHref = `/app/ingredients/${ingredientId}?${detailQuery}`;
-  return `/app/suppliers/new?${returnContextSearchParams({ href: detailHref })}`;
+  return `/app/suppliers?create=supplier&${returnContextSearchParams({ href: detailHref })}`;
 }

@@ -1,5 +1,6 @@
 .wrap {
   margin-top: 20px;
+  min-width: 0;
   max-width: 100%;
   overflow: hidden;
   border: 1px solid #e4e9e1;
@@ -89,10 +90,12 @@
 .tableScroll {
   max-width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .tableScroll :global(.ag-root-wrapper) {
-  min-width: 640px;
+  min-width: 0;
+  width: 100%;
   border: 0;
   border-radius: 0;
 }
@@ -142,6 +145,114 @@
   color: #748176;
   font-size: 12px;
   white-space: pre-line;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  min-height: 36px;
+  padding-block: 3px;
+}
+
+.action,
+.primaryAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 4px 9px;
+  border: 1px solid #b9cdbb;
+  border-radius: 6px;
+  background: #fff;
+  color: #386443;
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.actionMenu {
+  display: contents;
+}
+
+.actionMenuTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 4px 9px;
+  border: 1px solid #b9cdbb;
+  border-radius: 6px;
+  background: #fff;
+  color: #386443;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.actionMenuTrigger:hover,
+.actionMenuTrigger[aria-expanded='true'] {
+  border-color: #386443;
+  background: #eef5eb;
+}
+
+.actionMenuChevronOpen {
+  transform: rotate(180deg);
+}
+
+.actionMenuItems {
+  display: grid;
+  grid-template-columns: repeat(3, max-content);
+  flex-basis: 100%;
+  gap: 6px;
+  width: 100%;
+  min-width: 190px;
+  padding: 3px 0 0;
+  border-top: 1px solid #dce7da;
+}
+
+.actionMenuItems a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 6px 9px;
+  border: 1px solid #b9cdbb;
+  border-radius: 6px;
+  background: #fff;
+  color: #386443;
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.actionMenuItems a:hover {
+  background: #eef5eb;
+  text-decoration: none;
+}
+
+.action:hover,
+.primaryAction:hover {
+  border-color: #386443;
+  background: #eef5eb;
+  text-decoration: none;
+}
+
+.primaryAction {
+  background: #386443;
+  border-color: #386443;
+  color: #fff;
+}
+
+.primaryAction:hover {
+  background: #28573d;
+  text-decoration: none;
 }
 
 .empty {
@@ -204,8 +315,24 @@
     width: 100%;
   }
 
-  .tableScroll :global(.ag-root-wrapper),
+  .tableScroll :global(.ag-root-wrapper) {
+    min-width: 0;
+  }
+
   .fallbackTable {
     min-width: 560px;
+  }
+}
+
+@media (any-pointer: coarse), (max-width: 760px) {
+  .action,
+  .primaryAction,
+  .actionMenuTrigger,
+  .actionMenuItems a {
+    min-height: 44px;
+  }
+
+  .actionMenuItems {
+    grid-template-columns: 1fr;
   }
 }

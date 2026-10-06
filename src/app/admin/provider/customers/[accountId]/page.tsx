@@ -1,5 +1,8 @@
-import { notFound } from 'next/navigation';
-import ProviderCustomerAccountDetailView from '@/components/provider/provider-customer-account-detail';
+import { notFound, unstable_rethrow } from 'next/navigation';
+import ProviderCustomerAccountDetailView, {
+  type ProviderCustomerAccountDetailState,
+} from '@/components/provider/provider-customer-account-detail';
+import { logFailure } from '@/lib/operation-error';
 import {
   getProviderCustomerAccountDetail,
   ProviderConsoleAccessError,
@@ -14,32 +17,25 @@ export default async function ProviderCustomerAccountDetailPage({
   params: Promise<{ accountId: string }>;
 }) {
   const { accountId } = await params;
+  let state: ProviderCustomerAccountDetailState;
   try {
     const account = await getProviderCustomerAccountDetail(accountId);
-    return (
-      <ProviderCustomerAccountDetailView
-        backHref="/admin/provider/customers"
-        state={{ kind: 'ready', account }}
-        tenantHref={(tenantId) => `/admin/provider/${tenantId}`}
-      />
-    );
+    state = { kind: 'ready', account };
   } catch (error) {
-    if (error instanceof ProviderConsoleAccessError) {
-      return (
-        <ProviderCustomerAccountDetailView
-          backHref="/admin/provider/customers"
-          state={{ kind: 'denied' }}
-          tenantHref={() => '/admin/provider'}
-        />
-      );
-    }
+    unstable_rethrow(error);
     if (error instanceof ProviderCustomerAccountNotFoundError) notFound();
-    return (
-      <ProviderCustomerAccountDetailView
-        backHref="/admin/provider/customers"
-        state={{ kind: 'unavailable' }}
-        tenantHref={() => '/admin/provider'}
-      />
-    );
+    if (error instanceof ProviderConsoleAccessError) {
+      state = { kind: 'denied' };
+    } else {
+      logFailure('provider_customer_load', error);
+      state = { kind: 'unavailable' };
+    }
   }
+  return (
+    <ProviderCustomerAccountDetailView
+      backHref="/admin/provider/customers"
+      state={state}
+      tenantHref={(tenantId) => `/admin/provider/${tenantId}`}
+    />
+  );
 }

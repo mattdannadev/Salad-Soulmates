@@ -52,6 +52,8 @@ describe('purchasing workspace application service', () => {
     repository = {
       loadWorkspaceRecords: vi.fn<PurchasingRepository['loadWorkspaceRecords']>()
         .mockResolvedValue(records),
+      loadDemandCoverage: vi.fn<PurchasingRepository['loadDemandCoverage']>()
+        .mockResolvedValue([]),
       loadMaterialRequirements: vi.fn<PurchasingRepository['loadMaterialRequirements']>()
         .mockResolvedValue([{
           ingredient_id: id(2),
@@ -93,6 +95,7 @@ describe('purchasing workspace application service', () => {
       expect.objectContaining({ ingredient_name: 'Garlic', shortage: 3 }),
     ]);
     expect(workspace.productionBatches).toHaveLength(1);
+    expect(workspace.demandCoverage).toEqual([]);
     expect(workspace.canOrder).toBe(true);
     expect(repository.loadMaterialRequirements).toHaveBeenCalledWith(plan.id);
     expect(repository.loadProductionBatches).toHaveBeenCalledWith(plan.id);

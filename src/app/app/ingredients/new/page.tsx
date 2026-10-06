@@ -7,6 +7,7 @@ import IngredientForm from '@/components/ingredient-form';
 import { PageHeader } from '@/components/shell';
 import BackButton from '@/components/back-button';
 import { ingredientReturnContext, ingredientReturnHref } from '../return-context';
+import { organizationMeasurementSystem, selectableUoms } from '@/services/uoms';
 
 export default async function NewIngredient({
   searchParams,
@@ -16,7 +17,7 @@ export default async function NewIngredient({
   const query = await searchParams;
   const returnContext = ingredientReturnContext(query.returnTo, query.focusRow);
   const { db, profile } = await requireAdminShell();
-  const [canWrite, allergens, categoryResult, unitsResult] = await Promise.all([
+  const [canWrite, allergens, categoryResult, measurementSystem, unitsResult] = await Promise.all([
     hasPermission(db, 'master_data.write'),
     rows(db, 'allergens', rowSchemas.allergens),
     db
@@ -25,6 +26,7 @@ export default async function NewIngredient({
       .eq('list_code', 'ingredient_category')
       .eq('active', true)
       .order('sort_order'),
+    organizationMeasurementSystem(db),
     db.from('uoms').select('code,label_en,label_es,family_code,measurement_system')
       .eq('active', true).eq('is_inventory_unit', true)
       .order('sort_order'),
@@ -35,13 +37,13 @@ export default async function NewIngredient({
     rowSchemas.reference_options.pick({ code: true, label_en: true, label_es: true }).array(),
     'ingredient_categories',
   );
-  const baseUnits = readResult(
+  const baseUnits = selectableUoms(readResult(
     unitsResult,
     rowSchemas.uoms.pick({
       code: true, label_en: true, label_es: true, family_code: true, measurement_system: true,
     }).array(),
     'inventory_uoms',
-  );
+  ), measurementSystem);
   return (
     <>
       <BackButton

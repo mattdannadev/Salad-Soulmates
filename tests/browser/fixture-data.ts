@@ -5,6 +5,7 @@ export const ADMIN_PERMISSIONS = [
   'orders.read', 'orders.write', 'planning.read', 'planning.write', 'inventory.read',
   'inventory.adjust', 'inventory.receive', 'workforce.read', 'workforce.manage',
   'production.mobile', 'feedback.manage', 'access.manage', 'settings.manage', 'audit.read',
+  'operations.work_plans.manage',
 ];
 export const fixtureRecords: Readonly<Record<string, readonly Record<string, unknown>[]>> = {
   permissions: ADMIN_PERMISSIONS.map((code) => ({

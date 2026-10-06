@@ -5,12 +5,12 @@ import { PageHeader } from '@/components/shell';
 import { requireAdminShell } from '@/lib/auth';
 import hasPermission from '@/lib/permissions';
 
-type PlanningDestination = {
+interface PlanningDestination {
   href: string;
   title: string;
   description: string;
   icon: typeof ClipboardList;
-};
+}
 
 export default async function Planning() {
   const { db, profile } = await requireAdminShell();
@@ -26,39 +26,39 @@ export default async function Planning() {
   const destinations: PlanningDestination[] = [
     ...(canReadOrders
       ? [
-          {
-            href: '/app/orders',
-            title: es ? 'Demanda de clientes' : 'Customer demand',
-            description: es
-              ? 'Revisa pedidos, fechas de recogida y requisitos de ingredientes.'
-              : 'Review orders, pickup dates, and ingredient requirements.',
-            icon: ClipboardList,
-          },
-        ]
+        {
+          href: '/app/orders',
+          title: es ? 'Demanda de clientes' : 'Customer demand',
+          description: es
+            ? 'Revisa pedidos, fechas de recogida y requisitos de ingredientes.'
+            : 'Review orders, pickup dates, and ingredient requirements.',
+          icon: ClipboardList,
+        },
+      ]
       : []),
     ...(canReadInventory
       ? [
-          {
-            href: '/app/inventory',
-            title: es ? 'Disponibilidad de ingredientes' : 'Ingredient availability',
-            description: es
-              ? 'Consulta existencias, puntos de reposición y ajustes auditables.'
-              : 'Review stock, reorder points, and auditable adjustments.',
-            icon: Package,
-          },
-        ]
+        {
+          href: '/app/inventory',
+          title: es ? 'Disponibilidad de ingredientes' : 'Ingredient availability',
+          description: es
+            ? 'Consulta existencias, puntos de reposición y ajustes auditables.'
+            : 'Review stock, reorder points, and auditable adjustments.',
+          icon: Package,
+        },
+      ]
       : []),
     ...(canReadSchedule
       ? [
-          {
-            href: '/app/scheduling',
-            title: es ? 'Programación del equipo' : 'Team scheduling',
-            description: es
-              ? 'Programa el trabajo y publica asignaciones para el equipo.'
-              : 'Schedule work and publish assignments for the team.',
-            icon: CalendarDays,
-          },
-        ]
+        {
+          href: '/app/scheduling',
+          title: es ? 'Programación del equipo' : 'Team scheduling',
+          description: es
+            ? 'Programa el trabajo y publica asignaciones para el equipo.'
+            : 'Schedule work and publish assignments for the team.',
+          icon: CalendarDays,
+        },
+      ]
       : []),
   ];
 

@@ -1,0 +1,21 @@
+{
+  "source": "Customer operational interview — 2026-10-01",
+  "unit": "minutes per 40-gallon production batch",
+  "assumed_mixing_crew_size": 1,
+  "daily_single_product_range": { "minimum_batches": 24, "maximum_batches": 27 },
+  "products": [
+    { "product_name": "Balsamic", "mixing_minutes_per_batch": 12, "pouch_size_gallons": 1 },
+    {
+      "product_name": "Creamy Buttermilk Ranch",
+      "mixing_minutes_per_batch": 18,
+      "pouch_size_gallons": 1
+    },
+    {
+      "product_name": "Classic Italian Vinaigrette",
+      "mixing_minutes_per_batch": 15,
+      "pouch_size_gallons": 1
+    },
+    { "product_name": "Honey Mustard", "mixing_minutes_per_batch": 15, "pouch_size_gallons": 0.5 },
+    { "product_name": "Caesar", "mixing_minutes_per_batch": 15, "pouch_size_gallons": 0.5 }
+  ]
+}

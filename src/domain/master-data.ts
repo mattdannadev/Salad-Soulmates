@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { languageSchema, regionalLocaleSchema } from './user-preferences';
 
 // Unit codes come from the tenant's canonical UOM catalog. They remain strings
 // here so new active catalog entries work without a client deployment.
@@ -154,7 +155,8 @@ export const profileRowSchema = z.object({
   facility_id: z.uuid(),
   display_name: z.string(),
   role: z.enum(['admin', 'reviewer', 'worker', 'receiver']),
-  preferred_locale: z.enum(['es', 'en']),
+  preferred_locale: languageSchema,
+  regional_locale: regionalLocaleSchema,
   active: z.boolean(),
   access_profile_id: z.uuid(),
 });
@@ -164,7 +166,8 @@ export const accessRequestRowSchema = z.object({
   display_name: z.string(),
   contact_kind: z.enum(['email', 'phone']),
   contact_value: z.string(),
-  preferred_locale: z.enum(['en', 'es']),
+  preferred_locale: languageSchema,
+  regional_locale: regionalLocaleSchema,
   requested_role: z.enum(['reviewer', 'worker', 'receiver']),
   status: z.string(),
   review_note: z.string(),

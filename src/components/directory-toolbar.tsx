@@ -114,7 +114,7 @@ export function updateDirectoryQuery(
   }
   if (patch.dateRange && config.dateRange
     && validDateKey(config.dateRange.fromKey) && validDateKey(config.dateRange.toKey)) {
-    const dateRange = config.dateRange;
+    const { dateRange } = config;
     ([['from', dateRange.fromKey], ['to', dateRange.toKey]] as const).forEach(([part, key]) => {
       if (!Object.hasOwn(patch.dateRange ?? {}, part)) return;
       next.delete(key);
@@ -137,7 +137,8 @@ export function clearDirectoryQuery(
 ): URLSearchParams {
   const next = new URLSearchParams(search);
   ['q', 'sort', 'page', ...config.filters.filter(validFilter).map((filter) => filter.key),
-    ...(config.dateRange && validDateKey(config.dateRange.fromKey) && validDateKey(config.dateRange.toKey)
+    ...(config.dateRange && validDateKey(config.dateRange.fromKey)
+      && validDateKey(config.dateRange.toKey)
       ? [config.dateRange.fromKey, config.dateRange.toKey] : [])]
     .forEach((key) => next.delete(key));
   return next;
@@ -181,7 +182,8 @@ export default function DirectoryToolbar({
       const option = filter.options.find((candidate) => candidate.value === value);
       return option ? [{ key: filter.key, label: `${filter.label}: ${option.label}` }] : [];
     }),
-    ...(config.dateRange && validDateKey(config.dateRange.fromKey) && validDateKey(config.dateRange.toKey)
+    ...(config.dateRange && validDateKey(config.dateRange.fromKey)
+      && validDateKey(config.dateRange.toKey)
       ? [
         ...(validIsoDate(searchParams.get(config.dateRange.fromKey) ?? '')
           ? [{ key: config.dateRange.fromKey, label: `${config.dateRange.fromLabel}: ${searchParams.get(config.dateRange.fromKey)}` }] : []),
@@ -223,7 +225,8 @@ export default function DirectoryToolbar({
           </select>
         </label>
       )}
-      {config.dateRange && validDateKey(config.dateRange.fromKey) && validDateKey(config.dateRange.toKey) && (
+      {config.dateRange && validDateKey(config.dateRange.fromKey)
+        && validDateKey(config.dateRange.toKey) && (
         <>
           <label className={styles.field}>
             <span>{config.dateRange.fromLabel}</span>
@@ -274,13 +277,13 @@ export default function DirectoryToolbar({
               className={styles.chip}
               aria-label={`${es ? 'Quitar' : 'Remove'} ${chip.label}`}
               onClick={() => {
-                const patch = chip.key === 'q'
-                  ? { q: '' }
-                  : chip.key === config.dateRange?.fromKey
-                    ? { dateRange: { from: null } }
-                    : chip.key === config.dateRange?.toKey
-                      ? { dateRange: { to: null } }
-                      : { filters: { [chip.key]: null } };
+                let patch: DirectoryQueryPatch = { filters: { [chip.key]: null } };
+                if (chip.key === 'q') patch = { q: '' };
+                else if (chip.key === config.dateRange?.fromKey) {
+                  patch = { dateRange: { from: null } };
+                } else if (chip.key === config.dateRange?.toKey) {
+                  patch = { dateRange: { to: null } };
+                }
                 pushQuery(updateDirectoryQuery(searchParams.toString(), config, patch));
               }}
             >

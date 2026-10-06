@@ -1,12 +1,13 @@
 'use client';
 
-import { useActionState, useState, useTransition } from 'react';
+import { useActionState, useState, useTransition, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { inviteUserFromSettings, saveRecord } from '@/app/actions';
 import type {
   ReferenceList, ReferenceOption, Permission, AccessProfile,
 } from '@/domain/master-data';
 import { RecordForm } from './record-form';
+import { regionalLocaleOptions } from '@/domain/user-preferences';
 
 function DeleteReferenceOption({ option }: { option: ReferenceOption }) {
   const [pending, start] = useTransition();
@@ -116,16 +117,20 @@ export function ReferenceOptionForm({
 export function ReferenceDataManager({
   lists,
   options,
+  unitManager,
 }: {
   lists: ReferenceList[];
   options: ReferenceOption[];
+  unitManager?: ReactNode;
 }) {
   const visibleLists = lists.filter((list) => list.code !== 'base_unit' && list.code !== 'purchase_unit');
   const areas = [...new Set(visibleLists.map((list) => list.area))].sort();
   const [selectedArea, setSelectedArea] = useState(areas[0] ?? '');
   const areaLists = visibleLists.filter((list) => list.area === selectedArea);
   const [selectedCode, setSelectedCode] = useState(areaLists[0]?.code ?? '');
-  const selectedList = areaLists.find((list) => list.code === selectedCode) ?? areaLists[0];
+  const unitsAvailable = selectedArea === 'Master data' && Boolean(unitManager);
+  const unitsSelected = unitsAvailable && selectedCode === '__units__';
+  const selectedList = unitsSelected ? undefined : areaLists.find((list) => list.code === selectedCode) ?? areaLists[0];
   const selectedOptions = options
     .filter((option) => option.list_code === selectedList?.code)
     .sort((a, b) => a.sort_order - b.sort_order);
@@ -135,7 +140,7 @@ export function ReferenceDataManager({
     setSelectedCode(visibleLists.find((list) => list.area === area)?.code ?? '');
   }
 
-  if (!selectedList) {
+  if (!selectedList && !unitsSelected) {
     return (
       <section className="panel empty">
         <h2>No dropdown lists yet</h2>
@@ -179,10 +184,10 @@ export function ReferenceDataManager({
             const inactiveCount = listOptions.filter((option) => !option.active).length;
             return (
               <button
-                className={list.code === selectedList.code ? 'configuration-list-link active' : 'configuration-list-link'}
+                className={list.code === selectedList?.code ? 'configuration-list-link active' : 'configuration-list-link'}
                 key={list.code}
                 type="button"
-                aria-current={list.code === selectedList.code ? 'page' : undefined}
+                aria-current={list.code === selectedList?.code ? 'page' : undefined}
                 onClick={() => setSelectedCode(list.code)}
               >
                 <span>{list.name_en}</span>
@@ -194,26 +199,39 @@ export function ReferenceDataManager({
               </button>
             );
           })}
+          {unitsAvailable ? (
+            <button
+              className={unitsSelected ? 'configuration-list-link active' : 'configuration-list-link'}
+              type="button"
+              aria-current={unitsSelected ? 'page' : undefined}
+              onClick={() => setSelectedCode('__units__')}
+            >
+              <span>Types and units</span>
+              <small>Measurement setup</small>
+            </button>
+          ) : null}
         </nav>
 
         <div className="configuration-list-detail">
-          <header className="configuration-list-header">
-            <div>
-              <p className="eyebrow">{selectedList.area}</p>
-              <h2>
-                {selectedList.name_en}
-              </h2>
-              <p className="configuration-list-translation">{selectedList.name_es}</p>
-              <p>
-                {selectedList.allow_custom_values
-                  ? 'This dropdown is editable. Add an option below, or open a row to edit its labels, order, and availability.'
-                  : 'This dropdown has a fixed set of options. Open a row to edit its labels, order, and availability.'}
-              </p>
-            </div>
-            <span className={selectedList.allow_custom_values ? 'badge' : 'badge muted'}>
-              {selectedList.allow_custom_values ? 'Add options enabled' : 'Fixed options'}
-            </span>
-          </header>
+          {unitsSelected ? unitManager : (
+            <>
+              <header className="configuration-list-header">
+                <div>
+                  <p className="eyebrow">{selectedList!.area}</p>
+                  <h2>
+                    {selectedList!.name_en}
+                  </h2>
+                  <p className="configuration-list-translation">{selectedList!.name_es}</p>
+                  <p>
+                    {selectedList!.allow_custom_values
+                      ? 'This dropdown is editable. Add an option below, or open a row to edit its labels, order, and availability.'
+                      : 'This dropdown has a fixed set of options. Open a row to edit its labels, order, and availability.'}
+                  </p>
+                </div>
+                <span className={selectedList!.allow_custom_values ? 'badge' : 'badge muted'}>
+                  {selectedList!.allow_custom_values ? 'Add options enabled' : 'Fixed options'}
+                </span>
+              </header>
 
           <div className="configuration-values">
             <div className="configuration-values-heading" aria-hidden="true">
@@ -235,9 +253,9 @@ export function ReferenceDataManager({
                 </summary>
                 <div className="configuration-value-form">
                   <ReferenceOptionForm
-                    listCode={selectedList.code}
+                    listCode={selectedList!.code}
                     option={option}
-                    allowCustom={selectedList.allow_custom_values}
+                    allowCustom={selectedList!.allow_custom_values}
                   />
                 </div>
               </details>
@@ -245,16 +263,16 @@ export function ReferenceDataManager({
             {!selectedOptions.length ? (
               <div className="empty configuration-empty">
                 <h3>No options yet</h3>
-                <p>{selectedList.allow_custom_values ? 'Add the first option to populate this dropdown.' : 'This list has no options.'}</p>
+                <p>{selectedList!.allow_custom_values ? 'Add the first option to populate this dropdown.' : 'This list has no options.'}</p>
               </div>
             ) : null}
           </div>
 
-          {selectedList.allow_custom_values ? (
+          {selectedList!.allow_custom_values ? (
             <details className="configuration-add-value">
               <summary>+ Add dropdown option</summary>
               <div className="configuration-value-form">
-                <ReferenceOptionForm listCode={selectedList.code} allowCustom />
+                <ReferenceOptionForm listCode={selectedList!.code} allowCustom />
               </div>
             </details>
           ) : null}
@@ -262,6 +280,8 @@ export function ReferenceDataManager({
             For options already used in records, turn off Active instead of deleting them.
             Inactive options stay in historical records and can be turned on again.
           </p>
+            </>
+          )}
         </div>
       </div>
     </section>
@@ -432,6 +452,15 @@ export function InviteUserForm({
               <option value="en">English</option>
               <option value="es">Español</option>
             </select>
+          </label>
+          <label>
+            Regional format
+            <select name="regional_locale" defaultValue="en-US">
+              {regionalLocaleOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+            <small>Controls date, number, and currency formatting; it does not change the interface language.</small>
           </label>
         </div>
         {state.message ? <p role={state.ok ? 'status' : 'alert'} className={state.ok ? 'notice' : 'error-notice'}>{state.message}</p> : null}

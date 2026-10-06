@@ -8,6 +8,7 @@ import hasPermission from '@/lib/permissions';
 import { requireAdminShell } from '@/lib/auth';
 import { productRowSchema } from '@/domain/recipes';
 import { rowSchemas } from '@/domain/master-data';
+import { organizationMeasurementSystem, selectableUoms } from '@/services/uoms';
 
 export default async function PricingPage() {
   const { db, profile } = await requireAdminShell();
@@ -23,10 +24,11 @@ export default async function PricingPage() {
     rows(db, 'customer_product_options', customerOptionRowSchema),
     rows(db, 'uoms', rowSchemas.uoms),
     hasPermission(db, 'products.write'),
+    organizationMeasurementSystem(db),
   ]) : undefined;
-  const [products, customers, options, units, canWrite] = customerWorkspace
-    ?? [[], [], [], [], false];
-  const orderUnits = units
+  const [products, customers, options, units, canWrite, measurementSystem] = customerWorkspace
+    ?? [[], [], [], [], false, 'imperial' as const];
+  const orderUnits = selectableUoms(units, measurementSystem)
     .filter((unit) => unit.active && unit.is_purchase_unit)
     .sort((left, right) => left.sort_order - right.sort_order)
     .map((unit) => ({ code: unit.code, label: es ? unit.label_es : unit.label_en }));

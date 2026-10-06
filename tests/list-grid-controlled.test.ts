@@ -12,18 +12,20 @@ const columns = [{ key: 'name', label: 'Name' }];
 
 describe('ListGrid controlled directory state', () => {
   it('renders every supplied page row without another search or pager', () => {
-    const html = renderToStaticMarkup(createElement(ListGrid, {
-      label: 'Fruit',
-      columns,
-      rows,
-      pageSize: 2,
-      controlled: {
-        page: 2,
-        pageSize: 20,
-        totalCount: 53,
-        sort: { key: 'name', direction: 'asc' },
-      },
-    }));
+    const html = renderToStaticMarkup(
+      createElement(ListGrid, {
+        label: 'Fruit',
+        columns,
+        rows,
+        pageSize: 2,
+        controlled: {
+          page: 2,
+          pageSize: 20,
+          totalCount: 53,
+          sort: { key: 'name', direction: 'asc' },
+        },
+      }),
+    );
     expect(html).toContain('Apple');
     expect(html).toContain('Banana');
     expect(html).toContain('Cherry');
@@ -33,12 +35,14 @@ describe('ListGrid controlled directory state', () => {
   });
 
   it('keeps existing client-side fallback behavior for uncontrolled lists', () => {
-    const html = renderToStaticMarkup(createElement(ListGrid, {
-      label: 'Fruit',
-      columns,
-      rows,
-      pageSize: 2,
-    }));
+    const html = renderToStaticMarkup(
+      createElement(ListGrid, {
+        label: 'Fruit',
+        columns,
+        rows,
+        pageSize: 2,
+      }),
+    );
     expect(html).toContain('Apple');
     expect(html).toContain('Banana');
     expect(html).not.toContain('Cherry');
@@ -47,16 +51,50 @@ describe('ListGrid controlled directory state', () => {
   });
 
   it('localizes the controlled summary and respects a caller-provided empty message', () => {
-    const html = renderToStaticMarkup(createElement(ListGrid, {
-      label: 'Frutas',
-      columns,
-      rows: [],
-      locale: 'es',
-      emptyMessage: 'Sin coincidencias',
-      controlled: { page: 1, pageSize: 20, totalCount: 0 },
-    }));
+    const html = renderToStaticMarkup(
+      createElement(ListGrid, {
+        label: 'Frutas',
+        columns,
+        rows: [],
+        locale: 'es',
+        emptyMessage: 'Sin coincidencias',
+        controlled: { page: 1, pageSize: 20, totalCount: 0 },
+      }),
+    );
     expect(html).toContain('Página 1. Mostrando 0–0 de 0 registros.');
     expect(html).toContain('Sin coincidencias');
+    expect(html).not.toContain('type="search"');
+  });
+
+  it('renders compact per-row navigation actions without introducing client filtering', () => {
+    const html = renderToStaticMarkup(
+      createElement(ListGrid, {
+        label: 'Orders',
+        columns: [{
+          key: 'actions', label: 'Actions', sortable: false, filterable: false,
+        }],
+        rows: [
+          {
+            id: 'order-1',
+            cells: {
+              actions: {
+                text: '',
+                actions: [
+                  { label: 'View order', href: '/app/orders?order=order-1' },
+                  { label: 'Purchase ingredients', href: '/app/purchasing?plan=order-1' },
+                ],
+              },
+            },
+          },
+        ],
+        controlled: { page: 1, pageSize: 20, totalCount: 1 },
+      }),
+    );
+
+    expect(html).toContain('View order');
+    expect(html).toContain('href="/app/orders?order=order-1"');
+    expect(html).toContain('More actions');
+    expect(html).toContain('aria-expanded="false"');
     expect(html).not.toContain('type="search"');
   });
 });

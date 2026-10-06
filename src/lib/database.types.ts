@@ -641,6 +641,7 @@ export type Database = {
           id: string;
           organization_id: string;
           preferred_locale: string;
+          regional_locale: string;
           requested_role: string;
           review_note: string;
           reviewed_at: string | null;
@@ -656,6 +657,7 @@ export type Database = {
           id?: string;
           organization_id?: string;
           preferred_locale?: string;
+          regional_locale?: string;
           requested_role?: string;
           review_note?: string;
           reviewed_at?: string | null;
@@ -671,6 +673,7 @@ export type Database = {
           id?: string;
           organization_id?: string;
           preferred_locale?: string;
+          regional_locale?: string;
           requested_role?: string;
           review_note?: string;
           reviewed_at?: string | null;
@@ -1202,6 +1205,7 @@ export type Database = {
           created_at: string;
           id: string;
           name: string;
+          measurement_system: 'metric' | 'imperial';
           operations_copilot_plan_enabled: boolean;
           signup_enabled: boolean;
           signup_enabled_before_suspension: boolean | null;
@@ -1212,6 +1216,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           name: string;
+          measurement_system?: 'metric' | 'imperial';
           operations_copilot_plan_enabled?: boolean;
           signup_enabled?: boolean;
           signup_enabled_before_suspension?: boolean | null;
@@ -1222,6 +1227,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           name?: string;
+          measurement_system?: 'metric' | 'imperial';
           operations_copilot_plan_enabled?: boolean;
           signup_enabled?: boolean;
           signup_enabled_before_suspension?: boolean | null;
@@ -1325,6 +1331,7 @@ export type Database = {
           operations_copilot_override: boolean | null;
           organization_id: string;
           preferred_locale: string;
+          regional_locale: string;
           role: string;
           work_email: string | null;
         };
@@ -1342,6 +1349,7 @@ export type Database = {
           operations_copilot_override?: boolean | null;
           organization_id: string;
           preferred_locale?: string;
+          regional_locale?: string;
           role: string;
           work_email?: string | null;
         };
@@ -1359,6 +1367,7 @@ export type Database = {
           operations_copilot_override?: boolean | null;
           organization_id?: string;
           preferred_locale?: string;
+          regional_locale?: string;
           role?: string;
           work_email?: string | null;
         };
@@ -2177,18 +2186,30 @@ export type Database = {
         Returns: undefined;
       };
       save_customer_master: { Args: { payload: Json }; Returns: string };
+      set_organization_measurement_system: { Args: { payload: Json }; Returns: string };
       save_packaging_profile: { Args: { payload: Json }; Returns: string };
+      save_process_profile: { Args: { payload: Json }; Returns: string };
+      save_work_type: { Args: { payload: Json }; Returns: string };
       save_shipping_draft: { Args: { payload: Json }; Returns: string };
       get_workforce_schedule: { Args: { payload: Json }; Returns: Json };
       get_my_workforce_schedule: { Args: { payload: Json }; Returns: Json };
       get_workforce_work_context: { Args: { payload: Json }; Returns: Json };
       get_schedule_customer_products: { Args: { payload: Json }; Returns: Json };
       get_schedule_batch_context: { Args: { payload: Json }; Returns: Json };
+      get_schedule_customer_orders: { Args: { payload: Json }; Returns: Json };
+      get_schedule_supplier_deliveries: { Args: { payload: Json }; Returns: Json };
       unclaim_workforce_work_queue_item: { Args: { payload: Json }; Returns: string };
       get_my_workforce_work_queue: { Args: { payload: Json }; Returns: Json };
+      get_my_worker_work: { Args: { payload: Json }; Returns: Json };
       claim_workforce_work_queue_item: { Args: { payload: Json }; Returns: string };
       create_workforce_work_queue_item: { Args: { payload: Json }; Returns: string };
       publish_workforce_work_queue: { Args: { payload: Json }; Returns: number };
+      get_work_order_dependencies: { Args: { payload: Json }; Returns: Json };
+      set_work_order_predecessors: { Args: { payload: Json }; Returns: string };
+      set_schedule_event_predecessors: { Args: { payload: Json }; Returns: string };
+      delete_work_order: { Args: { payload: Json }; Returns: string };
+      move_scheduled_work_order: { Args: { payload: Json }; Returns: string };
+      move_schedule_event_with_successors: { Args: { payload: Json }; Returns: string };
       get_workforce_work_queue_overview: { Args: { payload: Json }; Returns: Json };
       save_plant_operations_configuration: { Args: { payload: Json }; Returns: string };
       publish_workforce_schedule: { Args: { payload: Json }; Returns: string };
@@ -2196,9 +2217,16 @@ export type Database = {
       delete_workforce_schedule_event: { Args: { payload: Json }; Returns: string };
       save_workforce_pto: { Args: { payload: Json }; Returns: string };
       cancel_workforce_pto: { Args: { payload: Json }; Returns: string };
+      save_workforce_pto_type: { Args: { payload: Json }; Returns: string };
+      retire_workforce_pto_type: { Args: { payload: Json }; Returns: string };
+      transition_work_plan_version: { Args: { payload: Json }; Returns: string };
       save_workforce_availability: { Args: { payload: Json }; Returns: string };
       save_facility_schedule_settings: { Args: { payload: Json }; Returns: string };
         save_order_production_plan: { Args: { payload: Json }; Returns: string };
+      preview_order_production_work: { Args: { payload: Json }; Returns: Json };
+      create_order_production_work: { Args: { payload: Json }; Returns: Json };
+      preview_delete_customer_order: { Args: { payload: Json }; Returns: Json };
+      delete_customer_order: { Args: { payload: Json }; Returns: Json };
         save_product_labor_estimate: { Args: { payload: Json }; Returns: string };
       assign_production_lot: { Args: { payload: Json }; Returns: string };
       set_product_lot_code: { Args: { payload: Json }; Returns: string };
@@ -2208,6 +2236,13 @@ export type Database = {
       report_spice_preparation_issue: { Args: { payload: Json }; Returns: string };
       worker_spice_preparations: { Args: Record<PropertyKey, never>; Returns: Json };
       complete_batch_worksheet: { Args: { execution_id: string }; Returns: string };
+      mobile_my_mixing_preps: { Args: Record<PropertyKey, never>; Returns: Json };
+      mobile_mixing_prep_detail: { Args: { payload: Json }; Returns: Json };
+      mobile_start_mixing_prep: { Args: { payload: Json }; Returns: string };
+      mobile_resolve_mixing_ingredient: { Args: { payload: Json }; Returns: Json };
+      mobile_record_mixing_ingredient: { Args: { payload: Json }; Returns: string };
+      mobile_report_mixing_prep: { Args: { payload: Json }; Returns: string };
+      mobile_complete_mixing_prep: { Args: { payload: Json }; Returns: string };
       order_production_batches: { Args: { order_id: string }; Returns: Json };
       receive_serialized_delivery: { Args: { payload: Json }; Returns: string };
       receive_purchase_delivery: { Args: { payload: Json }; Returns: string };
@@ -2278,6 +2313,7 @@ export type Database = {
           contact_value: string;
           display_name: string;
           preferred_locale: string;
+          regional_locale: string;
           requested_role: string;
           tenant_slug: string;
         };
@@ -2331,6 +2367,12 @@ export type Database = {
       post_inventory_receipt: { Args: { payload: Json }; Returns: string };
       save_access_profile: { Args: { payload: Json }; Returns: string };
       save_ingredient: { Args: { payload: Json }; Returns: string };
+      release_work_plan_version: { Args: { payload: Json }; Returns: string };
+      create_work_plan: { Args: { payload: Json }; Returns: string };
+      list_work_plan_versions: { Args: never; Returns: Json };
+      list_recipe_process_configuration: { Args: never; Returns: Json };
+      save_work_plan_draft: { Args: { payload: Json }; Returns: string };
+      create_work_plan_draft_version: { Args: { payload: Json }; Returns: string };
     };
     Enums: {
       [_ in never]: never;

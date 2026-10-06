@@ -577,3 +577,134 @@ it('denies anonymous traceability RPC execution', async () => {
   await database.exec('reset role; set role anon');
   await expect(query("select public.trace_source_material('SUP-LOT-7')")).rejects.toThrow('permission');
 });
+
+it('runs the assigned mobile preparation lifecycle without exposing unassigned work', async () => {
+  await query('select public.save_customer_order($1::jsonb)', [JSON.stringify({
+    id: id(810),
+    customer_name: 'Mobile customer',
+    reference: '',
+    needed_on: '2026-10-10',
+    products: [{ product_id: id(300), batch_count: 1, customer_product_option_id: null }],
+  })]);
+  await query('select public.save_order_production_plan($1::jsonb)', [JSON.stringify({
+    id: id(810),
+    revision: 0,
+    start_on: '2026-09-28',
+    finish_on: '2026-09-28',
+    status: 'Draft',
+    note: '',
+    shortage_reason: '',
+  })]);
+  await query('select public.assign_production_lot($1::jsonb)', [JSON.stringify({
+    order_id: id(810), product_id: id(300), assigned_on: '2026-09-28',
+  })]);
+  await query('select public.receive_serialized_delivery($1::jsonb)', [JSON.stringify({
+    request_id: id(910),
+    supplier_id: id(200),
+    ingredient_id: id(100),
+    quantity: 10,
+    uom: 'lb',
+    received_on: '2026-10-05',
+    supplier_reference: '',
+    supplier_lot: 'MOBILE-LOT',
+    expiration_date: '2026-11-01',
+    note: '',
+    supplier_item_id: null,
+    packages: [{ quantity: 10, supplier_barcode: 'MOBILE-PKG' }],
+  })]);
+  await confirmProductionPlan(id(810));
+  const preparation = idRowSchema.parse((await query(`
+    select preparation.id
+    from public.planned_spice_preparations preparation
+    join public.planned_mixer_batches batch on batch.id=preparation.planned_mixer_batch_id
+    where batch.order_id=$1
+  `, [id(810)])).rows[0]);
+
+  await expect(query('select public.mobile_start_mixing_prep($1::jsonb)', [JSON.stringify({
+    planned_spice_preparation_id: preparation.id,
+  })])).rejects.toThrow('Preparation is not assigned to you today');
+
+  await database.exec('reset role');
+  await database.query(`insert into public.workforce_work_queue_items(
+    id,organization_id,facility_id,work_on,kind,title,instructions,batch_quota,
+    estimated_minutes,linked_task_type,linked_task_id,required_worker_count,status,
+    publication_state,published_by,published_at,created_by,updated_by
+  ) values($1,$2,$3,(now() at time zone 'America/Chicago')::date,'ingredient_prep',
+    'Prepare mobile batch','Use the released recipe.',1,30,'production_plan',$4,1,
+    'claimed','published',$5,now(),$5,$5)`, [
+    id(950), id(10), id(11), id(810), gateActor,
+  ]);
+  await database.query(`insert into public.workforce_work_queue_claims(
+    organization_id,facility_id,queue_item_id,worker_id,claim_source
+  ) values($1,$2,$3,$4,'supervisor_assigned')`, [id(10), id(11), id(950), gateActor]);
+  await actAs(gateActor);
+
+  const list = z.object({
+    items: z.array(z.object({
+      planned_spice_preparation_id: z.uuid(),
+      order_reference: z.string().trim().min(1),
+      status: z.string(),
+      required_line_count: z.coerce.number(),
+    })),
+  }).parse(z.object({ result: z.unknown() }).parse((await query(
+    'select public.mobile_my_mixing_preps() result',
+  )).rows[0]).result);
+  expect(list.items).toHaveLength(1);
+  expect(list.items[0]).toMatchObject({
+    planned_spice_preparation_id: preparation.id,
+    order_reference: 'Mobile customer · 2026-10-10',
+    status: 'Not started',
+    required_line_count: 0,
+  });
+
+  const startPayload = JSON.stringify({ planned_spice_preparation_id: preparation.id });
+  const execution = idRowSchema.parse((await query('select public.mobile_start_mixing_prep($1::jsonb) id', [startPayload])).rows[0]);
+  expect(idRowSchema.parse((await query('select public.mobile_start_mixing_prep($1::jsonb) id', [startPayload])).rows[0])).toEqual(execution);
+
+  const detail = z.object({
+    instructions: z.literal('Use the released recipe.'),
+    status: z.literal('Open'),
+    sections: z.array(z.object({
+      items: z.array(z.object({
+        worksheet_line_id: z.uuid(),
+        recorded_quantity: z.coerce.number(),
+      })),
+    })),
+  }).parse(z.object({ result: z.unknown() }).parse((await query('select public.mobile_mixing_prep_detail($1::jsonb) result', [startPayload])).rows[0]).result);
+  const worksheetLine = detail.sections[0]?.items[0];
+  if (!worksheetLine) throw new Error('Expected a mobile preparation ingredient.');
+
+  const resolved = z.object({
+    match: z.object({ id: z.uuid(), source_lot: z.literal('MOBILE-LOT') }),
+    reason: z.null(),
+  }).parse(z.object({ result: z.unknown() }).parse((await query(
+    'select public.mobile_resolve_mixing_ingredient($1::jsonb) result',
+    [JSON.stringify({
+      execution_id: execution.id,
+      worksheet_line_id: worksheetLine.worksheet_line_id,
+      identifier: 'MOBILE-PKG',
+    })],
+  )).rows[0]).result);
+
+  await query('select public.mobile_record_mixing_ingredient($1::jsonb)', [JSON.stringify({
+    id: id(911),
+    worksheet_line_id: worksheetLine.worksheet_line_id,
+    serialized_unit_id: resolved.match.id,
+    quantity: 10,
+  })]);
+  await query('select public.mobile_report_mixing_prep($1::jsonb)', [JSON.stringify({
+    id: id(912), execution_id: execution.id, category: 'Spice', note: 'Scale verified',
+  })]);
+  await query('select public.mobile_complete_mixing_prep($1::jsonb)', [JSON.stringify({
+    execution_id: execution.id,
+  })]);
+  await query('select public.mobile_complete_mixing_prep($1::jsonb)', [JSON.stringify({
+    execution_id: execution.id,
+  })]);
+
+  const completed = z.object({
+    status: z.literal('Complete'),
+    notes: z.array(z.object({ note: z.literal('Scale verified') })),
+  }).parse(z.object({ result: z.unknown() }).parse((await query('select public.mobile_mixing_prep_detail($1::jsonb) result', [startPayload])).rows[0]).result);
+  expect(completed.notes).toHaveLength(1);
+});

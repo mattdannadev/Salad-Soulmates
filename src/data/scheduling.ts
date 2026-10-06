@@ -36,8 +36,20 @@ export function readScheduleBatchContext(db: ScheduleDb, payload: { facility_id:
   return db.rpc('get_schedule_batch_context', { payload });
 }
 
+export function readScheduleCustomerOrders(db: ScheduleDb, payload: {
+  facility_id: string; start_on: string; end_on: string;
+}) {
+  return db.rpc('get_schedule_customer_orders', { payload });
+}
+
+export function readScheduleSupplierDeliveries(db: ScheduleDb, payload: {
+  facility_id: string; start_on: string; end_on: string;
+}) {
+  return db.rpc('get_schedule_supplier_deliveries', { payload });
+}
+
 export function writeSchedule(db: ScheduleDb, operation: ScheduleMutation, payload: {
   facility_id: string;
 }) {
-  return db.rpc(operation as never, { payload } as never);
+  return db.rpc(operation, { payload });
 }

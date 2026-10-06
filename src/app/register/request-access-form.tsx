@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import requestTenantAccess from './actions';
+import { regionalLocaleOptions } from '@/domain/user-preferences';
 
 export default function RequestAccessForm({ organizationSlug }: { organizationSlug: string }) {
   const requestAccess = requestTenantAccess.bind(null, organizationSlug);
@@ -35,6 +36,15 @@ export default function RequestAccessForm({ organizationSlug }: { organizationSl
           <option value="en">English</option>
           <option value="es">Español</option>
         </select>
+      </label>
+      <label>
+        Regional format
+        <select name="regional_locale" defaultValue="en-US">
+          {regionalLocaleOptions.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+        <small>Used for dates, numbers, and currency.</small>
       </label>
       <label className="honeypot" aria-hidden="true">
         Website

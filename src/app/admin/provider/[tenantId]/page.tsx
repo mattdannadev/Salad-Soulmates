@@ -1,5 +1,8 @@
-import { notFound } from 'next/navigation';
-import ProviderTenantDetail from '@/components/provider/provider-tenant-detail';
+import { notFound, unstable_rethrow } from 'next/navigation';
+import ProviderTenantDetail, {
+  type ProviderTenantDetailState,
+} from '@/components/provider/provider-tenant-detail';
+import { logFailure } from '@/lib/operation-error';
 import {
   getProviderTenantDetail,
   ProviderConsoleAccessError,
@@ -14,18 +17,25 @@ export default async function ProviderTenantDetailPage({
   params: Promise<{ tenantId: string }>;
 }) {
   const { tenantId } = await params;
+  let state: ProviderTenantDetailState;
   try {
     const tenant = await getProviderTenantDetail(tenantId);
-    return <ProviderTenantDetail
+    state = { kind: 'ready', tenant };
+  } catch (error) {
+    unstable_rethrow(error);
+    if (error instanceof ProviderTenantNotFoundError) notFound();
+    if (error instanceof ProviderConsoleAccessError) {
+      state = { kind: 'denied' };
+    } else {
+      logFailure('provider_tenant_load', error);
+      state = { kind: 'unavailable' };
+    }
+  }
+  return (
+    <ProviderTenantDetail
       backHref="/admin/provider"
       customerHref={(accountId) => `/admin/provider/customers/${accountId}`}
-      state={{ kind: 'ready', tenant }}
-    />;
-  } catch (error) {
-    if (error instanceof ProviderConsoleAccessError) {
-      return <ProviderTenantDetail backHref="/admin/provider" state={{ kind: 'denied' }} />;
-    }
-    if (error instanceof ProviderTenantNotFoundError) notFound();
-    return <ProviderTenantDetail backHref="/admin/provider" state={{ kind: 'unavailable' }} />;
-  }
+      state={state}
+    />
+  );
 }

@@ -32,6 +32,10 @@ export default function ProductOrderLine({
   const [batches, setBatches] = useState(String(initialBatches));
   const option = options.find((item) => item.id === optionId);
   const units = option ? (Number(batches) * 40) / option.gallons_per_unit : 0;
+  let orderedUnitLabel = es ? 'unidades solicitadas' : 'ordering units';
+  if (option?.unit_name === 'case') {
+    orderedUnitLabel = es ? 'cajas solicitadas' : 'cases ordered';
+  }
   const wholePackageLabel = es
     ? 'Ajusta los lotes o el empaque para obtener unidades completas.'
     : 'Adjust batches or package size to produce whole packages.';
@@ -104,7 +108,7 @@ export default function ProductOrderLine({
             <>
               <br />
               {validUnits
-                ? `${formatNumber(Number(batches))} ${es ? 'lotes' : 'batches'} × 40 gal = ${formatNumber(Math.round(units))} ${option.unit_name} · ${formatPrice(Math.round(units) * option.unit_price)}`
+                ? `${formatNumber(Number(batches))} ${es ? 'lotes' : 'batches'} × 40 gal = ${formatNumber(Math.round(units))} ${orderedUnitLabel} · ${formatPrice(Math.round(units) * option.unit_price)}`
                 : wholePackageLabel}
             </>
           )}

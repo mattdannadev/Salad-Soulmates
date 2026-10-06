@@ -96,6 +96,103 @@ const postInventory = `insert into public.inventory_events
   (ingredient_id,event_type,quantity_delta,uom,reason_note,request_id)
   values($1,'OpeningBalance',1,'lb','Concurrency fixture',$2)`;
 
+async function workPlanDraft() {
+  const definition = {
+    name: 'Concurrent workflow',
+    steps: [{
+      key: 'complete', title: 'Complete', materialization_policy: 'task_only', task_template: {},
+    }],
+    dependencies: [],
+  };
+  const result: unknown = await first.query('select public.create_work_plan($1::jsonb) id', [
+    JSON.stringify({ ...definition, code: `concurrent_${randomUUID().replaceAll('-', '')}` }),
+  ]);
+  const { id } = z.object({ rows: z.tuple([z.object({ id: z.uuid() })]) }).parse(result).rows[0];
+  return { definition, id };
+}
+
+it('serializes draft saves and rejects the stale competing revision', async () => {
+  const draft = await workPlanDraft();
+  const payload = JSON.stringify({ ...draft.definition, version_id: draft.id, revision: 1 });
+  const outcome = await overlap(
+    'select public.save_work_plan_draft($1::jsonb)',
+    [payload],
+    'select public.save_work_plan_draft($1::jsonb)',
+    [payload],
+  );
+  expect(String(outcome.error)).toContain('changed; reload');
+  const saved: unknown = await observer.query('select revision,state from public.work_plan_versions where id=$1', [draft.id]);
+  expect(resultRows.parse(saved).rows).toEqual([{ revision: 2, state: 'draft' }]);
+});
+
+it('makes a competing release wait for draft save and reject its stale revision', async () => {
+  const draft = await workPlanDraft();
+  const outcome = await overlap(
+    'select public.save_work_plan_draft($1::jsonb)',
+    [JSON.stringify({ ...draft.definition, version_id: draft.id, revision: 1 })],
+    'select public.release_work_plan_version($1::jsonb)',
+    [JSON.stringify({ version_id: draft.id, revision: 1 })],
+  );
+  expect(String(outcome.error)).toContain('changed; reload');
+});
+
+it.each(['same', 'different'])(
+  'serializes %s-token clone requests into one draft with one creation audit',
+  async (tokenMode) => {
+    const draft = await workPlanDraft();
+    await first.query('select public.release_work_plan_version($1::jsonb)', [
+      JSON.stringify({ version_id: draft.id, revision: 1 }),
+    ]);
+    const version: unknown = await observer.query('select work_plan_id from public.work_plan_versions where id=$1', [draft.id]);
+    const { work_plan_id: workPlanId } = z.object({
+      rows: z.tuple([z.object({ work_plan_id: z.uuid() })]),
+    }).parse(version).rows[0];
+    const payload = JSON.stringify({ work_plan_id: workPlanId, request_id: randomUUID() });
+    const secondPayload = tokenMode === 'same' ? payload
+      : JSON.stringify({ work_plan_id: workPlanId, request_id: randomUUID() });
+    const outcome = await overlap(
+      'select public.create_work_plan_draft_version($1::jsonb) id',
+      [payload],
+      'select public.create_work_plan_draft_version($1::jsonb) id',
+      [secondPayload],
+    );
+    expect(outcome.error).toBeNull();
+    const { id: clonedId } = z.object({
+      rows: z.tuple([z.object({ id: z.uuid() })]),
+    }).parse(outcome.result).rows[0];
+    const counts: unknown = await observer.query(`select
+    (select count(*)::int from public.work_plan_versions
+      where work_plan_id=$1 and state='draft') drafts,
+    (select count(*)::int from public.audit_events
+      where entity_id=$2 and event_type='WORK_PLAN_VERSION_CREATED') audits`, [workPlanId, clonedId]);
+    expect(resultRows.parse(counts).rows).toEqual([{ drafts: 1, audits: 1 }]);
+    await first.query('select public.release_work_plan_version($1::jsonb)', [
+      JSON.stringify({ version_id: clonedId, revision: 1 }),
+    ]);
+    const recovered: unknown = await second.query('select public.create_work_plan_draft_version($1::jsonb) id', [payload]);
+    expect(z.object({ rows: z.tuple([z.object({ id: z.uuid() })]) }).parse(recovered).rows[0].id)
+      .toBe(clonedId);
+    const versionCount: unknown = await observer.query('select count(*)::int count from public.work_plan_versions where work_plan_id=$1', [workPlanId]);
+    expect(resultRows.parse(versionCount).rows).toEqual([{ count: 2 }]);
+    const secondRecovery: unknown = await second.query('select public.create_work_plan_draft_version($1::jsonb) id', [secondPayload]);
+    expect(z.object({ rows: z.tuple([z.object({ id: z.uuid() })]) })
+      .parse(secondRecovery).rows[0].id).toBe(clonedId);
+  },
+);
+
+it('rejects a stale review transition after an overlapping release', async () => {
+  const draft = await workPlanDraft();
+  const outcome = await overlap(
+    'select public.release_work_plan_version($1::jsonb)',
+    [JSON.stringify({ version_id: draft.id, revision: 1 })],
+    'select public.transition_work_plan_version($1::jsonb)',
+    [JSON.stringify({ version_id: draft.id, revision: 1, state: 'review' })],
+  );
+  expect(String(outcome.error)).toContain('changed; reload');
+  const persisted: unknown = await observer.query('select state,revision from public.work_plan_versions where id=$1', [draft.id]);
+  expect(resultRows.parse(persisted).rows).toEqual([{ state: 'released', revision: 2 }]);
+});
+
 it('blocks a unit change until the first inventory posting is committed, then rejects it', async () => {
   const id = await ingredient();
   const outcome = await overlap(

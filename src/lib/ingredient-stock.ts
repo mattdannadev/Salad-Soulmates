@@ -1,7 +1,7 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import inventoryBalances from '@/domain/inventory';
-import { ingredientReferenceQuantities } from '@/domain/ingredient-reference';
+import ingredientReferenceQuantities from '@/domain/ingredient-reference';
 import {
   materialPlanRowSchema, purchaseDraftRowSchema, purchaseLineRowSchema,
 } from '@/domain/purchasing';

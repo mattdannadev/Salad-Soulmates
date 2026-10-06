@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { Fragment, useEffect, useRef, useState } from 'react';
+import {
+  Fragment, useEffect, useRef, useState,
+} from 'react';
 import { usePathname } from 'next/navigation';
 import {
   Leaf,
@@ -28,11 +30,14 @@ import {
   navigationLabel,
   navigationSections,
 } from './navigation-registry';
+import type { RegionalLocale } from '@/domain/user-preferences';
+
 export function Shell({
   children,
   name,
   role,
   locale,
+  regionalLocale = locale === 'es' ? 'es-MX' : 'en-US',
   permissions,
   feedbackTypes = [],
 }: {
@@ -40,6 +45,7 @@ export function Shell({
   name: string;
   role: string;
   locale: 'en' | 'es';
+  regionalLocale?: RegionalLocale;
   permissions: string[];
   feedbackTypes?: { code: string; label_en: string; label_es: string }[];
 }) {
@@ -84,9 +90,8 @@ export function Shell({
           'a[href], button:not([disabled]), summary, [tabindex]:not([tabindex="-1"])',
         ),
       ).filter(
-        (element) =>
-          element.getClientRects().length > 0 &&
-          (element.tagName === 'SUMMARY' || !element.closest('details:not([open])')),
+        (element) => element.getClientRects().length > 0
+          && (element.tagName === 'SUMMARY' || !element.closest('details:not([open])')),
       );
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
@@ -169,7 +174,9 @@ export function Shell({
           id="main-navigation"
           aria-label={isSpanish ? 'Navegación principal' : 'Main navigation'}
         >
-          {visibleHomeNavigation.map(({ href, en, es, icon: Icon }) => {
+          {visibleHomeNavigation.map(({
+            href, en, es, icon: Icon,
+          }) => {
             const label = isSpanish ? es : en;
             return (
               <Link
@@ -206,8 +213,8 @@ export function Shell({
                   {visibleItems.map(({ active, destination }) => {
                     const { href, icon: Icon } = destination;
                     const label = navigationLabel(destination, locale);
-                    const isCurrentPage =
-                      active !== false && isNavigationDestinationCurrent(destination, path);
+                    const isCurrentPage = active !== false
+                      && isNavigationDestinationCurrent(destination, path);
                     return (
                       <Link
                         key={href}
@@ -263,7 +270,7 @@ export function Shell({
           <nav className="breadcrumb" aria-label={isSpanish ? 'Ruta de navegación' : 'Breadcrumb'}>
             {breadcrumb ? (
               breadcrumb.map((item, index) => (
-                <Fragment key={`${item.label}-${index}`}>
+                <Fragment key={`${item.label}-${item.href ?? ''}`}>
                   {index > 0 && <span aria-hidden>›</span>}
                   {item.href ? (
                     <Link href={item.href}>{item.label}</Link>
@@ -291,7 +298,11 @@ export function Shell({
                 <Sparkles size={18} aria-hidden />
               </Link>
             )}
-            <LocaleSwitcher key={locale} locale={locale} />
+            <LocaleSwitcher
+              key={`${locale}-${regionalLocale}`}
+              locale={locale}
+              regionalLocale={regionalLocale}
+            />
             <span className="avatar">{name.slice(0, 1)}</span>
             <span>
               {name}
@@ -308,14 +319,6 @@ export function Shell({
             </form>
           </div>
         </header>
-        <div className="staging-banner">
-          {isSpanish ? 'ETAPA 1A' : 'INCREMENT 1A'}{' '}
-          <span>
-            {locale === 'es'
-              ? 'Datos maestros activos · la ejecución de producción sigue bloqueada'
-              : 'Master data is active · production execution remains gated'}
-          </span>
-        </div>
         <main>{children}</main>
         <footer>
           {locale === 'es'
@@ -333,7 +336,9 @@ export function Shell({
         aria-label={isSpanish ? 'Navegación móvil' : 'Mobile navigation'}
         inert={mobileNavigationOpen}
       >
-        {mobileDestinations.map(({ href, en, es, icon: Icon }) => (
+        {mobileDestinations.map(({
+          href, en, es, icon: Icon,
+        }) => (
           <Link
             key={href}
             href={href}

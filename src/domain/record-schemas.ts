@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { languageSchema, regionalLocaleSchema } from './user-preferences';
 
 export const recordKindSchema = z.enum([
   'ingredient',
@@ -12,6 +13,7 @@ export const recordKindSchema = z.enum([
   'uom-family',
   'uom',
   'uom-delete',
+  'measurement-system',
   'access-profile',
   'feedback',
   'feedback-status',
@@ -46,6 +48,9 @@ export const uomSchema = uomFamilySchema.extend({
   is_purchase_unit: z.boolean(),
 }).refine((value) => value.is_inventory_unit || value.is_purchase_unit, 'Choose at least one usage.');
 export const uomDeleteSchema = z.object({ id: z.uuid(), code: z.string().min(1).max(50) });
+export const measurementSystemSchema = z.object({
+  measurement_system: z.enum(['metric', 'imperial']),
+});
 export const accessProfileSchema = z.object({
   id: z.uuid().optional(),
   name: z.string().trim().min(2).max(100),
@@ -62,7 +67,8 @@ export const userProfileSchema = z.object({
   work_email: z.union([z.email().max(320), z.literal('')]).nullable(),
   facility_id: z.uuid(),
   access_profile_id: z.uuid(),
-  preferred_locale: z.enum(['es', 'en']),
+  preferred_locale: languageSchema,
+  regional_locale: regionalLocaleSchema,
   active: z.boolean(),
 });
 export const loginEventSchema = z.object({

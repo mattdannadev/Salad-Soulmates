@@ -160,7 +160,8 @@ export default async function queryMobileOperations(
   if (access.profile.role === 'worker') {
     const preparations = (await dependencies.loadPreparations(access.db))
       .filter((item) => item.status !== 'Complete')
-      .toSorted((left, right) => (left.assigned_on ?? left.plan_start_on).localeCompare(right.assigned_on ?? right.plan_start_on)
+      .toSorted((left, right) => (left.assigned_on ?? left.plan_start_on)
+        .localeCompare(right.assigned_on ?? right.plan_start_on)
         || left.sequence - right.sequence)
       .slice(0, limit)
       .map((item) => ({

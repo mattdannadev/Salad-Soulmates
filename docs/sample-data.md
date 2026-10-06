@@ -1,14 +1,23 @@
 # Local sample data
 
 The repository keeps a realistic, internally linked manufacturing dataset in
-`supabase/seed.sql`. It creates two end-to-end customer flows for Creamy
-Buttermilk Ranch and Classic Italian Vinaigrette, plus their ingredients,
+`supabase/seed.sql`. It creates fifteen customer orders: seven Wings and More,
+seven Jason's Deli, and one Jason's Family Market order, distributed over a
+mix of one-week, ten-business-day, and fourteen-business-day mixing runs. Four
+orders run for ten mixing days, four run for fourteen mixing days, and seven run
+for one week. Every added order has a daily staggered ingredient-prep, mixing, and
+packaging chain, followed by distinct loading and shipping-pickup work orders.
+Finish-to-start dependency rows connect each execution stage, including confirmed
+purchase receiving before first prep and loading/shipping after final packaging.
+All work orders have matching planner/calendar projections and worker assignments.
+Five linked inbound purchase orders are confirmed so supplier deliveries also
+appear in the schedule. The fixture also includes ingredients,
 suppliers, packs, inventory, released recipes, customer pricing, orders,
-confirmed purchase orders, partial receiving with supplier lots and physical
-package serials, production preparation, production lots, completed worker
-worksheets, approved packaging and shipping preparation. Each customer flow also
-retains unstarted mixer batches so both completed and pending worker states can be
-tested.
+confirmed purchase orders, planned production preparation, unstarted mixer
+batches, and packaging/loading/shipping work. It deliberately does not post
+receipts, ingredient consumption, completed worksheets, production lots, or
+finished-goods genealogy. Completed execution states require explicit local
+workflow actions or isolated test fixtures; the seed does not fabricate them.
 
 This dataset is deliberately local-only. It must never be applied to the linked
 shared Supabase project. Recreate a clean local database and reload the saved
@@ -33,9 +42,12 @@ The formulation quantities are plausible workflow examples, not approved
 production formulas. The records use the reserved `10000000-...` UUID range so
 they remain visibly synthetic in diagnostics and exports.
 
-Dates share one facility-local anchor on every regeneration. Purchase receipts
-land six to seven days in the past, production begins today, pickup/shipping is
-two to three weeks ahead, and expiration remains one year or more in the future.
+Dates share one facility-local anchor on every regeneration. Purchase delivery
+commitments land six to seven days in the past, production begins today, and customer
+commitments span the needed production horizon. Each order follows a deliberate
+business-day sequence: confirmed purchasing/receiving → prep → mixing →
+packaging, repeated daily for its defined mixing run, then loading and shipping
+pickup. Planned work does not imply physical receipt or completed execution.
 This keeps receiving, current production and future fulfillment queues useful
 without hand-editing dates.
 

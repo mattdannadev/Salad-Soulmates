@@ -10,6 +10,9 @@ describe('customer return context', () => {
     const directory = '/app/customers?q=market&activity=with-orders&sort=name&page=2#results';
     const create = customerCreateHref(customerReturnContext(directory, undefined));
     const params = new URL(create, 'https://customer-return.invalid').searchParams;
+    expect(new URL(create, 'https://customer-return.invalid').pathname).toBe('/app/customers');
+    expect(params.get('create')).toBe('customer');
+    expect(params.get('q')).toBe('market');
     const context = customerReturnContext(params.get('returnTo'), params.get('focusRow'));
     expect(customerReturnHref(context)).toBe(directory);
     expect(customerReturnHref(context, customerId))

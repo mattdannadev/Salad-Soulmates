@@ -224,7 +224,7 @@ export default async function Inventory({
             <p>{emptyDescription}</p>
             <Link href="/app/inventory?status=active">{es ? 'Borrar filtros →' : 'Clear filters →'}</Link>
             {!ingredients.length && profile.role === 'admin' && (
-              <Link href="/app/ingredients/new">{es ? 'Agregar ingrediente →' : 'Add ingredient →'}</Link>
+              <Link href="/app/ingredients?create=ingredient&returnTo=%2Fapp%2Finventory">{es ? 'Agregar ingrediente →' : 'Add ingredient →'}</Link>
             )}
           </div>
         )}

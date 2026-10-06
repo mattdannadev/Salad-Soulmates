@@ -18,18 +18,21 @@ function weekStart(date: string): string {
   return value.toISOString().slice(0, 10);
 }
 
-export default function WorkerWorkQueue({ items, locale, claim, unclaim }: WorkerWorkQueueProps) {
+export default function WorkerWorkQueue({
+  items, locale, claim, unclaim,
+}: WorkerWorkQueueProps) {
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const queueDescription = locale === 'es'
     ? 'Elige una tarea publicada para agregarla a tu trabajo.'
     : 'Claim a published task to add it to your work.';
+  const returningLabel = locale === 'es' ? 'Devolviendo…' : 'Returning…';
+  const returnLabel = locale === 'es' ? 'Devolver a la cola' : 'Return to queue';
 
   if (!items.length) return null;
   const weeks = items.reduce<Record<string, WorkerQueueItem[]>>((groups, item) => {
     const start = weekStart(item.work_on);
-    groups[start] = [...(groups[start] ?? []), item];
-    return groups;
+    return { ...groups, [start]: [...(groups[start] ?? []), item] };
   }, {});
   return (
     <section className="panel" aria-labelledby="available-work-heading">
@@ -39,51 +42,62 @@ export default function WorkerWorkQueue({ items, locale, claim, unclaim }: Worke
       </div>
       <p>{queueDescription}</p>
       {message && <p role="status">{message}</p>}
-      {Object.entries(weeks).map(([start, weekItems]) => <section key={start} aria-label={`${locale === 'es' ? 'Semana de' : 'Week of'} ${start}`}>
-        <h3>{locale === 'es' ? 'Semana de' : 'Week of'} {start}</h3>
-        {weekItems.map((item) => {
-        const openSlots = Math.max(0, item.required_worker_count - item.claimed_worker_count);
-        return (
-          <article className="panel" key={item.id}>
-            <h3>{item.title || workQueueKindLabel(item.kind, locale)}</h3>
-            <p>{workQueueKindLabel(item.kind, locale)}</p>
-            {item.instructions && <p>{item.instructions}</p>}
-            <p>
-              {locale === 'es' ? 'Equipo' : 'Crew'}
-              :
-              {' '}
-              {item.claimed_worker_count}
-              {' / '}
-              {item.required_worker_count}
-            </p>
-            {item.claimed_by_me ? (
-              <div>
-                <p>{locale === 'es' ? 'Ya aceptaste esta tarea.' : 'You claimed this task.'}</p>
-                <button className="button secondary" disabled={pending} type="button" onClick={() => startTransition(async () => {
-                  const result = await unclaim({ id: item.id, revision: item.revision });
-                  setMessage(result.message);
-                })}>
-                  {pending ? (locale === 'es' ? 'Devolviendo…' : 'Returning…') : (locale === 'es' ? 'Devolver a la cola' : 'Return to queue')}
-                </button>
-              </div>
-            ) : (
-              <button
-                className="button"
-                disabled={pending || openSlots === 0}
-                type="button"
-                onClick={() => startTransition(async () => {
-                  const result = await claim({ id: item.id, revision: item.revision });
-                  setMessage(result.message);
-                })}
-              >
-                {pending && (locale === 'es' ? 'Aceptando…' : 'Claiming…')}
-                {!pending && (locale === 'es' ? 'Aceptar tarea' : 'Claim task')}
-              </button>
-            )}
-          </article>
-        );
-        })}
-      </section>)}
+      {Object.entries(weeks).map(([start, weekItems]) => (
+        <section key={start} aria-label={`${locale === 'es' ? 'Semana de' : 'Week of'} ${start}`}>
+          <h3>
+            {locale === 'es' ? 'Semana de' : 'Week of'}
+            {' '}
+            {start}
+          </h3>
+          {weekItems.map((item) => {
+            const openSlots = Math.max(0, item.required_worker_count - item.claimed_worker_count);
+            return (
+              <article className="panel" key={item.id}>
+                <h3>{item.title || workQueueKindLabel(item.kind, locale)}</h3>
+                <p>{workQueueKindLabel(item.kind, locale)}</p>
+                {item.instructions && <p>{item.instructions}</p>}
+                <p>
+                  {locale === 'es' ? 'Equipo' : 'Crew'}
+                  :
+                  {' '}
+                  {item.claimed_worker_count}
+                  {' / '}
+                  {item.required_worker_count}
+                </p>
+                {item.claimed_by_me ? (
+                  <div>
+                    <p>{locale === 'es' ? 'Ya aceptaste esta tarea.' : 'You claimed this task.'}</p>
+                    <button
+                      className="button secondary"
+                      disabled={pending}
+                      type="button"
+                      onClick={() => startTransition(async () => {
+                        const result = await unclaim({ id: item.id, revision: item.revision });
+                        setMessage(result.message);
+                      })}
+                    >
+                      {pending ? returningLabel : returnLabel}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    className="button"
+                    disabled={pending || openSlots === 0}
+                    type="button"
+                    onClick={() => startTransition(async () => {
+                      const result = await claim({ id: item.id, revision: item.revision });
+                      setMessage(result.message);
+                    })}
+                  >
+                    {pending && (locale === 'es' ? 'Aceptando…' : 'Claiming…')}
+                    {!pending && (locale === 'es' ? 'Aceptar tarea' : 'Claim task')}
+                  </button>
+                )}
+              </article>
+            );
+          })}
+        </section>
+      ))}
     </section>
   );
 }

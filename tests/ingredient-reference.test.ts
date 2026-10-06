@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ingredientReferenceQuantities } from '@/domain/ingredient-reference';
+import ingredientReferenceQuantities from '@/domain/ingredient-reference';
 import type { MaterialPlan, PurchaseDraft, PurchaseLine } from '@/domain/purchasing';
 
 const ingredientId = '00000000-0000-4000-8000-000000000001';

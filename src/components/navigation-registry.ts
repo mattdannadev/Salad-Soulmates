@@ -25,7 +25,7 @@ import {
 export type NavigationLocale = 'en' | 'es';
 type NavigationItemType = 'home' | 'destination';
 
-export type NavigationDestination = {
+export interface NavigationDestination {
   id: string;
   href: string;
   en: string;
@@ -40,25 +40,25 @@ export type NavigationDestination = {
   mobilePriority?: number;
   breadcrumb: { en: string; es: string };
   searchKeywords: readonly string[];
-};
+}
 
-type NavigationSectionItem = {
+interface NavigationSectionItem {
   destinationId: string;
   active?: boolean;
-};
+}
 
-export type NavigationSection = {
+export interface NavigationSection {
   id: string;
   en: string;
   es: string;
   icon: LucideIcon;
   itemIds: readonly NavigationSectionItem[];
-};
+}
 
-export type NavigationBreadcrumbItem = {
+export interface NavigationBreadcrumbItem {
   label: string;
   href?: string;
-};
+}
 
 const purchasingPermissions = [
   'orders.read',
@@ -134,13 +134,13 @@ export const navigationDestinations: readonly NavigationDestination[] = [
   {
     id: 'purchasing',
     href: '/app/purchasing',
-    en: 'Purchase planning',
-    es: 'Planificación de compras',
+    en: 'Purchasing',
+    es: 'Compras',
     icon: ShoppingBasket,
     itemType: 'destination',
     permissions: purchasingPermissions,
     parent: 'procurement',
-    breadcrumb: { en: 'Purchase planning', es: 'Planificación de compras' },
+    breadcrumb: { en: 'Purchasing', es: 'Compras' },
     searchKeywords: ['purchasing', 'purchase planning', 'compras'],
   },
   {
@@ -253,27 +253,15 @@ export const navigationDestinations: readonly NavigationDestination[] = [
     searchKeywords: ['team', 'employees', 'equipo'],
   },
   {
-    id: 'planning',
-    href: '/app/planning',
-    en: 'Production planning',
-    es: 'Planificación de producción',
-    icon: ClipboardList,
-    itemType: 'destination',
-    permissions: ['planning.read'],
-    parent: 'planning-production',
-    breadcrumb: { en: 'Production planning', es: 'Planificación de producción' },
-    searchKeywords: ['production planning', 'demand coverage', 'planificación de producción'],
-  },
-  {
     id: 'scheduling',
     href: '/app/scheduling',
-    en: 'Schedule',
-    es: 'Calendario',
+    en: 'Production Planning',
+    es: 'Planificación de producción',
     icon: CalendarDays,
     itemType: 'destination',
     permissions: ['workforce.read'],
     parent: 'planning-production',
-    breadcrumb: { en: 'Schedule', es: 'Calendario' },
+    breadcrumb: { en: 'Production Planning', es: 'Planificación de producción' },
     searchKeywords: ['schedule', 'calendar', 'calendario'],
   },
   {
@@ -389,8 +377,8 @@ export const navigationSections: readonly NavigationSection[] = [
   },
   {
     id: 'procurement',
-    en: 'Purchasing & deliveries',
-    es: 'Compras y entregas',
+    en: 'Purchasing & receiving',
+    es: 'Compras y recepción',
     icon: ShoppingBasket,
     itemIds: [
       { destinationId: 'purchasing' },
@@ -403,21 +391,14 @@ export const navigationSections: readonly NavigationSection[] = [
     en: 'Inventory & traceability',
     es: 'Inventario y trazabilidad',
     icon: Package,
-    itemIds: [
-      { destinationId: 'inventory' },
-      { destinationId: 'traceability' },
-    ],
+    itemIds: [{ destinationId: 'inventory' }, { destinationId: 'traceability' }],
   },
   {
     id: 'planning-production',
     en: 'Production & team',
     es: 'Producción y equipo',
     icon: CalendarDays,
-    itemIds: [
-      { destinationId: 'planning' },
-      { destinationId: 'scheduling' },
-      { destinationId: 'team' },
-    ],
+    itemIds: [{ destinationId: 'scheduling' }, { destinationId: 'team' }],
   },
   {
     id: 'administration',
@@ -453,13 +434,11 @@ export function navigationRegistryValidationErrors() {
   const destinationIds = navigationDestinations.map(({ id }) => id);
   const destinationPaths = navigationDestinations.map(({ href }) => href);
   const sectionIds = navigationSections.map(({ id }) => id);
-  const referencedDestinationIds = navigationSections.flatMap(({ itemIds }) =>
-    itemIds.map(({ destinationId }) => destinationId),
-  );
-  if (new Set(destinationIds).size !== destinationIds.length)
-    errors.push('Destination IDs must be unique.');
-  if (new Set(destinationPaths).size !== destinationPaths.length)
-    errors.push('Destination paths must be unique.');
+  const referencedDestinationIds = navigationSections.flatMap(({ itemIds }) => (
+    itemIds.map(({ destinationId }) => destinationId)
+  ));
+  if (new Set(destinationIds).size !== destinationIds.length) errors.push('Destination IDs must be unique.');
+  if (new Set(destinationPaths).size !== destinationPaths.length) errors.push('Destination paths must be unique.');
   if (new Set(sectionIds).size !== sectionIds.length) errors.push('Section IDs must be unique.');
   if (new Set(referencedDestinationIds).size !== referencedDestinationIds.length) {
     errors.push('Sidebar destinations must appear in only one section.');
@@ -479,9 +458,9 @@ export function navigationRegistryValidationErrors() {
       errors.push(`Destination ${destination.id} references unknown parent ${destination.parent}.`);
     }
     if (
-      destination.sidebar !== false &&
-      destination.itemType !== 'home' &&
-      !referencedDestinationIds.includes(destination.id)
+      destination.sidebar !== false
+      && destination.itemType !== 'home'
+      && !referencedDestinationIds.includes(destination.id)
     ) {
       errors.push(`Sidebar destination ${destination.id} is not placed in a section.`);
     }
@@ -511,9 +490,11 @@ export function canViewNavigationDestination(
   destination: NavigationDestination,
   permissions: readonly string[],
 ) {
-  return destination.permissions.every((permission) => permissions.includes(permission))
+  return (
+    destination.permissions.every((permission) => permissions.includes(permission))
     && (!destination.anyPermissions
-      || destination.anyPermissions.some((permission) => permissions.includes(permission)));
+      || destination.anyPermissions.some((permission) => permissions.includes(permission)))
+  );
 }
 
 export function isNavigationDestinationCurrent(
@@ -521,15 +502,15 @@ export function isNavigationDestinationCurrent(
   path: string,
 ) {
   return (
-    path === destination.href ||
-    (destination.href !== '/app' && path.startsWith(`${destination.href}/`))
+    path === destination.href
+    || (destination.href !== '/app' && path.startsWith(`${destination.href}/`))
   );
 }
 
 export function getVisibleNavigationDestinations(permissions: readonly string[]) {
   return navigationDestinations.filter(
-    (destination) =>
-      destination.sidebar !== false && canViewNavigationDestination(destination, permissions),
+    (destination) => destination.sidebar !== false
+      && canViewNavigationDestination(destination, permissions),
   );
 }
 
@@ -544,9 +525,9 @@ export function getVisibleSectionDestinations(
   section: NavigationSection,
   permissions: readonly string[],
 ) {
-  return getSectionDestinations(section).filter(({ destination }) =>
-    canViewNavigationDestination(destination, permissions),
-  );
+  return getSectionDestinations(section).filter(({ destination }) => (
+    canViewNavigationDestination(destination, permissions)
+  ));
 }
 
 export function isNavigationSectionCurrent(
@@ -555,8 +536,8 @@ export function isNavigationSectionCurrent(
   permissions: readonly string[],
 ) {
   return getVisibleSectionDestinations(section, permissions).some(
-    ({ active, destination }) =>
-      active !== false && isNavigationDestinationCurrent(destination, path),
+    ({ active, destination }) => active !== false
+      && isNavigationDestinationCurrent(destination, path),
   );
 }
 
@@ -564,9 +545,8 @@ export function getMobileNavigationDestinations(permissions: readonly string[]) 
   return getVisibleNavigationDestinations(permissions)
     .filter((destination) => destination.mobilePriority !== undefined)
     .sort(
-      (left, right) =>
-        (left.mobilePriority ?? Number.MAX_SAFE_INTEGER) -
-        (right.mobilePriority ?? Number.MAX_SAFE_INTEGER),
+      (left, right) => (left.mobilePriority ?? Number.MAX_SAFE_INTEGER)
+        - (right.mobilePriority ?? Number.MAX_SAFE_INTEGER),
     );
 }
 

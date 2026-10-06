@@ -10,6 +10,7 @@ import type {
 import type {
   MixerBatch, ProductionLot, ProductionPlan,
 } from '@/domain/production';
+import type { DemandCoverage } from '@/domain/demand-coverage';
 import type {
   productRowSchema, Recipe, recipeVersionRowSchema,
 } from '@/domain/recipes';
@@ -41,6 +42,7 @@ export interface PurchasingWorkspaceRecords {
 /** Data-access boundary implemented by the active persistence provider. */
 export interface PurchasingRepository {
   loadWorkspaceRecords(this: void): Promise<PurchasingWorkspaceRecords>;
+  loadDemandCoverage(this: void): Promise<DemandCoverage[]>;
   loadMaterialRequirements(this: void, planId: string): Promise<MaterialAvailability[]>;
   loadProductionBatches(this: void, orderId: string): Promise<PurchasingProductionBatch[]>;
 }

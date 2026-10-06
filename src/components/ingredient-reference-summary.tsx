@@ -22,11 +22,23 @@ export default function IngredientReferenceSummary({
       {quantities ? (
         <dl>
           <dt>{recipeText(locale, 'On hand')}</dt>
-          <dd>{formatNumber(quantities.onHand)} {unit}</dd>
+          <dd>
+            {formatNumber(quantities.onHand)}
+            {' '}
+            {unit}
+          </dd>
           <dt>{locale === 'es' ? 'Entrante en órdenes de compra abiertas' : 'Open purchase-order inbound'}</dt>
-          <dd>{formatNumber(quantities.inbound)} {unit}</dd>
+          <dd>
+            {formatNumber(quantities.inbound)}
+            {' '}
+            {unit}
+          </dd>
           <dt>{locale === 'es' ? 'Comprometido con planes de producción activos' : 'Committed to active production plans'}</dt>
-          <dd>{formatNumber(quantities.committed)} {unit}</dd>
+          <dd>
+            {formatNumber(quantities.committed)}
+            {' '}
+            {unit}
+          </dd>
         </dl>
       ) : <p>{recipeText(locale, 'Inventory details unavailable with your access')}</p>}
     </section>

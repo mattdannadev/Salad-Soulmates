@@ -3,7 +3,7 @@
   gap: 1.25rem;
 }
 .controlBar {
-  display: flex;
+  display: none;
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 0.75rem;
@@ -99,14 +99,39 @@
 }
 
 .queueComposer h2,
-.queueComposer p { margin: 0; }
-.queueComposer p { color: #52635a; font-size: 0.9rem; }
-.queueFields { display: grid; gap: 0.65rem; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
+.queueComposer p {
+  margin: 0;
+}
+.queueComposer p {
+  color: #52635a;
+  font-size: 0.9rem;
+}
+.queueFields {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+}
 .queueFields label,
-.queueInstructions { display: grid; gap: 0.25rem; font-size: 0.85rem; font-weight: 600; }
-.queueTitle { grid-column: span 2; }
-.queueActions { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
-@media (max-width: 640px) { .queueTitle { grid-column: auto; } }
+.queueInstructions {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.queueTitle {
+  grid-column: span 2;
+}
+.queueActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+@media (max-width: 640px) {
+  .queueTitle {
+    grid-column: auto;
+  }
+}
 .actions .publish {
   border-color: #176240;
   background: #fff;
@@ -119,38 +144,6 @@
 .viewSwitch button[aria-pressed='true'] {
   background: #d9efe1;
   border-color: #176240;
-}
-.capacity {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 0.7rem;
-  padding: 0.8rem 1rem;
-  border-radius: 0.65rem;
-  background: #f0f8f1;
-}
-.capacity label {
-  display: grid;
-  gap: 0.25rem;
-  font-weight: 650;
-}
-.capacity input {
-  border: 1px solid #a9b8b0;
-  border-radius: 0.45rem;
-  padding: 0.45rem 0.6rem;
-  background: #fff;
-  color: #143b2c;
-  font: inherit;
-  max-width: 140px;
-}
-.capacity button {
-  border: 1px solid #176240;
-  border-radius: 0.45rem;
-  background: #176240;
-  color: #fff;
-  padding: 0.55rem 0.9rem;
-  font: inherit;
-  cursor: pointer;
 }
 .workweek {
   border: 1px solid #d2e0d8;
@@ -175,7 +168,9 @@
   font-size: 0.82rem;
   margin: 0.2rem 0 0;
 }
-.workweekHeading > span { white-space: nowrap; }
+.workweekHeading > span {
+  white-space: nowrap;
+}
 .dayCards {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -194,17 +189,42 @@
   gap: 0.35rem;
   font-size: 0.82rem;
 }
-.dayCardTitle span { color: #4c6055; white-space: nowrap; }
-.dayCard dl { margin: 0.65rem 0; display: grid; gap: 0.35rem; }
-.dayCard dl div { display: flex; justify-content: space-between; gap: 0.4rem; font-size: 0.78rem; }
-.dayCard dt { color: #4c6055; }
-.dayCard dd { margin: 0; font-weight: 700; }
-.dayCard p { margin: 0; font-size: 0.76rem; font-weight: 650; }
-.gap { color: #9a4c08; }
-.covered { color: #176240; }
+.dayCardTitle span {
+  color: #4c6055;
+  white-space: nowrap;
+}
+.dayCard dl {
+  margin: 0.65rem 0;
+  display: grid;
+  gap: 0.35rem;
+}
+.dayCard dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+}
+.dayCard dt {
+  color: #4c6055;
+}
+.dayCard dd {
+  margin: 0;
+  font-weight: 700;
+}
+.dayCard p {
+  margin: 0;
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+.gap {
+  color: #9a4c08;
+}
+.covered {
+  color: #176240;
+}
 .layout {
   display: grid;
-  grid-template-columns: minmax(210px, 260px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
 }
@@ -217,6 +237,9 @@
   background: #fff;
   padding: 1rem;
   min-width: 0;
+}
+.sidebar {
+  display: none;
 }
 .sidebar h2,
 .summary h2,
@@ -254,8 +277,42 @@
   border-color: #d9b77c;
   background: #fffaf1;
 }
-.employeeConflictDetail { margin-left: auto; color: #8a5108; font-size: 0.78rem; text-align: right; }
-.fieldHelp { color: #4c6055; font-size: 0.78rem; font-weight: 500; }
+.employeeConflictDetail {
+  margin-left: auto;
+  color: #8a5108;
+  font-size: 0.78rem;
+  text-align: right;
+}
+.fieldHelp {
+  color: #4c6055;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+.orderContext {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+.orderContext > .fieldHelp {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.relatedWork {
+  border: 1px solid #d2e0d8;
+  border-radius: 0.5rem;
+  padding: 0.65rem;
+}
+.relatedWork summary {
+  cursor: pointer;
+  font-weight: 650;
+}
+.relatedWork[open] {
+  display: grid;
+  gap: 0.6rem;
+}
+.relatedWork .fieldHelp {
+  margin: 0;
+}
 .personOption {
   width: 100%;
   background: #fff;
@@ -327,16 +384,210 @@
   display: grid;
   gap: 0.75rem;
 }
-.calendar > * {
+.workspace[data-schedule-expanded='true'] > :not(.layout) {
+  display: none;
+}
+.calendarExpanded {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  width: 100%;
+  height: 100dvh;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 0;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.calendarExpanded > .calendarControls {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+}
+.calendar.calendarExpanded > section {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.calendarExpanded > section > :not(:global(.b-gantt), :global(.b-calendar)) {
+  flex: 0 0 auto;
+}
+.calendarExpanded :global(.b-gantt),
+.calendarExpanded :global(.b-calendar) {
+  flex: 1 1 auto;
+  height: auto !important;
+  min-height: 0;
+}
+@media (max-width: 650px) {
+  .calendarExpanded {
+    padding: 0.5rem;
+    overflow: auto;
+  }
+  .calendar.calendarExpanded > section {
+    min-height: 400px;
+  }
+}
+.calendarControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding: 0 0 0.75rem;
+  border-bottom: 1px solid #dce8df;
+}
+.orderFocus {
+  display: flex;
+  flex: 2 1 24rem;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.55rem;
+  min-width: min(100%, 19rem);
+}
+.orderFocusLabel {
+  flex-basis: 100%;
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.orderFocus label {
+  flex: 1 1 10rem;
+}
+.clearOrderFocus {
+  min-height: 44px;
+  border: 1px solid #176240;
+  border-radius: 0.45rem;
+  background: #eff8f2;
+  color: #14532d;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 0.42rem 0.65rem;
+}
+.clearOrderFocus:focus-visible {
+  outline: 3px solid #c8801c;
+  outline-offset: 2px;
+}
+.calendarControls label {
+  display: grid;
+  gap: 0.3rem;
+  color: #143b2c;
+  font-size: 0.8rem;
+  font-weight: 650;
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+.calendarControls select {
+  min-height: 44px;
+  min-width: 0;
+  width: 100%;
+  max-width: 22rem;
+  border: 1px solid #a9b8b0;
+  border-radius: 0.45rem;
+  padding: 0.42rem 2rem 0.42rem 0.55rem;
+  background: #fff;
+  color: #143b2c;
+  font: inherit;
+}
+.calendarActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+.surfaceToggle {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid #9ab3a5;
+  border-radius: 0.45rem;
+  background: #fff;
+}
+.surfaceToggle a {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  min-height: 44px;
+  border: 0;
+  border-right: 1px solid #dce8df;
+  background: transparent;
+  color: #143b2c;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  padding: 0.42rem 0.65rem;
+}
+.surfaceToggle a:last-child {
+  border-right: 0;
+}
+.surfaceToggle .surfaceSelected {
+  background: #176240;
+  color: #fff;
+}
+.surfaceToggle a:focus-visible {
+  outline: 3px solid #c8801c;
+  outline-offset: -3px;
+}
+.calendarActions button {
+  min-height: 44px;
+  border: 1px solid #9ab3a5;
+  border-radius: 0.45rem;
+  background: #fff;
+  color: #143b2c;
+  cursor: pointer;
+  font: inherit;
+  padding: 0.42rem 0.65rem;
+}
+.calendarActions .publish {
+  border-color: #176240;
+  background: #176240;
+  color: #fff;
+}
+.calendarActions button:focus-visible,
+.calendarControls select:focus-visible {
+  outline: 3px solid #c8801c;
+  outline-offset: 2px;
+}
+.calendar > :not(.calendarControls) {
   min-width: 500px;
   min-height: 540px;
 }
-.calendarOverview { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.45rem; min-height: 0 !important; }
-.calendarDaySummary { display: grid; gap: 0.18rem; padding: 0.55rem 0.65rem; border: 1px solid #dce8df; border-radius: 0.5rem; background: #f7fbf8; font-size: 0.78rem; }
-.calendarDaySummary strong { color: #143b2c; }
-.calendarDaySummary span { color: #4c6055; }
-.calendarDaySummary .covered { color: #176240; font-weight: 650; }
-.calendarDaySummary .gap { color: #9a4c08; font-weight: 650; }
+.calendarOverview {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.45rem;
+  min-height: 0 !important;
+}
+.calendarDaySummary {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #dce8df;
+  border-radius: 0.5rem;
+  background: #f7fbf8;
+  font-size: 0.78rem;
+}
+.calendarDaySummary strong {
+  color: #143b2c;
+}
+.calendarDaySummary span {
+  color: #4c6055;
+}
+.calendarDaySummary .covered {
+  color: #176240;
+  font-weight: 650;
+}
+.calendarDaySummary .gap {
+  color: #9a4c08;
+  font-weight: 650;
+}
 .summaryHeader {
   display: flex;
   flex-wrap: wrap;
@@ -440,6 +691,25 @@
 .modal h2 {
   margin: 0;
 }
+.summaryDetails {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+.summaryDetails div {
+  display: grid;
+  gap: 0.15rem;
+}
+.summaryDetails dt {
+  color: #4c6055;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.summaryDetails dd {
+  margin: 0;
+  white-space: pre-wrap;
+}
 .modal fieldset {
   border: 1px solid #d2e0d8;
   border-radius: 0.5rem;
@@ -458,42 +728,36 @@
   justify-content: flex-end;
   gap: 0.5rem;
 }
-.dialogActions button { min-width: 6.5rem; }
+.dialogActions button {
+  min-width: 6.5rem;
+}
 .dialogActions button:first-child:not(:last-child) {
   margin-right: auto;
 }
 @media (max-width: 1000px) {
-  .dayCards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .layout {
-    grid-template-columns: 1fr;
-  }
-  .sidebar {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    column-gap: 1rem;
-  }
-  .sidebar h2:not(:first-child) {
-    margin-top: 0;
+  .dayCards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 @media (max-width: 650px) {
-  .workweekHeading { align-items: flex-start; flex-direction: column; }
-  .dayCards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .calendarOverview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .sidebar {
-    display: block;
+  .workweekHeading {
+    align-items: flex-start;
+    flex-direction: column;
   }
-  .sidebar h2:not(:first-child) {
-    margin-top: 1.2rem;
+  .dayCards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .calendarOverview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .dates {
     grid-template-columns: 1fr;
   }
+  .orderContext {
+    grid-template-columns: 1fr;
+  }
   .layout {
     order: 5;
-  }
-  .calendar {
-    display: none;
   }
   .assignments {
     order: 2;
@@ -506,5 +770,34 @@
   .assignments button,
   .dialogActions button {
     min-height: 48px;
+  }
+  .calendarControls {
+    align-items: stretch;
+  }
+  .calendarControls label,
+  .orderFocus,
+  .calendarActions {
+    flex: 1 1 100%;
+  }
+  .calendarControls select {
+    max-width: none;
+  }
+  .surfaceToggle {
+    display: flex;
+    width: 100%;
+  }
+  .surfaceToggle a {
+    flex: 1;
+    justify-content: center;
+    text-align: center;
+  }
+  .calendarActions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  }
+  .calendarControls select,
+  .clearOrderFocus,
+  .calendarActions button {
+    width: 100%;
   }
 }

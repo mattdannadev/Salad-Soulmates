@@ -11,16 +11,18 @@ import { productionPlanSchema } from '@/domain/production';
 import { rowSchemas } from '@/domain/master-data';
 import { purchaseProgress } from '@/domain/supplier-orders';
 import inventoryBalances, { inventoryUnits } from '@/domain/inventory';
+import { readFacilitySchedule, readScheduleCustomerOrders } from '@/data/scheduling';
+import { addScheduleDays, workforceScheduleSchema } from '@/domain/scheduling';
+import { facilityDate } from '@/domain/format';
 import { requireAdminShell } from './auth';
 import hasPermission from './permissions';
 import { rows, readResult } from './data';
-import { readFacilitySchedule } from '@/data/scheduling';
-import { addScheduleDays, workforceScheduleSchema } from '@/domain/scheduling';
-import { facilityDate } from '@/domain/format';
 
 /** Each operational panel checks all permissions needed to interpret its records. */
 export default async function loadDashboard() {
   const { db, profile } = await requireAdminShell();
+  const scheduleStartOn = facilityDate();
+  const scheduleEndOn = addScheduleDays(scheduleStartOn, 7);
   const permissions = [
     'orders.read',
     'planning.read',
@@ -44,7 +46,8 @@ export default async function loadDashboard() {
   const canPurchases = orderAccess && planningAccess && inventoryAccess && masterAccess;
   const canStock = inventoryAccess && masterAccess;
   const canCoverage = canPurchases && productAccess;
-  const canViewSchedule = Boolean(workforceAccess && profile.facility_id);
+  const scheduleFacilityId = workforceAccess ? profile.facility_id : null;
+  const canViewSchedule = Boolean(scheduleFacilityId);
   const [
     orders,
     plans,
@@ -56,6 +59,7 @@ export default async function loadDashboard() {
     events,
     production,
     scheduleResult,
+    scheduleOrdersResult,
   ] = await Promise.all([
     canOrders ? rows(db, 'customer_orders', customerOrderRowSchema) : [],
     canOrders ? rows(db, 'material_plans', materialPlanRowSchema) : [],
@@ -66,32 +70,57 @@ export default async function loadDashboard() {
     canStock ? rows(db, 'ingredients', rowSchemas.ingredients) : [],
     canStock ? rows(db, 'inventory_events', rowSchemas.inventory_events) : [],
     canOrders ? rows(db, 'order_production_plans', productionPlanSchema) : [],
-    canViewSchedule
+    scheduleFacilityId
       ? readFacilitySchedule(db, {
-          facility_id: profile.facility_id!,
-          start_on: facilityDate(),
-          end_on: addScheduleDays(facilityDate(), 8),
-        })
+        facility_id: scheduleFacilityId,
+        start_on: scheduleStartOn,
+        end_on: scheduleEndOn,
+      })
+      : Promise.resolve(null),
+    scheduleFacilityId
+      ? readScheduleCustomerOrders(db, {
+        facility_id: scheduleFacilityId,
+        start_on: scheduleStartOn,
+        end_on: scheduleEndOn,
+      })
       : Promise.resolve(null),
   ]);
   if (scheduleResult?.error) throw new Error('Unable to load the dashboard schedule.');
+  if (scheduleOrdersResult?.error) throw new Error('Unable to load dashboard schedule context.');
   const schedule = scheduleResult ? workforceScheduleSchema.parse(scheduleResult.data) : null;
-  const employeeNames = new Map((schedule?.employees ?? []).map((employee) => [employee.id, employee.display_name]));
+  const scheduleOrders = scheduleOrdersResult ? z.array(z.object({
+    id: z.uuid(),
+    customer_id: z.uuid(),
+    customer_name: z.string(),
+    reference: z.string(),
+    needed_on: z.iso.date(),
+  })).parse(scheduleOrdersResult.data) : [];
+  const employeeNames = new Map((schedule?.employees ?? []).map((employee) => (
+    [employee.id, employee.display_name]
+  )));
   const ptoTypeNames = new Map((schedule?.pto_types ?? []).map((type) => [type.id, type.name]));
   const today = facilityDate();
   const upcomingSchedule = (schedule?.events ?? [])
     .filter((event) => event.end_on > today)
     .toSorted(
-      (left, right) =>
-        left.start_on.localeCompare(right.start_on) || left.id.localeCompare(right.id),
+      (left, right) => left.start_on.localeCompare(right.start_on)
+          || left.start_at.localeCompare(right.start_at)
+          || left.id.localeCompare(right.id),
     )
     .map((event) => ({
       id: event.id,
+      startAt: event.start_at,
       startOn: event.start_on,
       endOn: event.end_on,
       kind: event.kind,
       title: event.title,
       productionPlanId: event.production_plan_id,
+      linkedTaskType: event.linked_task_type,
+      linkedTaskId: event.linked_task_id,
+      productId: event.product_id,
+      customerId: event.customer_id,
+      batchCount: event.planned_batch_count,
+      requiredWorkerCount: event.required_worker_count,
       employeeCount: event.employee_ids.length,
       assigneeNames: event.employee_ids.map((id) => employeeNames.get(id) ?? '—'),
       ptoNames: (schedule?.pto ?? [])
@@ -116,19 +145,17 @@ export default async function loadDashboard() {
     .toSorted((a, b) => a.expected_on.localeCompare(b.expected_on));
   const coverage = canCoverage
     ? readResult(
-        await db.rpc('demand_coverage'),
-        z.array(demandCoverageSchema),
-        'dashboard_demand_coverage',
-      )
+      await db.rpc('demand_coverage'),
+      z.array(demandCoverageSchema),
+      'dashboard_demand_coverage',
+    )
     : [];
   const balances = inventoryBalances(events);
   const receivedUnits = inventoryUnits(events);
   const demand = new Map<string, number>();
-  activePlans.forEach((plan) =>
-    plan.requirements.forEach((item) => {
-      demand.set(item.ingredient_id, (demand.get(item.ingredient_id) ?? 0) + item.required);
-    }),
-  );
+  activePlans.forEach((plan) => plan.requirements.forEach((item) => {
+    demand.set(item.ingredient_id, (demand.get(item.ingredient_id) ?? 0) + item.required);
+  }));
   const stock = ingredients
     .filter((ingredient) => ingredient.active)
     .map((ingredient) => ({
@@ -138,11 +165,10 @@ export default async function loadDashboard() {
       demand: demand.get(ingredient.id) ?? 0,
     }))
     .toSorted(
-      (a, b) =>
-        Number(b.demand > 0) - Number(a.demand > 0) ||
-        Number(b.balance !== null && b.balance <= 0) -
-          Number(a.balance !== null && a.balance <= 0) ||
-        a.name.localeCompare(b.name),
+      (a, b) => Number(b.demand > 0) - Number(a.demand > 0)
+        || Number(b.balance !== null && b.balance <= 0)
+          - Number(a.balance !== null && a.balance <= 0)
+        || a.name.localeCompare(b.name),
     );
   return {
     profile,
@@ -160,5 +186,14 @@ export default async function loadDashboard() {
     stock,
     production,
     upcomingSchedule,
+    scheduleStartOn,
+    scheduleEndOn,
+    scheduleOrders: scheduleOrders.map((order) => ({
+      id: order.id,
+      customerName: order.customer_name,
+      orderReference: order.reference,
+      pickupOn: order.needed_on,
+    })),
+    scheduleProducts: schedule?.products ?? [],
   };
 }

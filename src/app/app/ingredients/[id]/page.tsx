@@ -11,11 +11,11 @@ import { PackForm } from '@/components/master-forms';
 import { PageHeader } from '@/components/shell';
 import { loadIngredientReferenceSummary } from '@/lib/ingredient-stock';
 import IngredientReferenceSummary from '@/components/ingredient-reference-summary';
-import recipeText from '@/domain/recipe-text';
 import BackButton from '@/components/back-button';
 import {
   ingredientReturnContext, ingredientReturnHref, ingredientSupplierRecoveryHref,
 } from '../return-context';
+import { organizationMeasurementSystem, selectableUoms } from '@/services/uoms';
 
 export default async function IngredientDetail({
   params, searchParams,
@@ -53,10 +53,11 @@ export default async function IngredientDetail({
     hasPermission(db, 'master_data.write'),
     loadIngredientReferenceSummary(db, id),
     db.from('facilities').select('name').eq('id', profile.facility_id).single(),
+    organizationMeasurementSystem(db),
   ]);
   const [
     allergens, translations, links, suppliers, allPacks,
-    categoryResult, unitsResult, canWrite, referenceSummary, facilityResult,
+    categoryResult, unitsResult, canWrite, referenceSummary, facilityResult, measurementSystem,
   ] = details;
   const translation = readResult(
     translations,
@@ -87,6 +88,7 @@ export default async function IngredientDetail({
     }).array(),
     'uoms',
   );
+  const selectableUnits = selectableUoms(units, measurementSystem);
   const facility = readResult(facilityResult, z.object({ name: z.string() }), 'ingredient_reference_facility');
   return (
     <>
@@ -115,7 +117,7 @@ export default async function IngredientDetail({
             allergens={allergens}
             selected={selected}
             categories={categories}
-            baseUnits={units.filter((unit) => unit.is_inventory_unit)}
+            baseUnits={selectableUnits.filter((unit) => unit.is_inventory_unit)}
             locale={profile.preferred_locale}
             returnContext={returnContext}
             directEntry={query.returnTo === undefined}
@@ -167,8 +169,8 @@ export default async function IngredientDetail({
                 ingredientId={id}
                 unit={ingredient.default_uom}
                 suppliers={suppliers}
-                purchaseUnits={units.filter((unit) => unit.is_purchase_unit)}
-                contentUnits={units.filter((unit) => unit.is_inventory_unit)}
+                purchaseUnits={selectableUnits.filter((unit) => unit.is_purchase_unit)}
+                contentUnits={selectableUnits.filter((unit) => unit.is_inventory_unit)}
               />
             ) : (
               <p>{pack.notes || 'No notes'}</p>
@@ -183,8 +185,8 @@ export default async function IngredientDetail({
                 ingredientId={id}
                 unit={ingredient.default_uom}
                 suppliers={suppliers}
-                purchaseUnits={units.filter((unit) => unit.is_purchase_unit)}
-                contentUnits={units.filter((unit) => unit.is_inventory_unit)}
+                purchaseUnits={selectableUnits.filter((unit) => unit.is_purchase_unit)}
+                contentUnits={selectableUnits.filter((unit) => unit.is_inventory_unit)}
               />
             </details>
           ) : (

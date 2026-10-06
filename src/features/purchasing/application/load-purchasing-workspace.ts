@@ -18,7 +18,10 @@ export async function loadPurchasingWorkspace(
   options: LoadPurchasingWorkspaceOptions,
 ) {
   const selectedId = z.uuid().optional().parse(options.selectedId);
-  const records = await repository.loadWorkspaceRecords();
+  const [records, demandCoverage] = await Promise.all([
+    repository.loadWorkspaceRecords(),
+    repository.loadDemandCoverage(),
+  ]);
   const selected = selectedId
     ? records.plans.find((plan) => plan.id === selectedId)
     : undefined;
@@ -40,6 +43,7 @@ export async function loadPurchasingWorkspace(
     canWrite: options.canWrite,
     selected,
     requirements,
+    demandCoverage,
     locale: options.locale,
   };
 }

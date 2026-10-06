@@ -6,18 +6,19 @@ import { z } from 'zod';
 import { PageHeader } from '@/components/shell';
 import DirectoryToolbar from '@/components/directory-toolbar';
 import CustomerOrderForm from '@/components/customer-order-form';
+import CreationDialog from '@/components/creation-dialog';
 import CustomerPickupDateForm from '@/components/customer-pickup-date-form';
-import OrderCardDetails from '@/components/order-card-details';
 import OrderProduction from '@/components/order-production';
 import OrderRequirements from '@/components/order-requirements';
 import { CancelMaterialPlan } from '@/components/purchase-status-form';
 import OrderDeactivateAction from '@/components/order-deactivate-action';
+import OrderProductionProposal from '@/components/order-production-proposal';
 import OrdersToast from '@/components/orders-toast';
 import { formatPrice } from '@/domain/customer-pricing';
 import { customerOrderLabel } from '@/domain/customer-orders';
 import { formatDate, formatNumber } from '@/domain/format';
 import loadPurchasingWorkspace from '@/lib/purchasing-data';
-import orderCards from '@/services/order-cards';
+import ListGrid, { type ListGridRow } from '@/components/list-grid';
 import {
   ORDER_PAGE_SIZE,
   orderDetailHref,
@@ -39,6 +40,7 @@ export default async function Orders({
       estimate: z.uuid().optional(),
       customer: z.uuid().optional(),
       draft: z.uuid().optional().catch(undefined),
+      create: z.literal('order').optional(),
     })
     .refine((value) => !value.order || !value.estimate)
     .safeParse(rawQuery);
@@ -52,9 +54,11 @@ export default async function Orders({
   ) notFound();
   const es = locale === 'es';
   const draftId = query.data.draft ?? randomUUID();
-  const allOrders = workspace.orders.filter((item) => workspace.plans.some(
-    (plan) => plan.id === item.id,
-  ));
+  function hasPlanWithStatus(orderId: string, status: 'Active' | 'inactive' | 'any') {
+    return workspace.plans.some((plan) => plan.id === orderId
+      && (status === 'any' || (status === 'Active' ? plan.status === 'Active' : plan.status !== 'Active')));
+  }
+  const allOrders = workspace.orders.filter((item) => hasPlanWithStatus(item.id, 'any'));
   const productTypes = [
     ...new Set(allOrders.flatMap((item) => item.items.map((line) => line.product_name))),
   ].sort((left, right) => left.localeCompare(right, locale));
@@ -67,7 +71,9 @@ export default async function Orders({
   const returnParams = new URL(directoryHref, 'https://internal.invalid').searchParams;
   if (query.data.customer) returnParams.set('customer', query.data.customer);
   returnParams.set('draft', draftId);
-  const orderReturnHref = `/app/orders?${returnParams}#new-order`;
+  const closeOrderHref = `/app/orders?${returnParams}`;
+  returnParams.set('create', 'order');
+  const orderReturnHref = `/app/orders?${returnParams}`;
   const activeLabel = es ? 'Activo' : 'Active';
   const cancelledLabel = es ? 'Cancelado' : 'Cancelled';
   const productionLabel = es ? 'Producción' : 'Production';
@@ -91,13 +97,8 @@ export default async function Orders({
   const legacy = workspace.plans.filter(
     (plan) => !workspace.orders.some((item) => item.id === plan.id),
   );
-  const {
-    orders, customers, plans, productionPlans,
-  } = workspace;
-  const savedCards = orderCards(orders, customers, plans, productionPlans);
-  const cardsById = new Map(savedCards.map((card) => [card.order.id, card]));
-  const activeOrders = allOrders.filter((item) => workspace.plans.some((plan) => plan.id === item.id && plan.status === 'Active'));
-  const historicalOrders = allOrders.filter((item) => workspace.plans.some((plan) => plan.id === item.id && plan.status !== 'Active'));
+  const activeOrders = allOrders.filter((item) => hasPlanWithStatus(item.id, 'Active'));
+  const historicalOrders = allOrders.filter((item) => hasPlanWithStatus(item.id, 'inactive'));
   const availableOrders = directoryQuery.view === 'historical' ? historicalOrders : activeOrders;
   const search = directoryQuery.q.toLocaleLowerCase(locale);
   const filteredOrders = availableOrders
@@ -139,11 +140,63 @@ export default async function Orders({
       const ordered = directoryQuery.sort === 'pickup-oldest' ? pickupOrder : -pickupOrder;
       return ordered || a.id.localeCompare(b.id);
     });
-  const pageCount = Math.max(1, Math.ceil(filteredOrders.length / ORDER_PAGE_SIZE));
-  const directoryOrders = filteredOrders.slice(
-    (directoryQuery.page - 1) * ORDER_PAGE_SIZE,
-    directoryQuery.page * ORDER_PAGE_SIZE,
-  );
+  const orderRows: ListGridRow[] = filteredOrders.map((item) => {
+    const production = workspace.productionPlans.find(
+      (plan) => plan.id === item.id && plan.status !== 'Cancelled',
+    );
+    const batchCount = item.items.reduce((total, line) => total + line.batch_count, 0);
+    const products = item.items.map((line) => line.product_name).join(', ');
+    const orderHref = orderDetailHref(directoryHref, item.id);
+    const actions = [
+      {
+        label: es ? 'Ver pedido' : 'View order',
+        href: orderHref,
+      },
+    ];
+    if (directoryQuery.view !== 'historical') {
+      actions.push(
+        {
+          label: es ? 'Comprar ingredientes' : 'Purchase ingredients',
+          href: `/app/purchasing?plan=${item.id}`,
+        },
+        {
+          label: es ? 'Planificar producción' : 'Plan production',
+          href: `/app/scheduling?order=${item.id}`,
+        },
+        {
+          label: es ? 'Preparar recogida' : 'Prepare pickup',
+          href: `/app/shipping?order=${item.id}`,
+        },
+      );
+    }
+    return {
+      id: item.id,
+      cells: {
+        order: {
+          text: item.reference || item.id.slice(0, 8),
+          href: orderHref,
+          secondary: `${products} · ${formatNumber(batchCount)} ${es ? 'lotes' : 'batches'}`,
+        },
+        customer: { text: item.customer_name },
+        pickup: { text: formatDate(item.needed_on), sortValue: item.needed_on },
+        production: {
+          text: production?.start_on
+            ? `${productionLabel} ${formatDate(production.start_on)}`
+            : unplannedLabel,
+          badge: production?.start_on ? 'default' : 'muted',
+        },
+        status: {
+          text: directoryQuery.view === 'historical' ? cancelledLabel : activeLabel,
+          badge: directoryQuery.view === 'historical' ? 'muted' : 'default',
+        },
+        actions: {
+          text: '',
+          actions,
+          actionsLabel: es ? 'Más acciones' : 'More actions',
+        },
+      },
+    };
+  });
   const toolbarFilters = [
     {
       key: 'customerFilter',
@@ -189,13 +242,28 @@ export default async function Orders({
   if (directoryQuery.view === 'historical') {
     noOrdersTitle = es ? 'Aún no hay pedidos históricos' : 'No historical orders yet';
     noOrdersDescription = es
-      ? 'Los pedidos desactivados aparecerán aquí.' : 'Deactivated orders will appear here.';
+      ? 'Los pedidos desactivados aparecerán aquí.'
+      : 'Deactivated orders will appear here.';
   }
-  let noMatchesDescription = es
-    ? 'Ajusta la búsqueda o los filtros.' : 'Adjust the search or filters.';
-  if (directoryQuery.page > pageCount) {
-    noMatchesDescription = es
-      ? 'Esta página ya no tiene resultados.' : 'This page no longer has results.';
+  const noMatchesDescription = es
+    ? 'Ajusta la búsqueda o los filtros.'
+    : 'Adjust the search or filters.';
+  let headerAction;
+  if (selected) {
+    headerAction = (
+      <Link
+        className="button secondary"
+        href={`${directoryHref}${query.data.order ? `#order-${query.data.order}` : ''}`}
+      >
+        {es ? 'Volver a pedidos' : 'Back to orders'}
+      </Link>
+    );
+  } else if (workspace.canOrder) {
+    headerAction = (
+      <Link className="button button--compact" href={orderReturnHref} scroll={false}>
+        {es ? 'Nuevo pedido' : 'New order'}
+      </Link>
+    );
   }
   return (
     <>
@@ -207,21 +275,26 @@ export default async function Orders({
             ? 'Registra productos, lotes y fecha de recogida. El pedido calcula ingredientes, revisa inventario y prepara la estimación de compras.'
             : 'Choose a customer, package prices, batches and pickup date. Each order calculates ingredients and connects purchasing to production preparation.'
         }
-        action={
-          selected ? (
-            <Link
-              className="button secondary"
-              href={`${directoryHref}${query.data.order ? `#order-${query.data.order}` : ''}`}
-            >
-              {es ? 'Volver a pedidos' : 'Back to orders'}
-            </Link>
-          ) : undefined
-        }
+        action={headerAction}
       />
       {selected ? (
         <>
           <section className="panel">
             <h2>{order ? customerOrderLabel(order) : selected.name}</h2>
+            {order && selected.status === 'Active' && workspace.canOrder ? (
+              <OrderProductionProposal
+                orderId={order.id}
+                orderLabel={customerOrderLabel(order)}
+                locale={locale}
+              />
+            ) : null}
+            {order && (
+              <p>
+                <Link className="button secondary" href={`/app/scheduling?order=${order.id}`}>
+                  {es ? 'Planificar producción' : 'Plan Production'}
+                </Link>
+              </p>
+            )}
             {order && (
               <p>
                 <Link href={`/app/shipping?order=${order.id}`}>
@@ -237,10 +310,11 @@ export default async function Orders({
                 locale={locale}
               />
             )}
-            {order && selected.status === 'Active' && workspace.canOrder ? (
+            {order && workspace.canOrder ? (
               <OrderDeactivateAction
                 orderId={order.id}
                 orderLabel={customerOrderLabel(order)}
+                locale={locale}
                 returnToDirectory
               />
             ) : null}
@@ -361,7 +435,6 @@ export default async function Orders({
                 }}
                 locale={locale}
                 mobileFilters
-                pageCount={pageCount}
               />
             </Suspense>
             {!availableOrders.length && (
@@ -374,112 +447,52 @@ export default async function Orders({
                   </Link>
                 ) : null}
                 {directoryQuery.view !== 'historical' && workspace.canOrder && (
-                  <Link href="#new-order">{es ? 'Crear pedido' : 'Create order'}</Link>
+                  <Link href={orderReturnHref} scroll={false}>{es ? 'Crear pedido' : 'Create order'}</Link>
                 )}
               </div>
             )}
-            {!!availableOrders.length && !directoryOrders.length && (
+            {!!availableOrders.length && !filteredOrders.length && (
               <div className="empty order-empty-state">
                 <h3>{es ? 'No hay pedidos en esta vista' : 'No orders in this view'}</h3>
                 <p>{noMatchesDescription}</p>
                 <Link href="/app/orders">{es ? 'Borrar filtros' : 'Clear all'}</Link>
               </div>
             )}
-            <div className="orders-by-customer">
-              {Object.entries(Object.groupBy(directoryOrders, (item) => item.customer_name))
-                .toSorted(
-                  ([a], [b]) => (directoryQuery.sort === 'customer-desc' ? -1 : 1) * a.localeCompare(b, locale),
-                )
-                .map(([customerName, customerOrders]) => (
-                  <section
-                    className="order-customer-group"
-                    key={customerName}
-                    aria-label={`${customerName} ${directoryQuery.view === 'historical' ? 'historical' : 'active'} orders`}
-                  >
-                    <h3>
-                      <span className="order-customer-label">{es ? 'Cliente' : 'Customer'}</span>
-                      <span>{customerName}</span>
-                      <span className="order-customer-count">
-                        {`${customerOrders?.length ?? 0} ${es ? 'pedidos' : 'orders'}`}
-                      </span>
-                    </h3>
-                    <div className="orders-grid">
-                      {customerOrders?.map((item) => {
-                        const card = cardsById.get(item.id);
-                        if (!card) throw new Error('Saved order card missing');
-                        const production = workspace.productionPlans.find(
-                          (plan) => plan.id === item.id && plan.status !== 'Cancelled',
-                        );
-                        const productionText = production?.start_on
-                          ? `${productionLabel} ${formatDate(production.start_on)}`
-                          : unplannedLabel;
-                        return (
-                          <article
-                            className="order-card"
-                            id={`order-${item.id}`}
-                            tabIndex={-1}
-                            key={item.id}
-                          >
-                            <div className="order-card-main">
-                              <p className="order-card-reference">
-                                {item.reference || item.id.slice(0, 8)}
-                              </p>
-                              <h4>
-                                <Link href={orderDetailHref(directoryHref, item.id)}>
-                                  {formatDate(item.needed_on)}
-                                </Link>
-                              </h4>
-                              <OrderCardDetails card={card} locale={locale} />
-                              <div className="order-card-badges">
-                                <span className="badge">
-                                  {directoryQuery.view === 'historical'
-                                    ? cancelledLabel
-                                    : activeLabel}
-                                </span>
-                                <span className="badge">{productionText}</span>
-                              </div>
-                            </div>
-                            <div className="order-card-actions">
-                              <Link
-                                className="button secondary"
-                                href={orderDetailHref(directoryHref, item.id)}
-                              >
-                                {es ? 'Ver pedido' : 'View order'}
-                              </Link>
-                              {directoryQuery.view !== 'historical' && (
-                                <Link
-                                  className="button secondary"
-                                  href={`/app/purchasing?plan=${item.id}`}
-                                >
-                                  {es ? 'Comprar ingredientes' : 'Purchase ingredients'}
-                                </Link>
-                              )}
-                              {directoryQuery.view !== 'historical' && (
-                                <Link
-                                  className="button secondary"
-                                  href={`/app/shipping?order=${item.id}`}
-                                >
-                                  {es ? 'Preparar recogida' : 'Prepare pickup'}
-                                </Link>
-                              )}
-                              {directoryQuery.view !== 'historical' && workspace.canOrder ? (
-                                <OrderDeactivateAction
-                                  orderId={item.id}
-                                  orderLabel={customerOrderLabel(item)}
-                                />
-                              ) : null}
-                            </div>
-                          </article>
-                        );
-                      })}
-                    </div>
-                  </section>
-                ))}
-            </div>
+            {!!filteredOrders.length && (
+              <ListGrid
+                label={es ? 'Pedidos guardados' : 'Saved customer orders'}
+                locale={locale}
+                rows={orderRows}
+                columns={[
+                  {
+                    key: 'order', label: es ? 'Pedido' : 'Order', minWidth: 230, flex: 2,
+                  },
+                  {
+                    key: 'customer', label: es ? 'Cliente' : 'Customer', minWidth: 170, flex: 1,
+                  },
+                  { key: 'pickup', label: es ? 'Recogida' : 'Pickup', minWidth: 130 },
+                  { key: 'production', label: productionLabel, minWidth: 190 },
+                  { key: 'status', label: es ? 'Estado' : 'Status', minWidth: 115 },
+                  {
+                    key: 'actions',
+                    label: es ? 'Acciones' : 'Actions',
+                    minWidth: 300,
+                    flex: 2,
+                    sortable: false,
+                    filterable: false,
+                  },
+                ]}
+                pageSize={ORDER_PAGE_SIZE}
+              />
+            )}
           </section>
           {workspace.canOrder && (
-            <section className="panel">
-              <h2 id="new-order">{es ? 'Nuevo pedido' : 'New order'}</h2>
+            <CreationDialog
+              open={query.data.create === 'order'}
+              title={es ? 'Nuevo pedido' : 'New order'}
+              closeHref={closeOrderHref}
+              closeLabel={es ? 'Cerrar nuevo pedido' : 'Close new order'}
+            >
               <CustomerOrderForm
                 key={query.data.customer ?? 'new'}
                 initialCustomerId={query.data.customer}
@@ -490,7 +503,7 @@ export default async function Orders({
                 options={workspace.customerOptions}
                 locale={locale}
               />
-            </section>
+            </CreationDialog>
           )}
           {!!legacy.length && (
             <section className="panel">

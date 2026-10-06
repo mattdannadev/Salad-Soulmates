@@ -82,7 +82,7 @@ export default function ReceiptHistory({
                     const sourceLotLabel = sourceLotOriginLabel(line.source_lot_origin);
                     return (
                       <tr key={line.id}>
-                        <td>{purchase?.reference || (purchase ? purchase.id.slice(0, 8) : '—')}</td>
+                        <td>{purchase?.reference || (purchase ? purchase.id.slice(-8).toUpperCase() : '—')}</td>
                         <td>{ingredientNames.get(line.ingredient_id) ?? '—'}</td>
                         <td>{`${number(Number(line.quantity))} ${line.uom}`}</td>
                         <td>

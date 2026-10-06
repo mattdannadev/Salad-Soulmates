@@ -44,6 +44,7 @@ export default function createSupabaseTenantSignupRepository(): TenantSignupRepo
         contact_value: request.contactValue,
         preferred_locale: request.preferredLocale,
         requested_role: request.requestedRole,
+        regional_locale: request.regionalLocale ?? (request.preferredLocale === 'es' ? 'es-MX' : 'en-US'),
       });
       if (!error) return;
       if (error.code === '23505') throw new TenantSignupSubmissionError('duplicate');

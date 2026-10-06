@@ -7,6 +7,8 @@ import Link from 'next/link';
 import ListGrid from '@/components/list-grid';
 import SupplierDetailLink, { SupplierHashDetails } from '@/components/supplier-detail-link';
 import { returnContextSearchParams } from '@/lib/return-context';
+import { supplierReturnContext } from '@/lib/supplier-return-context';
+import CreationDialog from '@/components/creation-dialog';
 import { Suspense } from 'react';
 import DirectoryToolbar from '@/components/directory-toolbar';
 import {
@@ -30,9 +32,14 @@ export default async function Suppliers({
     suppliers, locale, canEdit, canReadPurchases,
   } = workspace;
   const returnHref = supplierDirectoryHref(rawQuery, canReadPurchases);
-  const addSupplierHref = `/app/suppliers/new?${returnContextSearchParams({
+  const createReturnContext = supplierReturnContext(rawQuery.returnTo
+    ?? supplierCreateReturnHref(rawQuery, canReadPurchases), rawQuery.focusRow);
+  const createQuery = new URLSearchParams(new URL(returnHref, 'https://supplier-return.invalid').search);
+  createQuery.set('create', 'supplier');
+  returnContextSearchParams({
     href: supplierCreateReturnHref(rawQuery, canReadPurchases),
-  })}`;
+  }).forEach((value, key) => createQuery.set(key, value));
+  const addSupplierHref = `/app/suppliers?${createQuery}`;
   const es = locale === 'es';
   const activeLabel = es ? 'Activo' : 'Active';
   const inactiveLabel = es ? 'Inactivo' : 'Inactive';
@@ -215,6 +222,17 @@ export default async function Suppliers({
           </details>
         ))}
       </section>
+      {rawQuery.create === 'supplier' && canEdit && (
+        <CreationDialog
+          open
+          title={es ? 'Agregar proveedor' : 'Add supplier'}
+          description={es ? 'Guarda los datos de contacto y el plazo de entrega del proveedor.' : 'Save supplier contact details and their usual lead time.'}
+          closeHref={createReturnContext.href}
+          closeLabel={es ? 'Cerrar creación de proveedor' : 'Close supplier creation'}
+        >
+          <SupplierForm returnHref={createReturnContext.href} locale={locale} />
+        </CreationDialog>
+      )}
     </>
   );
 }

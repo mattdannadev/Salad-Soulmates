@@ -1,4 +1,8 @@
-import ProviderCustomerAccountDirectory from '@/components/provider/provider-customer-account-directory';
+import { unstable_rethrow } from 'next/navigation';
+import ProviderCustomerAccountDirectory, {
+  type ProviderCustomerAccountDirectoryState,
+} from '@/components/provider/provider-customer-account-directory';
+import { logFailure } from '@/lib/operation-error';
 import {
   listProviderCustomerAccounts,
   ProviderConsoleAccessError,
@@ -7,26 +11,24 @@ import {
 export const dynamic = 'force-dynamic';
 
 export default async function ProviderCustomerAccountsPage() {
+  let state: ProviderCustomerAccountDirectoryState;
   try {
     const accounts = await listProviderCustomerAccounts();
-    return (
-      <ProviderCustomerAccountDirectory
-        accountHref={(accountId) => `/admin/provider/customers/${accountId}`}
-        state={{ kind: 'ready', accounts }}
-        tenantsHref="/admin/provider"
-      />
-    );
+    state = { kind: 'ready', accounts };
   } catch (error) {
-    const state =
-      error instanceof ProviderConsoleAccessError
-        ? { kind: 'denied' as const }
-        : { kind: 'unavailable' as const };
-    return (
-      <ProviderCustomerAccountDirectory
-        accountHref={() => '/admin/provider/customers'}
-        state={state}
-        tenantsHref="/admin/provider"
-      />
-    );
+    unstable_rethrow(error);
+    if (error instanceof ProviderConsoleAccessError) {
+      state = { kind: 'denied' };
+    } else {
+      logFailure('provider_customer_directory_load', error);
+      state = { kind: 'unavailable' };
+    }
   }
+  return (
+    <ProviderCustomerAccountDirectory
+      accountHref={(accountId) => `/admin/provider/customers/${accountId}`}
+      state={state}
+      tenantsHref="/admin/provider"
+    />
+  );
 }

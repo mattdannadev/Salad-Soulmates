@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 /** Calendar dates are local to the facility; end_on is exclusive. */
 const date = z.iso.date();
+const instant = z.iso.datetime({ offset: true });
 export const scheduleKinds = [
   'pre_op', 'post_op', 'ingredient_prep', 'mixing', 'receiving',
   'shipment_loading', 'packaging', 'cleaning', 'off', 'other',
@@ -10,9 +11,15 @@ export const scheduleEventInputSchema = z.object({
   id: z.uuid(),
   facility_id: z.uuid(),
   revision: z.number().int().min(0),
-  start_on: date,
-  end_on: date,
+  start_at: instant,
+  end_at: instant,
+  all_day: z.boolean().default(false),
+  start_on: date.optional(),
+  end_on: date.optional(),
   kind: z.enum(scheduleKinds),
+  required_worker_count: z.number().int().min(1).max(100),
+  planned_batch_count: z.number().positive().nullable().default(null),
+  completed: z.boolean().default(false),
   title: z.string().trim().max(120).default(''),
   production_plan_id: z.uuid().nullable().default(null),
   linked_task_type: z.enum(['production_plan', 'order', 'planned_mixer_batch',
@@ -27,7 +34,9 @@ export const scheduleEventInputSchema = z.object({
     .nullable()
     .default(null),
   employee_ids: z.array(z.uuid()).max(100),
-}).refine((v) => v.end_on > v.start_on, { message: 'End date must follow start date.' })
+}).refine((v) => new Date(v.end_at).getTime() > new Date(v.start_at).getTime(), {
+  message: 'End time must follow start time.',
+})
   .refine((v) => new Set(v.employee_ids).size === v.employee_ids.length, { message: 'Choose each employee once.' })
   .refine(
     (v) => (v.linked_task_type === null) === (v.linked_task_id === null),
@@ -77,10 +86,21 @@ export const scheduleRangeSchema = z.object({
 }).refine((v) => v.end_on > v.start_on, { message: 'End date must follow start date.' });
 
 export const scheduleEventSchema = scheduleEventInputSchema.safeExtend({
+  start_on: date,
+  end_on: date,
+  timezone: z.string().min(1).max(64),
   revision: z.number().int().positive(),
   created_at: z.iso.datetime({ offset: true }),
   updated_at: z.iso.datetime({ offset: true }),
 });
+
+/** Read compatibility for schedule rows persisted before staffing requirements. */
+export const scheduleEventReadSchema = z.preprocess((value) => {
+  if (typeof value !== 'object' || value === null || 'required_worker_count' in value) {
+    return value;
+  }
+  return { ...value, required_worker_count: 1 };
+}, scheduleEventSchema);
 
 export const scheduleEmployeeSchema = z.object({
   id: z.uuid(),
@@ -111,9 +131,15 @@ export const saveSchedulePtoTypeSchema = z.object({
 
 export const publishedScheduleEventSchema = z.object({
   id: z.uuid(),
+  start_at: instant,
+  end_at: instant,
+  all_day: z.boolean(),
+  timezone: z.string().min(1).max(64),
   start_on: date,
   end_on: date,
   kind: z.enum(scheduleKinds),
+  required_worker_count: z.number().int().min(1).max(100)
+    .default(1),
   title: z.string(),
   employee_ids: z.array(z.uuid()),
   production_plan_id: z.uuid().nullable(),
@@ -127,9 +153,14 @@ export const publishedScheduleEventSchema = z.object({
 
 export interface PublishedWorkComparison {
   id: string;
+  startAt: string;
+  endAt: string;
+  allDay: boolean;
+  timeZone: string;
   startDate: string;
   endDate: string;
   type: typeof scheduleKinds[number];
+  requiredWorkerCount: number;
   note: string | null;
   employeeIds: string[];
   productionPlanId: string | null;
@@ -144,8 +175,11 @@ type ComparableWork = PublishedWorkComparison;
 export function matchesPublishedWork(draft: ComparableWork, published: ComparableWork): boolean {
   const draftEmployees = [...draft.employeeIds].sort();
   const publishedEmployees = [...published.employeeIds].sort();
-  return draft.id === published.id && draft.startDate === published.startDate
+  return draft.id === published.id && draft.startAt === published.startAt
+    && draft.endAt === published.endAt && draft.allDay === published.allDay
+    && draft.timeZone === published.timeZone && draft.startDate === published.startDate
     && draft.endDate === published.endDate && draft.type === published.type
+    && draft.requiredWorkerCount === published.requiredWorkerCount
     && draft.note === published.note && draft.productionPlanId === published.productionPlanId
     && draft.linkedTaskType === published.linkedTaskType
     && draft.linkedTaskId === published.linkedTaskId
@@ -177,7 +211,7 @@ export const workforceScheduleSchema = z.object({
     schedule_granularity: z.enum(['day', 'hour']),
   }),
   employees: z.array(scheduleEmployeeSchema),
-  events: z.array(scheduleEventSchema),
+  events: z.array(scheduleEventReadSchema),
   published_events: z.array(publishedScheduleEventSchema),
   publication_revision: z.number().int().min(0),
   pto: z.array(schedulePtoSchema),
@@ -193,6 +227,10 @@ export const myWorkforceScheduleSchema = z.object({
   timezone: z.string().min(1),
   events: z.array(z.object({
     id: z.uuid(),
+    start_at: instant,
+    end_at: instant,
+    all_day: z.boolean(),
+    timezone: z.string().min(1).max(64),
     start_on: date,
     end_on: date,
     kind: z.enum(scheduleKinds),
@@ -227,10 +265,10 @@ export function inclusiveScheduleEnd(endOn: string): string {
   return addScheduleDays(endOn, -1);
 }
 
-export function facilityCalendarDateAt(instant: Date, timezone: string): string {
+export function facilityCalendarDateAt(value: Date, timezone: string): string {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(instant);
+  }).formatToParts(value);
   const part = (name: string) => parts.find((item) => item.type === name)?.value ?? '';
   return `${part('year')}-${part('month')}-${part('day')}`;
 }

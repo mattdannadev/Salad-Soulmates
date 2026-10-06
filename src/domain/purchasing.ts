@@ -49,6 +49,17 @@ export const materialAvailabilitySchema = materialRequirementSchema.extend({
   shortage: quantity,
 });
 export type MaterialAvailability = z.infer<typeof materialAvailabilitySchema>;
+
+/**
+ * The order-specific purchase gap intentionally excludes other plans and inbound supply.
+ * Those quantities remain visible separately so a buyer can assess the full context.
+ */
+export function orderDemandGap(requiredInput: number, onHandInput: number) {
+  const required = quantity.positive().parse(requiredInput);
+  const onHand = z.number().finite().parse(onHandInput);
+  return Math.max(0, required - onHand);
+}
+
 export const materialPlanRowSchema = z.object({
   id: z.uuid(),
   name: z.string(),

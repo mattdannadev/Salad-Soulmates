@@ -1,0 +1,320 @@
+.surface {
+  width: 100%;
+  min-width: 0;
+}
+
+.surface :global(.work-pill-prep) {
+  --work-pill-background: #c7e8fb;
+  --work-pill-border: #83c9ee;
+  --work-pill-text: #164b67;
+}
+
+.surface :global(.work-pill-production) {
+  --work-pill-background: #fff0a8;
+  --work-pill-border: #e9ca53;
+  --work-pill-text: #5a4705;
+}
+
+.surface :global(.work-pill-packaging) {
+  --work-pill-background: #c7e9ce;
+  --work-pill-border: #8dcb9b;
+  --work-pill-text: #1c512a;
+}
+
+.surface :global(.work-pill-other) {
+  --work-pill-background: #e4eaf0;
+  --work-pill-border: #bdcbd6;
+  --work-pill-text: #334155;
+}
+
+/* Work type remains the card fill. A stable inset stripe differentiates orders
+   without making production semantics depend on an arbitrary color. */
+.surface :global(.order-accent-0) {
+  --order-accent: #155e75;
+}
+.surface :global(.order-accent-1) {
+  --order-accent: #7c2d12;
+}
+.surface :global(.order-accent-2) {
+  --order-accent: #5b21b6;
+}
+.surface :global(.order-accent-3) {
+  --order-accent: #9f1239;
+}
+.surface :global(.order-accent-4) {
+  --order-accent: #166534;
+}
+.surface :global(.order-accent-5) {
+  --order-accent: #a16207;
+}
+.surface :global(.order-accent-6) {
+  --order-accent: #1d4ed8;
+}
+.surface :global(.order-accent-7) {
+  --order-accent: #475569;
+}
+
+.surface :global(.b-gantt-task.work-pill-prep),
+.surface :global(.b-gantt-task.work-pill-production),
+.surface :global(.b-gantt-task.work-pill-packaging),
+.surface :global(.b-gantt-task.work-pill-other),
+.surface :global(.work-pill-prep .b-gantt-task),
+.surface :global(.work-pill-production .b-gantt-task),
+.surface :global(.work-pill-packaging .b-gantt-task),
+.surface :global(.work-pill-other .b-gantt-task),
+.surface :global(.b-cal-event-wrap.work-pill-prep),
+.surface :global(.b-cal-event-wrap.work-pill-production),
+.surface :global(.b-cal-event-wrap.work-pill-packaging),
+.surface :global(.b-cal-event-wrap.work-pill-other),
+.surface :global(.b-cal-event.work-pill-prep),
+.surface :global(.b-cal-event.work-pill-production),
+.surface :global(.b-cal-event.work-pill-packaging),
+.surface :global(.b-cal-event.work-pill-other) {
+  background: var(--work-pill-background) !important;
+  border: 1px solid var(--work-pill-border) !important;
+  border-radius: 8px;
+  color: var(--work-pill-text) !important;
+  box-shadow:
+    inset 5px 0 0 var(--order-accent, transparent),
+    0 1px 2px rgb(15 23 42 / 8%);
+}
+
+/* Keep Bryntum's summary bracket shape while sharing the exact child palette. */
+.surface :global(.work-summary.b-gantt-task-parent .b-gantt-task) {
+  border-radius: 0;
+  background: var(--work-pill-background) !important;
+  border-color: var(--work-pill-border) !important;
+}
+
+.surface :global(.b-gantt-task-content),
+.surface :global(.b-cal-event-desc) {
+  color: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+/* Completion is an operational state, while the work-type palette remains the
+   primary category cue. A strong inset edge keeps the two meanings distinct. */
+.surface :global(.b-gantt-task.status-complete),
+.surface :global(.status-complete .b-gantt-task) {
+  box-shadow:
+    inset 5px 0 0 #15803d,
+    0 1px 2px rgb(15 23 42 / 8%);
+}
+
+.surface :global(.b-gantt-task.status-draft),
+.surface :global(.status-draft .b-gantt-task) {
+  border-style: dashed !important;
+}
+
+.surface :global(.b-gantt-task-percent) {
+  background: rgb(21 128 61 / 20%);
+  border-right: 2px solid rgb(21 128 61 / 55%);
+}
+
+.surface :global(.work-pill-status-line) {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.surface :global(.work-pill-status) {
+  flex: none;
+  padding: 0 0.3rem;
+  border: 1px solid currentcolor;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.surface :global(.work-pill-crew) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.surface :global(.focused-work) {
+  outline: 3px solid #0f766e !important;
+  outline-offset: 2px;
+}
+
+/* Keep the merged order/work hierarchy column scannable without wrapping
+   long product names, scheduled dates, or batch counts across rows. */
+.orderIdentity {
+  overflow: hidden;
+}
+
+.workIdentity {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.12rem;
+  line-height: 1.15;
+}
+
+.workIdentityTitle,
+.workIdentityDetail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workIdentityTitle {
+  color: #173b2a;
+  font-weight: 650;
+}
+
+.workIdentityDetail {
+  color: #5b6c63;
+  font-size: 0.78rem;
+}
+
+.orderBatchRollup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.orderBatchRollup span:last-child {
+  color: #5b6c63;
+  font-size: 0.76rem;
+}
+
+.calendarPillLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  padding: 6px 8px;
+  line-height: 1.3;
+}
+
+.calendarPillTitle {
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.calendarPillOrder {
+  align-self: flex-start;
+  padding: 1px 4px;
+  border: 1px solid color-mix(in srgb, currentcolor 45%, transparent);
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+.calendarPillContext {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.calendarPillMetadata {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px 5px;
+  min-width: 0;
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.calendarPillBadge {
+  padding: 1px 4px;
+  border: 1px solid currentcolor;
+  border-radius: 4px;
+  flex: none;
+}
+
+.calendarPillResources {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .calendarPillLabel {
+    padding: 5px 4px;
+    gap: 2px;
+  }
+}
+
+.notice {
+  padding: 0.75rem;
+  border: 1px solid #b7791f;
+  border-radius: 0.5rem;
+  background: #fff8e6;
+  color: #704400;
+  font-weight: 600;
+}
+
+.note {
+  color: #475569;
+  font-size: 0.875rem;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.actions [role='group'] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.actions [role='group'] button {
+  border: 1px solid #bdcbd6;
+  border-radius: 0.375rem;
+  background: #fff;
+  color: #234c38;
+  cursor: pointer;
+  font: inherit;
+  padding: 0.5rem 0.75rem;
+}
+
+.actions [role='group'] button:focus-visible {
+  outline: 3px solid #5eead4;
+  outline-offset: 2px;
+}
+
+.addWork {
+  border: 1px solid #0f766e;
+  border-radius: 0.375rem;
+  background: #0f766e;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  padding: 0.5rem 0.75rem;
+}
+
+.addWork:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.addWork:focus-visible {
+  outline: 3px solid #5eead4;
+  outline-offset: 2px;
+}

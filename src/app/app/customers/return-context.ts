@@ -27,7 +27,12 @@ export function customerReturnHref(context: ReturnContext, customerId?: string):
 }
 
 export function customerCreateHref(context: ReturnContext): string {
-  return `${CUSTOMER_PATH}/new?${returnContextSearchParams(context)}`;
+  const url = new URL(context.href, 'https://customer-return.invalid');
+  const params = url.pathname === CUSTOMER_PATH
+    ? new URLSearchParams(url.search) : new URLSearchParams();
+  params.set('create', 'customer');
+  returnContextSearchParams(context).forEach((value, key) => params.set(key, value));
+  return `${CUSTOMER_PATH}?${params}`;
 }
 
 /** Preserve only the directory's defined URL state when constructing a return link. */

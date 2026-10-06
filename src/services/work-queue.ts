@@ -2,10 +2,11 @@ import 'server-only';
 
 import { z } from 'zod';
 import {
-  claimWorkQueueItem, createWorkQueueItem, publishWorkQueue, readMyWorkQueue, unclaimWorkQueueItem,
+  claimWorkQueueItem, createWorkQueueItem, publishWorkQueue, readMyAssignedWork, readMyWorkQueue,
+  unclaimWorkQueueItem,
 } from '@/data/work-queue';
 import {
-  createWorkQueueItemSchema, publishWorkQueueSchema, workQueueClaimSchema,
+  assignedWorkerWorkSchema, createWorkQueueItemSchema, publishWorkQueueSchema, workQueueClaimSchema,
   workQueueRangeSchema, workerQueueItemSchema,
 } from '@/domain/work-queue';
 import type { ActionResult } from '@/domain/master-data';
@@ -19,6 +20,16 @@ export async function loadMyWorkQueue(startOn: string, endOn: string) {
   const result = await readMyWorkQueue(db, range);
   if (result.error) throw operationError('worker_queue_load', 'Unable to load your work queue.', result.error);
   return z.array(workerQueueItemSchema).parse(result.data);
+}
+
+export async function loadMyAssignedWork(startOn: string, endOn: string) {
+  const range = workQueueRangeSchema.parse({ start_on: startOn, end_on: endOn });
+  const { db } = await requireProfile();
+  const result = await readMyAssignedWork(db, range);
+  if (result.error) {
+    throw operationError('worker_assigned_work_load', 'Unable to load your assigned work.', result.error);
+  }
+  return assignedWorkerWorkSchema.parse(result.data);
 }
 
 export async function claimPublishedWorkQueueItem(input: unknown): Promise<ActionResult> {
@@ -57,8 +68,11 @@ export async function unclaimPublishedWorkQueueItem(input: unknown): Promise<Act
     const result = await unclaimWorkQueueItem(db, parsed.data);
     if (result.error) {
       logFailure('worker_queue_unclaim', result.error);
-      return { ok: false, message: result.error.message.includes('You have not claimed this work item')
-        ? 'You have not claimed this work item.' : 'Unable to unclaim this work item. Reload and try again.' };
+      return {
+        ok: false,
+        message: result.error.message.includes('You have not claimed this work item')
+          ? 'You have not claimed this work item.' : 'Unable to unclaim this work item. Reload and try again.',
+      };
     }
     const id = z.uuid().safeParse(result.data);
     return id.success ? { ok: true, id: id.data, message: 'Work returned to the queue.' }

@@ -153,7 +153,11 @@ it('creates a product-coded Production Run only when confirmed work starts', asy
   expect((await query('select count(*)::int count from public.production_lots')).rows).toEqual([{ count: 0 }]);
   await query('select public.open_batch_worksheet($1)', [batch.id]);
   expect((await query('select production_lot_code,planned_batch_count from public.production_lots')).rows)
-    .toEqual([expect.objectContaining({ production_lot_code: expect.stringMatching(/^\d{5}-IT$/), planned_batch_count: 1 })]);
+    .toEqual([expect.objectContaining({ planned_batch_count: 1 })]);
+  const lotRows = z.array(z.object({ production_lot_code: z.string() })).parse(
+    (await query('select production_lot_code from public.production_lots')).rows,
+  );
+  expect(lotRows[0]?.production_lot_code).toMatch(/^\d{5}-IT$/);
 });
 it('allows the same DDDYY on distinct products while rejecting duplicate lot assignment for one product', async () => {
   const secondProduct = id(301);

@@ -1,0 +1,275 @@
+.manager {
+  display: grid;
+  gap: 18px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 20px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+}
+
+.toolbar label {
+  display: grid;
+  flex: 1 1 26rem;
+  gap: 6px;
+  max-width: 38rem;
+  font-weight: 600;
+}
+
+.toolbar input {
+  margin: 0;
+}
+
+.count,
+.recipeIdentity p,
+.unassignedHelp,
+.noSteps,
+.preview > p,
+.emptyState p,
+.missingSetup p,
+.noMatches p {
+  color: var(--color-text-muted);
+}
+
+.count {
+  padding-bottom: 12px;
+  white-space: nowrap;
+}
+
+.list {
+  display: grid;
+  gap: 12px;
+}
+
+.recipeCard {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.6fr) minmax(22rem, 1.4fr);
+  gap: 24px;
+  padding: 20px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+}
+
+.recipeIdentity {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.recipeIdentity h2,
+.recipeIdentity p,
+.preview p,
+.unassignedHelp,
+.noSteps,
+.feedback,
+.emptyState h2,
+.emptyState p,
+.missingSetup h2,
+.missingSetup p,
+.noMatches h2,
+.noMatches p {
+  margin-top: 0;
+}
+
+.recipeIdentity h2 {
+  margin-bottom: 4px;
+  font-size: 1.1rem;
+}
+
+.recipeIdentity p {
+  margin-bottom: 0;
+}
+
+.notSet {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  color: var(--color-text-muted);
+  background: var(--soft);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.assignment > label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.controls select {
+  margin: 0;
+}
+
+.preview {
+  margin-top: 12px;
+}
+
+.preview > p {
+  margin-bottom: 9px;
+  font-size: 0.9rem;
+}
+
+.flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flow li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 9px 7px 7px;
+  background: var(--soft);
+  border-radius: var(--radius-control);
+}
+
+.flow li:not(:last-child)::after {
+  margin-left: 3px;
+  color: var(--color-text-muted);
+  content: '→';
+}
+
+.stepNumber {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: white;
+  background: var(--color-action);
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.stepText {
+  display: grid;
+  gap: 1px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.kind {
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.unassignedHelp,
+.noSteps {
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+}
+
+.error,
+.success,
+.readOnly {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-control);
+}
+
+.error {
+  color: var(--color-status-error-text);
+  background: var(--color-status-error-bg);
+}
+
+.success {
+  color: var(--color-status-success-text);
+  background: var(--color-status-success-bg);
+}
+
+.readOnly,
+.missingSetup {
+  background: var(--soft);
+}
+
+.missingSetup,
+.emptyState,
+.noMatches {
+  padding: 22px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+}
+
+.missingSetup {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.missingSetup h2,
+.emptyState h2,
+.noMatches h2 {
+  margin-bottom: 5px;
+  font-size: 1.12rem;
+}
+
+.missingSetup p,
+.emptyState p,
+.noMatches p {
+  margin-bottom: 14px;
+}
+
+.missingSetup p {
+  margin-bottom: 0;
+}
+
+@media (max-width: 800px) {
+  .recipeCard {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .toolbar,
+  .missingSetup {
+    display: grid;
+  }
+
+  .count {
+    padding-bottom: 0;
+  }
+
+  .controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .controls button,
+  .missingSetup a {
+    width: 100%;
+  }
+
+  .flow {
+    display: grid;
+  }
+
+  .flow li::after {
+    display: none;
+  }
+}

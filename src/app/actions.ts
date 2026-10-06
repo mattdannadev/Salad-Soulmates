@@ -14,6 +14,7 @@ import { logFailure } from '@/lib/operation-error';
 import confirmSignOut from '@/lib/sign-out';
 import authConfirmationUrl from '@/domain/auth-callback-url';
 import { postSignInDestination } from '@/services/platform-admin';
+import { languageSchema, regionalLocaleSchema } from '@/domain/user-preferences';
 
 async function recordSuccessfulSignIn(db: Awaited<ReturnType<typeof supabase>>) {
   let userAgent: string | null = null;
@@ -52,7 +53,7 @@ export async function signIn(_previous: ActionResult, form: FormData): Promise<A
 }
 
 export async function setPreferredLocale(form: FormData): Promise<ActionResult> {
-  const parsed = z.enum(['en', 'es']).safeParse(form.get('locale'));
+  const parsed = languageSchema.safeParse(form.get('language') ?? form.get('locale'));
   if (!parsed.success) return { ok: false, message: 'Choose English or Spanish.' };
   const { db, profile } = await requireProfile({ readOnly: false });
   const failure = {
@@ -86,6 +87,40 @@ export async function setPreferredLocale(form: FormData): Promise<ActionResult> 
   }
   revalidatePath('/', 'layout');
   return { ok: true, message: parsed.data === 'es' ? 'Idioma actualizado.' : 'Language updated.' };
+}
+
+export async function setRegionalLocale(form: FormData): Promise<ActionResult> {
+  const parsed = regionalLocaleSchema.safeParse(form.get('regional_locale'));
+  if (!parsed.success) return { ok: false, message: 'Choose a supported regional format.' };
+  const { db, profile } = await requireProfile({ readOnly: false });
+  const failure = {
+    ok: false,
+    message: profile.preferred_locale === 'es'
+      ? 'No se pudo guardar el formato regional. Vuelve a intentarlo.'
+      : 'Could not save the regional format. Please try again.',
+  };
+  try {
+    const { data, error } = await db.from('profiles')
+      .update({ regional_locale: parsed.data })
+      .eq('id', profile.id)
+      .select('id,regional_locale')
+      .single();
+    if (error) {
+      logFailure('regional_locale_update', error);
+      return failure;
+    }
+    const saved = z.object({ id: z.uuid(), regional_locale: regionalLocaleSchema }).safeParse(data);
+    if (!saved.success || saved.data.id !== profile.id
+      || saved.data.regional_locale !== parsed.data) {
+      logFailure('regional_locale_update', { code: 'INVALID_RESPONSE' });
+      return failure;
+    }
+  } catch (error) {
+    logFailure('regional_locale_update', error);
+    return failure;
+  }
+  revalidatePath('/', 'layout');
+  return { ok: true, message: 'Regional format updated.' };
 }
 
 export async function reviewAccessRequest(
@@ -287,12 +322,13 @@ export async function inviteUserFromSettings(
   const parsed = z.object({
     display_name: z.string().trim().min(2).max(120),
     email: z.email(),
-    preferred_locale: z.enum(['en', 'es']),
+    preferred_locale: languageSchema,
+    regional_locale: regionalLocaleSchema,
     facility_id: z.uuid(),
     access_profile_id: z.uuid(),
   }).safeParse(Object.fromEntries(form));
   if (!parsed.success) {
-    return { ok: false, message: 'Enter a name, work email, facility, access profile, and language.' };
+    return { ok: false, message: 'Enter a name, work email, facility, access profile, language, and regional format.' };
   }
   const { db, profile } = await requireProfile({ readOnly: false });
   if (!(await hasPermission(db, 'access.manage'))) {
@@ -324,6 +360,7 @@ export async function inviteUserFromSettings(
       contact_kind: 'email',
       contact_value: email,
       preferred_locale: parsed.data.preferred_locale,
+      regional_locale: parsed.data.regional_locale,
       requested_role: 'reviewer',
     })
     .select('*')

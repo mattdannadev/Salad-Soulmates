@@ -18,12 +18,12 @@ const example = [
     es: 'Producto y receta publicada: 40 galones de aderezo ranch cremoso de suero de leche',
   },
   {
-    en: 'Customer package price: four 1-gallon cases for Lakeshore University Dining at $78 each',
-    es: 'Precio por cliente y presentación: cuatro cajas de 1 galón para Lakeshore University Dining a $78 cada una',
+    en: 'Customer package price: one case of four 1-gallon bags for Lakeshore University Dining at $78 per case',
+    es: 'Precio por cliente y presentación: una caja de cuatro bolsas de 1 galón para Lakeshore University Dining a $78 por caja',
   },
   {
-    en: 'Customer order: LUD-PO-10482, planned through pickup',
-    es: 'Pedido de cliente: LUD-PO-10482, planificado hasta la recogida',
+    en: 'Customer order: 10 cases per 40-gallon batch, planned through pickup',
+    es: 'Pedido de cliente: 10 cajas por lote de 40 galones, planificado hasta la recogida',
   },
 ];
 

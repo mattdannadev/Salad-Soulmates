@@ -31,7 +31,7 @@ it('makes purchase history primary and keeps contact editing collapsed', async (
   expect(html).toContain('<details class="supplier-orders" id="supplier-');
   expect(html.indexOf('</table>')).toBeLessThan(html.indexOf('<details class="supplier-orders"'));
   expect(html).toContain('aria-label="Supplier directory"');
-  expect(html).toContain('href="/app/suppliers/new?returnTo=%2Fapp%2Fsuppliers"');
+  expect(html).toContain('href="/app/suppliers?create=supplier&amp;returnTo=%2Fapp%2Fsuppliers"');
   expect(html).toContain('aria-controls="supplier-');
   expect(html).toMatch(/<table\b[^>]*aria-label="Supplier directory"/);
   expect(html).toContain('<th scope="col">Open purchase orders</th>');
@@ -79,7 +79,7 @@ it('provides a dedicated creation form only to supplier editors', async () => {
   expect(renderToStaticMarkup(await NewSupplier())).toContain('Supplier name');
   mocks.permission.mockImplementation((_db: unknown, permission: string) => Promise.resolve(permission !== 'master_data.write'));
   await expect(NewSupplier()).rejects.toThrow('REDIRECT:/app/suppliers');
-  expect(renderToStaticMarkup(await Suppliers())).not.toContain('href="/app/suppliers/new?');
+  expect(renderToStaticMarkup(await Suppliers())).not.toContain('create=supplier');
 });
 
 it('carries the supplier directory query through create, cancel, and save', async () => {
@@ -106,4 +106,22 @@ it('uses the supplier fallback for unsafe or unrelated return paths', async () =
     expect(html).toContain('href="/app/suppliers"');
     expect(html).not.toContain(returnTo);
   }));
+});
+
+it('opens supplier creation in a dialog with the pack setup return context', async () => {
+  const returnTo = `/app/ingredients/${fixtureId(100)}?addPack=1`;
+  const html = renderToStaticMarkup(await Suppliers({
+    searchParams: Promise.resolve({ create: 'supplier', returnTo }),
+  }));
+  expect(html).toContain('<dialog');
+  expect(html).toContain('Close supplier creation');
+  expect(html).toContain('Create supplier');
+  expect(html).toContain(`href="${returnTo}"`);
+
+  mocks.permission.mockImplementation((_db: unknown, permission: string) => Promise.resolve(permission !== 'master_data.write'));
+  const readOnly = renderToStaticMarkup(await Suppliers({
+    searchParams: Promise.resolve({ create: 'supplier', returnTo }),
+  }));
+  expect(readOnly).not.toContain('<dialog');
+  expect(readOnly).not.toContain('Create supplier');
 });

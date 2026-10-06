@@ -16,6 +16,7 @@ import {
   uomFamilySchema,
   uomSchema,
   uomDeleteSchema,
+  measurementSystemSchema,
   accessProfileSchema,
   feedbackStatusSchema,
   invalidInput,
@@ -197,6 +198,15 @@ async function deleteUom(db: Client, input: unknown) {
   if ((ingredientUsage.count ?? 0) + (packUsage.count ?? 0) > 0) return { ok: false, message: 'This unit is already in use. Deactivate it instead to preserve history.' };
   return saved(await db.from('uoms').delete().eq('id', id), 'uom-delete', false);
 }
+async function saveMeasurementSystem(db: Client, input: unknown) {
+  const parsed = measurementSystemSchema.safeParse(input);
+  if (!parsed.success) return invalidInput(parsed.error);
+  return saved(
+    await db.rpc('set_organization_measurement_system', { payload: parsed.data }),
+    'measurement-system',
+    false,
+  );
+}
 async function saveAccessProfile(db: Client, input: unknown) {
   const parsed = accessProfileSchema.safeParse(input);
   if (!parsed.success) return invalidInput(parsed.error);
@@ -242,6 +252,7 @@ export const recordOperations = {
   'uom-family': saveUomFamily,
   uom: saveUom,
   'uom-delete': deleteUom,
+  'measurement-system': saveMeasurementSystem,
   'access-profile': saveAccessProfile,
   feedback: saveFeedback,
   'feedback-status': saveFeedbackStatus,
@@ -259,6 +270,7 @@ export const recordPermissions: Record<RecordKind, string | null> = {
   'uom-family': 'settings.manage',
   uom: 'settings.manage',
   'uom-delete': 'settings.manage',
+  'measurement-system': 'settings.manage',
   'access-profile': 'settings.manage',
   feedback: null,
 };

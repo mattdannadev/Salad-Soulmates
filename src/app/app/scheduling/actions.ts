@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import {
   publishScheduleInputSchema, scheduleAvailabilityInputSchema, scheduleDeleteInputSchema,
-  scheduleEventInputSchema, schedulePtoInputSchema, scheduleSettingsInputSchema, saveSchedulePtoTypeSchema,
+  scheduleEventInputSchema, schedulePtoInputSchema, scheduleSettingsInputSchema,
+  saveSchedulePtoTypeSchema,
 } from '@/domain/scheduling';
 import type { ActionResult } from '@/domain/master-data';
 import { commitScheduleMutation } from '@/services/scheduling';

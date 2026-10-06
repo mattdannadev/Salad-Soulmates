@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import {
   facilityCalendarDateAt, groupWorkDays, inclusiveScheduleEnd, scheduleEventInputSchema,
-  matchesPublishedWork, scheduleKindLabel, scheduleRangeSchema,
+  matchesPublishedWork, scheduleEventReadSchema, scheduleKindLabel, scheduleRangeSchema,
   selectLinkedPreparation,
 } from '@/domain/scheduling';
 
@@ -10,9 +10,13 @@ const event = {
   id,
   facility_id: id,
   revision: 0,
+  start_at: '2026-09-28T08:00:00.000Z',
+  end_at: '2026-09-29T08:00:00.000Z',
+  all_day: true,
   start_on: '2026-09-28',
   end_on: '2026-09-29',
   kind: 'mixing',
+  required_worker_count: 2,
   title: '',
   production_plan_id: null,
   employee_ids: [id],
@@ -21,15 +25,37 @@ const event = {
 it('accepts one or more employees and exclusive all-day dates', () => {
   expect(scheduleEventInputSchema.safeParse(event).success).toBe(true);
   expect(scheduleEventInputSchema.safeParse({
-    ...event, end_on: event.start_on,
+    ...event, end_at: event.start_at,
   }).success).toBe(false);
   expect(scheduleEventInputSchema.safeParse({ ...event, employee_ids: [] }).success).toBe(true);
+  const { required_worker_count: omittedRequiredCount, ...withoutRequiredCount } = event;
+  expect(omittedRequiredCount).toBe(2);
+  expect(scheduleEventInputSchema.safeParse(withoutRequiredCount).success).toBe(false);
+  expect(scheduleEventInputSchema.safeParse({ ...event, required_worker_count: 0 }).success)
+    .toBe(false);
+  expect(scheduleEventInputSchema.safeParse({ ...event, required_worker_count: 1.5 }).success)
+    .toBe(false);
   expect(scheduleEventInputSchema.safeParse({
     ...event, employee_ids: [id, id],
   }).success).toBe(false);
   expect(scheduleEventInputSchema.safeParse({
     ...event, start_on: '2026-02-30',
   }).success).toBe(false);
+});
+
+it('loads schedule rows created before staffing requirements were added', () => {
+  const { required_worker_count: omittedRequiredCount, ...legacyEvent } = event;
+  expect(omittedRequiredCount).toBe(2);
+
+  const parsed = scheduleEventReadSchema.parse({
+    ...legacyEvent,
+    revision: 1,
+    timezone: 'America/Chicago',
+    created_at: '2026-09-01T12:00:00.000Z',
+    updated_at: '2026-09-01T12:00:00.000Z',
+  });
+
+  expect(parsed.required_worker_count).toBe(1);
 });
 
 it('keeps the requested report window exclusive at the end', () => {
@@ -65,9 +91,14 @@ it('uses a Spanish task label when an assignment title is blank', () => {
 it('marks work published only when all worker-visible fields still match', () => {
   const published = {
     id,
+    startAt: '2026-09-28T08:00:00.000Z',
+    endAt: '2026-09-29T08:00:00.000Z',
+    allDay: true,
+    timeZone: 'America/Chicago',
     startDate: '2026-09-28',
     endDate: '2026-09-28',
     type: 'mixing' as const,
+    requiredWorkerCount: 1,
     note: 'Batch',
     employeeIds: [id],
     productionPlanId: id,
@@ -80,6 +111,7 @@ it('marks work published only when all worker-visible fields still match', () =>
   expect(matchesPublishedWork(published, published)).toBe(true);
   expect(matchesPublishedWork({ ...published, note: 'Changed' }, published)).toBe(false);
   expect(matchesPublishedWork({ ...published, type: 'ingredient_prep' }, published)).toBe(false);
+  expect(matchesPublishedWork({ ...published, requiredWorkerCount: 2 }, published)).toBe(false);
   expect(matchesPublishedWork(
     { ...published, linkedTaskType: 'planned_spice_preparation' },
     published,

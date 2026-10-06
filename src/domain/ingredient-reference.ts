@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import inventoryBalances from './inventory';
-import { outstandingInbound, type MaterialPlan, type PurchaseDraft, type PurchaseLine } from './purchasing';
+import {
+  outstandingInbound, type MaterialPlan, type PurchaseDraft, type PurchaseLine,
+} from './purchasing';
 
 const receiptSchema = z.object({
   purchase_draft_line_id: z.uuid().nullable(),
@@ -8,7 +10,7 @@ const receiptSchema = z.object({
 });
 
 /** Derives one facility's reference quantities without treating an ingredient as a stock record. */
-export function ingredientReferenceQuantities(
+export default function ingredientReferenceQuantities(
   ingredientId: string,
   events: { ingredient_id: string; quantity_delta: number | string }[],
   drafts: PurchaseDraft[],

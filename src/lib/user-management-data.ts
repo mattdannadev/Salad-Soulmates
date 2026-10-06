@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { requireAdminShell } from '@/lib/auth';
 import { operationError } from '@/lib/operation-error';
 import hasPermission from '@/lib/permissions';
+import { regionalLocaleSchema, type RegionalLocale } from '@/domain/user-preferences';
 
 export const userDirectoryQuerySchema = z.object({
   q: z.string().trim().max(200).optional()
@@ -25,6 +26,7 @@ const managedProfileSchema = z.object({
   work_email: z.email().nullable(),
   role: z.string(),
   preferred_locale: z.enum(['en', 'es']),
+  regional_locale: regionalLocaleSchema,
   active: z.boolean(),
   deactivated_at: z.string().nullable(),
   deactivated_by: z.uuid().nullable(),
@@ -56,6 +58,7 @@ export interface ManagedUser {
   accessProfileName: string;
   role: string;
   preferredLocale: 'en' | 'es';
+  regionalLocale?: RegionalLocale;
   active: boolean;
   deactivatedAt: string | null;
   deactivatedBy: string | null;
@@ -112,6 +115,7 @@ function combineUser(
     accessProfileName: accessProfiles.get(profile.access_profile_id) ?? 'Access profile unavailable',
     role: profile.role,
     preferredLocale: profile.preferred_locale,
+    regionalLocale: profile.regional_locale,
     active: profile.active,
     deactivatedAt: profile.deactivated_at,
     deactivatedBy: profile.deactivated_by,
@@ -176,7 +180,7 @@ export async function loadUserDirectory(query: UserDirectoryQuery) {
   const [profilesResult, references] = await Promise.all([
     context.db
       .from('profiles')
-      .select('id,organization_id,facility_id,access_profile_id,first_name,last_name,display_name,work_email,role,preferred_locale,active,deactivated_at,deactivated_by,deactivation_reason,operations_copilot_override')
+      .select('id,organization_id,facility_id,access_profile_id,first_name,last_name,display_name,work_email,role,preferred_locale,regional_locale,active,deactivated_at,deactivated_by,deactivation_reason,operations_copilot_override')
       .order('last_name')
       .order('first_name'),
     loadReferenceNames(context.db),
@@ -210,7 +214,7 @@ export async function loadManagedUser(userId: string): Promise<{
   const [profileResult, references, loginResult, planResult] = await Promise.all([
     context.db
       .from('profiles')
-      .select('id,organization_id,facility_id,access_profile_id,first_name,last_name,display_name,work_email,role,preferred_locale,active,deactivated_at,deactivated_by,deactivation_reason,operations_copilot_override')
+      .select('id,organization_id,facility_id,access_profile_id,first_name,last_name,display_name,work_email,role,preferred_locale,regional_locale,active,deactivated_at,deactivated_by,deactivation_reason,operations_copilot_override')
       .eq('id', parsedUserId.data)
       .maybeSingle(),
     loadReferenceNames(context.db),

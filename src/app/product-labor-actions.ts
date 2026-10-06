@@ -6,10 +6,16 @@ import { requireProfile } from '@/lib/auth';
 import hasPermission from '@/lib/permissions';
 import type { ActionResult } from '@/domain/master-data';
 
-const optionalPositive = z.preprocess((value) => value === '' ? null : Number(value),
-  z.number().finite().positive().max(1440).nullable());
-const optionalCrew = z.preprocess((value) => value === '' ? null : Number(value),
-  z.number().int().min(1).max(100).nullable());
+const optionalPositive = z.preprocess(
+  (value) => (value === '' ? null : Number(value)),
+  z.number().finite().positive().max(1440)
+    .nullable(),
+);
+const optionalCrew = z.preprocess(
+  (value) => (value === '' ? null : Number(value)),
+  z.number().int().min(1).max(100)
+    .nullable(),
+);
 const inputSchema = z.object({
   product_id: z.uuid(),
   ingredient_prep_minutes_per_batch: optionalPositive,
@@ -18,10 +24,12 @@ const inputSchema = z.object({
   mixing_crew_size: optionalCrew,
 }).refine((value) => (value.ingredient_prep_minutes_per_batch === null)
   === (value.ingredient_prep_crew_size === null), 'Enter both ingredient prep values or leave both blank.')
-  .refine((value) => (value.mixing_minutes_per_batch === null) === (value.mixing_crew_size === null),
-    'Enter both mixing values or leave both blank.');
+  .refine(
+    (value) => (value.mixing_minutes_per_batch === null) === (value.mixing_crew_size === null),
+    'Enter both mixing values or leave both blank.',
+  );
 
-export async function saveProductLaborEstimate(input: unknown): Promise<ActionResult> {
+export default async function saveProductLaborEstimate(input: unknown): Promise<ActionResult> {
   const parsed = inputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? 'Enter valid labor estimates.' };
   const { db } = await requireProfile({ readOnly: false });
