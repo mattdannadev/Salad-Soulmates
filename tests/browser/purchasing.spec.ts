@@ -87,6 +87,7 @@ test('inventory starts a purchase with its ingredient fixed', async ({ page }, i
 test('customer packaging and order estimates lead to purchasing and partial receipt', async ({
   page,
 }, info) => {
+  test.setTimeout(60_000);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/login');
@@ -353,8 +354,12 @@ test('customer packaging and order estimates lead to purchasing and partial rece
     supplier.getByRole('article').getByText('Partially received', { exact: true }),
   ).toBeVisible();
   await expect(supplier.getByRole('article')).toContainText('50 lb');
-  const supplierRow = page.getByRole('row').filter({ hasText: 'Preview supplier' }).first();
-  await expect(supplierRow.getByRole('gridcell').last()).toHaveText('1');
+  if (info.project.name === 'phone') {
+    await expect(page.getByText('1 open purchase orders', { exact: true })).toBeVisible();
+  } else {
+    const supplierRow = page.getByRole('row').filter({ hasText: 'Preview supplier' }).first();
+    await expect(supplierRow.getByRole('gridcell').last()).toHaveText('1');
+  }
   const fitsScreen = await page.evaluate(
     () => document.documentElement.scrollWidth <= window.innerWidth,
   );

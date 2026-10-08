@@ -9,7 +9,6 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
   type ReactNode,
   type SyntheticEvent,
 } from 'react';
@@ -26,6 +25,7 @@ import {
   type ColDef,
   type GridApi,
   type ICellRendererParams,
+  type SuppressMouseEventHandlingParams,
 } from 'ag-grid-community';
 import { AgGridProvider, AgGridReact } from 'ag-grid-react';
 import styles from './list-grid.module.css';
@@ -97,7 +97,6 @@ const modules = [
   TextFilterModule,
 ];
 const emptyCellSlots: Record<string, ReactNode> = {};
-const subscribe = () => () => {};
 type GridCellParams = ICellRendererParams<ListGridRow, ListGridCell>;
 
 interface FocusPageApi {
@@ -174,6 +173,14 @@ export function stopListGridLinkPropagation(event: Pick<SyntheticEvent, 'stopPro
   event.stopPropagation();
 }
 
+/** Avoid AG Grid cancelling native and framework-owned link navigation in cells. */
+export function suppressListGridLinkMouseHandling(
+  params: SuppressMouseEventHandlingParams<ListGridRow, ListGridCell>,
+): boolean {
+  const { target } = params.event;
+  return target instanceof Element && target.closest('a, button') !== null;
+}
+
 function ListGridLink({
   href,
   children,
@@ -184,7 +191,7 @@ function ListGridLink({
 }: ListGridLinkProps) {
   const onClick = isolateFromGrid ? stopListGridLinkPropagation : undefined;
   const onPointerDown = isolateFromGrid ? stopListGridLinkPropagation : undefined;
-  if (native) {
+  if (native || isolateFromGrid) {
     return (
       <a
         href={href}
@@ -365,6 +372,9 @@ function createColumnDefinitions(
       return String(a).localeCompare(String(b), locale, { numeric: true, sensitivity: 'base' });
     },
     cellRenderer: gridCellRenderer(cellSlots),
+    cellRendererParams: {
+      suppressMouseEventHandling: suppressListGridLinkMouseHandling,
+    },
     autoHeight: true,
     wrapText: true,
   }));
@@ -447,15 +457,15 @@ export default function ListGrid({
   focusRowId = undefined,
   controlled = undefined,
 }: ListGridProps) {
-  const mounted = useSyncExternalStore(
-    subscribe,
-    () => true,
-    () => false,
-  );
+  const [mounted, setMounted] = useState(false);
   const descriptionId = useId();
   const gridApiRef = useRef<GridApi<ListGridRow> | null>(null);
   const [search, setSearch] = useState('');
   const [displayedCount, setDisplayedCount] = useState<number | null>(null);
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setMounted(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
   const effectivePageSize = Number.isFinite(pageSize) ? Math.max(1, Math.floor(pageSize)) : 20;
   const externallyControlled = controlled !== undefined;
   useEffect(() => {
