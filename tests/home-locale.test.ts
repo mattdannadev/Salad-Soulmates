@@ -72,6 +72,15 @@ describe('operations dashboard', () => {
     expect(html).toContain('Shipment confirmation is not available yet');
     expect(html).toContain('/app/orders?order=test-order');
   });
+  it('opens the order dialog from the empty pickup recovery action', async () => {
+    mocks.load.mockResolvedValue({
+      ...base,
+      profile: { display_name: 'Matt', preferred_locale: 'en' },
+    });
+    const html = renderToStaticMarkup(await Home());
+    expect(html).toContain('href="/app/orders?returnTo=%2Fapp&amp;create=order"');
+    expect(html).not.toContain('/app/orders#new-order');
+  });
   it('propagates failed reads instead of showing false empty operations', async () => {
     mocks.load.mockRejectedValue(new Error('Read failed'));
     await expect(Home()).rejects.toThrow('Read failed');

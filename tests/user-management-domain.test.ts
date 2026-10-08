@@ -19,6 +19,7 @@ describe('user management schemas', () => {
         facility_id: '00000000-0000-4000-8000-000000000002',
         access_profile_id: '00000000-0000-4000-8000-000000000003',
         preferred_locale: 'es',
+        regional_locale: 'es-MX',
         active: true,
       }).success,
     ).toBe(true);
@@ -32,6 +33,7 @@ describe('user management schemas', () => {
         facility_id: '00000000-0000-4000-8000-000000000002',
         access_profile_id: '00000000-0000-4000-8000-000000000003',
         preferred_locale: 'es',
+        regional_locale: 'es-MX',
         active: true,
       }).success,
     ).toBe(true);

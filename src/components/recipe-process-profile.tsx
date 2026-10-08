@@ -1,6 +1,11 @@
 'use client';
 
-import { useId, useMemo, useState, useTransition } from 'react';
+import {
+  useId,
+  useMemo,
+  useState,
+  useTransition,
+} from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import saveProcessProfile from '@/app/process-profile-actions';
@@ -100,8 +105,9 @@ export default function RecipeProcessProfile({
   const assignedWorkType = workTypes.find((workType) => workType.id === profile?.work_type_id);
   const selectedWorkType = workTypes.find((workType) => workType.id === selectedWorkTypeId);
   const assignedInactive = Boolean(assignedWorkType && !assignedWorkType.active);
-  const canSave =
-    canWrite && selectedWorkType?.active === true && selectedWorkTypeId !== savedWorkTypeId;
+  const canSave = canWrite
+    && selectedWorkType?.active === true
+    && selectedWorkTypeId !== savedWorkTypeId;
 
   function submit() {
     if (!canSave || pending) return;

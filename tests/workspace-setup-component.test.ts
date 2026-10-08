@@ -6,13 +6,13 @@ import type { SetupStep } from '@/services/workspace-setup';
 
 const steps: SetupStep[] = [
   {
-    id: 'ingredients', state: 'missing', counts: [0], canAct: true,
+    id: 'ingredients', state: 'missing', counts: [0], canAct: false,
   },
   { id: 'suppliers', state: 'ready', counts: [1, 1] },
   { id: 'products', state: 'denied' },
   { id: 'pricing', state: 'error' },
   {
-    id: 'orders', state: 'missing', counts: [0], canAct: false,
+    id: 'orders', state: 'missing', counts: [0], canAct: true,
   },
 ];
 
@@ -24,5 +24,6 @@ it('shows ordered bilingual setup guidance without actions for denied records', 
   expect(markup).toContain('Pide a un administrador que complete este paso.');
   expect(markup).toContain('/app?setupRetry=1#workspace-setup');
   expect(markup).not.toContain('/app/products?returnTo=');
+  expect(markup).toContain('/app/orders?returnTo=%2Fapp&amp;create=order');
   expect(markup).toContain('/app/demo?returnTo=%2Fapp');
 });

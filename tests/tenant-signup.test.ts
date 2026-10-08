@@ -44,6 +44,7 @@ function validForm() {
   form.set('display_name', '  Ana Rivera  ');
   form.set('contact', '  ANA@EXAMPLE.TEST  ');
   form.set('preferred_locale', 'es');
+  form.set('regional_locale', 'es-MX');
   form.set('requested_role', 'receiver');
   return form;
 }
@@ -64,6 +65,7 @@ describe('tenant signup application rules', () => {
         contactKind: 'email',
         contactValue: 'ana@example.test',
         preferredLocale: 'es',
+        regionalLocale: 'es-MX',
         requestedRole: 'receiver',
       },
     });
@@ -128,6 +130,7 @@ describe('tenant signup presentation and transport', () => {
       contactKind: 'email',
       contactValue: 'ana@example.test',
       preferredLocale: 'es',
+      regionalLocale: 'es-MX',
       requestedRole: 'receiver',
     });
   });

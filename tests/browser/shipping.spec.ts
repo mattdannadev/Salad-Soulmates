@@ -1,6 +1,8 @@
 import { expect, test } from './fixtures';
 
-test('saves a partial pickup draft, preserves it on reload, and gates physical confirmation', async ({ page }, info) => {
+test('saves a partial pickup draft, preserves it on reload, and gates physical confirmation', async ({
+  page,
+}, info) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => {
@@ -16,18 +18,29 @@ test('saves a partial pickup draft, preserves it on reload, and gates physical c
   await expect(page).toHaveURL(/\/app$/);
   await page.goto('/app/shipping');
   await expect(page.getByText('No customer orders yet.')).toBeVisible();
-  const unavailableConfirmation = page.getByRole('button', { name: 'Confirm shipment / pickup — unavailable' });
+  const unavailableConfirmation = page.getByRole('button', {
+    name: 'Confirm shipment / pickup — unavailable',
+  });
   await expect(unavailableConfirmation).toBeDisabled();
   await expect(unavailableConfirmation).toHaveCSS('cursor', 'not-allowed');
   await page.goto('/app/orders');
-  await page.getByRole('combobox', { name: 'Customer', exact: true }).selectOption({ label: 'Shipping customer' });
-  await page.getByLabel('Customer order reference (optional)').fill(`Shipping ${info.project.name}`);
-  await page.getByLabel('Customer pickup date').fill('2026-10-01');
-  await page.getByLabel('Preview Italian dressing', { exact: true }).fill('4');
-  await page.getByRole('button', { name: 'Save order & estimate ingredients' }).click();
+  await page.getByRole('link', { name: 'New order', exact: true }).click();
+  const newOrderDialog = page.getByRole('dialog', { name: 'New order', exact: true });
+  await expect(newOrderDialog).toBeVisible();
+  await newOrderDialog
+    .getByRole('combobox', { name: 'Customer', exact: true })
+    .selectOption({ label: 'Shipping customer' });
+  await newOrderDialog
+    .getByLabel('Customer order reference (optional)')
+    .fill(`Shipping ${info.project.name}`);
+  await newOrderDialog.getByLabel('Customer pickup date').fill('2026-10-01');
+  await newOrderDialog.getByLabel('Preview Italian dressing', { exact: true }).fill('4');
+  await newOrderDialog.getByRole('button', { name: 'Save order & estimate ingredients' }).click();
   await expect(page).toHaveURL(/\/app\/orders\?order=/);
   await page.getByRole('link', { name: 'Prepare shipment / pickup' }).click();
-  await expect(page.getByRole('button', { name: 'Confirm shipment / pickup — unavailable' })).toBeDisabled();
+  await expect(
+    page.getByRole('button', { name: 'Confirm shipment / pickup — unavailable' }),
+  ).toBeDisabled();
   await page.getByRole('combobox', { name: 'Method', exact: true }).selectOption('Pickup');
   await page.getByLabel(/Preview Italian dressing ·/).fill('5');
   await page.getByLabel('Preparation notes').fill('Customer plans a partial pickup');
@@ -38,8 +51,14 @@ test('saves a partial pickup draft, preserves it on reload, and gates physical c
   await page.reload();
   await expect(page.locator('article')).toHaveCount(1);
   await expect(page.locator('article')).toContainText('Customer plans a partial pickup');
-  await expect(page.getByRole('button', { name: 'Confirm shipment / pickup — unavailable' })).toBeDisabled();
-  await page.screenshot({ path: info.outputPath('shipping-draft.png'), fullPage: true, caret: 'initial' });
+  await expect(
+    page.getByRole('button', { name: 'Confirm shipment / pickup — unavailable' }),
+  ).toBeDisabled();
+  await page.screenshot({
+    path: info.outputPath('shipping-draft.png'),
+    fullPage: true,
+    caret: 'initial',
+  });
   const fits = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
   expect(fits).toBe(true);
   expect(errors).toEqual([]);

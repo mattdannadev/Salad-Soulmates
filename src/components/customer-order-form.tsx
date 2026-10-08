@@ -8,7 +8,7 @@ import { customerCreateHref, customerReturnContext } from '@/app/app/customers/r
 import { type Customer, type CustomerOption } from '@/domain/customer-pricing';
 import {
   clearOrderDraft, orderDraftFromForm, orderDraftSnapshot, parseOrderDraftSnapshot,
-  orderProductSetupHref, saveOrderDraft,
+  orderProductSetupHref, orderSavedDetailHref, saveOrderDraft,
 } from '@/app/app/orders/order-draft';
 import ProductOrderLine from './product-order-line';
 import PurchasingForm from './purchasing-form';
@@ -26,6 +26,7 @@ export default function CustomerOrderForm({
   initialCustomerId = '',
   draftId,
   returnHref,
+  afterSaveReturnHref = undefined,
 }: {
   choices: { id: string; name: string }[];
   customers: Customer[];
@@ -34,6 +35,7 @@ export default function CustomerOrderForm({
   initialCustomerId?: string;
   draftId: string;
   returnHref: string;
+  afterSaveReturnHref?: string;
 }) {
   const prefix = useId();
   const es = locale === 'es';
@@ -97,7 +99,7 @@ export default function CustomerOrderForm({
       label={es ? 'Guardar pedido y calcular ingredientes' : 'Save order & estimate ingredients'}
       destination={(id) => {
         clearOrderDraft(draftId);
-        return `/app/orders?order=${id}`;
+        return orderSavedDetailHref(id, afterSaveReturnHref);
       }}
       payload={(form, requestId) => ({
         id: requestId,

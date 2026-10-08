@@ -20,9 +20,9 @@ describe('customer return context', () => {
   });
 
   it('preserves an order origin and selects the saved customer', () => {
-    const context = customerReturnContext('/app/orders?draft=abc&customer=old#new-order', undefined);
+    const context = customerReturnContext('/app/orders?draft=abc&customer=old&create=order', undefined);
     expect(customerReturnHref(context, customerId))
-      .toBe(`/app/orders?draft=abc&customer=${customerId}#new-order`);
+      .toBe(`/app/orders?draft=abc&customer=${customerId}&create=order`);
   });
 
   it('keeps the original directory focus row on cancel or back', () => {

@@ -46,20 +46,37 @@
   }
 
   .shellRoot :global(.topbar) {
+    align-items: flex-start;
     min-width: 0;
+    gap: var(--space-2);
     padding-left: max(18px, env(safe-area-inset-left));
     padding-right: max(18px, env(safe-area-inset-right));
     padding-top: max(12px, env(safe-area-inset-top));
   }
 
   .shellRoot :global(.identity) {
-    flex: 1;
+    flex: 1 1 0;
+    flex-wrap: wrap;
     justify-content: flex-end;
     min-width: 0;
   }
 
+  .shellRoot :global(.identity > .avatar),
   .shellRoot :global(.identity > span:not(.avatar)) {
-    min-width: 0;
+    display: none;
+  }
+
+  .shellRoot :global(.command-palette-trigger) {
+    flex: 0 0 48px;
+    width: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    padding: 10px;
+  }
+
+  .shellRoot :global(.command-palette-trigger > span),
+  .shellRoot :global(.command-palette-trigger > kbd) {
+    display: none;
   }
 
   .shellRoot :global(.mobile-drawer-close) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { selectableUoms } from '@/services/uoms';
+import { selectableUoms } from '@/domain/uoms';
 
 describe('selectableUoms', () => {
   const units = [

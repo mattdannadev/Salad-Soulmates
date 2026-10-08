@@ -3,7 +3,7 @@ import {
 } from 'vitest';
 import {
   clearOrderDraft, orderDraftFromForm, orderDraftSnapshot, parseOrderDraftSnapshot,
-  orderProductReturnHref, orderProductSetupHref, saveOrderDraft,
+  orderProductReturnHref, orderProductSetupHref, orderSavedDetailHref, saveOrderDraft,
 } from '@/app/app/orders/order-draft';
 
 const draftId = '10000000-0000-4000-8000-000000000001';
@@ -26,8 +26,28 @@ function stubStorage() {
 }
 
 describe('order detour draft', () => {
+  it('carries a validated Home origin into the saved order detail', () => {
+    expect(orderSavedDetailHref(productId, '/app?queue=orders'))
+      .toBe(`/app/orders?order=${productId}&returnTo=%2Fapp%3Fqueue%3Dorders`);
+    [
+      undefined,
+      'https://external.invalid/app',
+      '//external.invalid/app',
+      '/app/orders?create=order',
+      '/app/products',
+    ].forEach((returnTo) => {
+      expect(orderSavedDetailHref(productId, returnTo)).toBe(`/app/orders?order=${productId}`);
+    });
+  });
+
+  it('keeps validated order-directory filters and sorting after save', () => {
+    expect(
+      orderSavedDetailHref(productId, '/app/orders?q=pickup&sort=pickup-oldest&page=2'),
+    ).toBe(`/app/orders?q=pickup&sort=pickup-oldest&page=2&order=${productId}`);
+  });
+
   it('passes a validated draft and customer through product setup', () => {
-    const orderHref = `/app/orders?q=Preview&customer=${customerId}&draft=${draftId}#new-order`;
+    const orderHref = `/app/orders?q=Preview&customer=${customerId}&draft=${draftId}&create=order`;
     const setup = new URL(orderProductSetupHref(orderHref), 'https://internal.invalid');
     expect(setup.pathname).toBe('/app/products');
     expect(setup.searchParams.get('returnTo')).toBe(orderHref);
@@ -35,15 +55,18 @@ describe('order detour draft', () => {
   });
 
   it.each([
-    'https://external.invalid/app/orders?draft=10000000-0000-4000-8000-000000000001#new-order',
+    'https://external.invalid/app/orders?draft=10000000-0000-4000-8000-000000000001&create=order',
     '//external.invalid/app/orders',
-    '/app/orders?draft=invalid#new-order',
-    `/app/orders?draft=${draftId}&customer=invalid#new-order`,
-    `/app/orders?draft=${draftId}&order=${productId}#new-order`,
-    `/app/orders?draft=${draftId}#other`,
-    `/app/orders?draft=${draftId}&draft=${draftId}#new-order`,
+    '/app/orders?draft=invalid&create=order',
+    `/app/orders?draft=${draftId}&customer=invalid&create=order`,
+    `/app/orders?draft=${draftId}&order=${productId}&create=order`,
+    `/app/orders?draft=${draftId}&create=other`,
+    `/app/orders?draft=${draftId}`,
+    `/app/orders?draft=${draftId}#new-order`,
+    `/app/orders?draft=${draftId}&draft=${draftId}&create=order`,
+    `/app/orders?draft=${draftId}&create=order&create=order`,
   ])('falls back for unsafe product returns: %s', (input) => {
-    expect(orderProductReturnHref(input)).toBe('/app/orders#new-order');
+    expect(orderProductReturnHref(input)).toBe('/app/orders?create=order');
   });
 
   it('keeps only typed order fields in tab storage, with no URL or customer contact data', () => {

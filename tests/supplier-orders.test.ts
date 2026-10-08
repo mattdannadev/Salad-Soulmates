@@ -76,6 +76,32 @@ const lemonPack = {
   active: true,
   notes: '',
 };
+const garlicCoverage = [{
+  ingredientId: fixtureId(100),
+  name: 'Preview garlic powder',
+  uom: 'lb',
+  demand: 60,
+  usable: 0,
+  inbound: 0,
+  shortage: 60,
+  neededOn: '2026-10-12',
+  planId: fixtureId(601),
+  demandByDate: 60,
+  supplyDate: '2026-10-12',
+}];
+const lemonCoverage = [{
+  ingredientId: fixtureId(101),
+  name: 'Preview lemon juice',
+  uom: 'gal',
+  demand: 10,
+  usable: 0,
+  inbound: 0,
+  shortage: 10,
+  neededOn: '2026-10-12',
+  planId: fixtureId(601),
+  demandByDate: 10,
+  supplyDate: '2026-10-12',
+}];
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.workspace.mockResolvedValue({
@@ -88,6 +114,8 @@ beforeEach(() => {
     packs: [],
     ingredients: fixtureRecords.ingredients,
     requirements: [],
+    demandCoverage: [],
+    supplierPrices: [],
     canWrite: true,
     locale: 'en',
   });
@@ -104,13 +132,13 @@ it('preserves recorded purchasing packs, quantities, dates and status controls',
   expect(html).toContain('Update status');
   expect(html).toContain(`/app/orders?estimate=${draft.material_plan_id}`);
   expect(html).toContain('New purchase order');
-  expect(html).toContain('href="/app/purchasing?create=1"');
+  expect(html).toContain('href="#aggregate-purchase-planning"');
   expect(html).not.toContain('<dialog');
   expect(html).not.toContain('Standalone supplier purchase');
   expect(html).not.toContain('Create draft for');
 });
 
-it('opens a standalone purchase composer from the page-level creation action', async () => {
+it('anchors the page-level creation action to aggregate purchase planning', async () => {
   mocks.workspace.mockResolvedValue({
     orders: [],
     plans: [],
@@ -121,19 +149,23 @@ it('opens a standalone purchase composer from the page-level creation action', a
     packs: [garlicPack, lemonPack],
     ingredients: fixtureRecords.ingredients,
     requirements: [],
+    demandCoverage: garlicCoverage,
+    supplierPrices: [],
     canWrite: true,
     locale: 'en',
   });
 
   const html = renderToStaticMarkup(
     await Purchasing({
-      searchParams: Promise.resolve({ create: '1' }),
+      searchParams: Promise.resolve({}),
     }),
   );
 
-  expect(html).toContain('<dialog');
-  expect(html).toContain('Standalone supplier purchase');
-  expect(html).toContain('Create purchase order');
+  expect(html).toContain('href="#aggregate-purchase-planning"');
+  expect(html).toContain('id="aggregate-purchase-planning"');
+  expect(html).toContain('Purchase for all open orders');
+  expect(html).toContain('Review before ordering');
+  expect(html).not.toContain('<dialog');
 });
 
 it.each([
@@ -169,6 +201,8 @@ it('fixes an inventory-selected ingredient and offers only its compatible suppli
     ],
     ingredients: fixtureRecords.ingredients,
     requirements: [],
+    demandCoverage: [],
+    supplierPrices: [],
     canWrite: true,
     locale: 'en',
   });
@@ -185,7 +219,7 @@ it('fixes an inventory-selected ingredient and offers only its compatible suppli
   expect(html).not.toContain('Preview lemon juice');
   expect(html).not.toContain('Customer order (optional)');
 });
-it('keeps a supplier fixed while offering each configured ingredient', async () => {
+it('keeps a supplier fixed while showing each aggregate shortage', async () => {
   mocks.workspace.mockResolvedValue({
     orders: [],
     plans: [],
@@ -196,6 +230,8 @@ it('keeps a supplier fixed while offering each configured ingredient', async () 
     packs: [garlicPack, lemonPack],
     ingredients: fixtureRecords.ingredients,
     requirements: [],
+    demandCoverage: [...garlicCoverage, ...lemonCoverage],
+    supplierPrices: [],
     canWrite: true,
     locale: 'en',
   });
@@ -205,19 +241,20 @@ it('keeps a supplier fixed while offering each configured ingredient', async () 
     }),
   );
   expect(html).toContain('Selected supplier: Preview supplier');
+  expect(html).toContain('Purchase for all open orders');
   expect(html).toContain('Preview garlic powder');
   expect(html).toContain('Preview lemon juice');
-  expect(html).toContain('Whole packs (0 skips this ingredient)');
+  expect(html).toContain('aria-label="Buy Preview garlic powder"');
+  expect(html).toContain('aria-label="Buy Preview lemon juice"');
 });
-it('preserves supplier scope and directory filters in the creation action', async () => {
+it('uses in-page aggregate purchase planning without discarding supplier directory state', async () => {
   const html = renderToStaticMarkup(
     await Purchasing({
       searchParams: Promise.resolve({ supplier: fixtureId(200), q: 'PO-100', status: 'Confirmed' }),
     }),
   );
-  expect(html).toContain(
-    `href="/app/purchasing?supplier=${fixtureId(200)}&amp;q=PO-100&amp;status=Confirmed&amp;create=1"`,
-  );
+  expect(html).toContain('Selected supplier: Preview supplier');
+  expect(html).toContain('href="#aggregate-purchase-planning"');
   expect(html).not.toContain('<dialog');
 });
 it('does not expose purchase creation for a read-only user even with creation URL state', async () => {
@@ -231,6 +268,8 @@ it('does not expose purchase creation for a read-only user even with creation UR
     packs: [],
     ingredients: fixtureRecords.ingredients,
     requirements: [],
+    demandCoverage: [],
+    supplierPrices: [],
     canWrite: false,
     locale: 'en',
   });
@@ -262,6 +301,8 @@ it('shows only the selected supplier’s history', async () => {
     packs: [],
     ingredients: fixtureRecords.ingredients,
     requirements: [],
+    demandCoverage: [],
+    supplierPrices: [],
     canWrite: true,
     locale: 'en',
   });

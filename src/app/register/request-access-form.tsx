@@ -1,8 +1,8 @@
 'use client';
 
 import { useActionState } from 'react';
-import requestTenantAccess from './actions';
 import { regionalLocaleOptions } from '@/domain/user-preferences';
+import requestTenantAccess from './actions';
 
 export default function RequestAccessForm({ organizationSlug }: { organizationSlug: string }) {
   const requestAccess = requestTenantAccess.bind(null, organizationSlug);

@@ -8,7 +8,12 @@ import RecipeDetails from '../src/app/app/recipes/[id]/page';
 import { fixtureId, fixtureRecords } from './browser/fixture-data';
 
 const mocks = vi.hoisted(() => ({
-  context: vi.fn(), permission: vi.fn(), rows: vi.fn(), rpc: vi.fn(), single: vi.fn(),
+  context: vi.fn(),
+  permission: vi.fn(),
+  rows: vi.fn(),
+  rpc: vi.fn(),
+  single: vi.fn(),
+  organizationSingle: vi.fn(),
 }));
 vi.mock('server-only', () => ({}));
 vi.mock('next/navigation', () => ({
@@ -29,10 +34,16 @@ vi.mock('../src/lib/data', async (original) => ({
 beforeEach(() => {
   vi.clearAllMocks();
   const query = { select: vi.fn(), eq: vi.fn(), maybeSingle: mocks.single };
+  const organizationQuery = { select: vi.fn(), single: mocks.organizationSingle };
   query.select.mockReturnValue(query);
   query.eq.mockReturnValue(query);
+  organizationQuery.select.mockReturnValue(organizationQuery);
   mocks.context.mockResolvedValue({
-    db: { from: () => query, rpc: mocks.rpc }, profile: { preferred_locale: 'en' },
+    db: {
+      from: (table: string) => (table === 'organizations' ? organizationQuery : query),
+      rpc: mocks.rpc,
+    },
+    profile: { preferred_locale: 'en' },
   });
   mocks.permission.mockResolvedValue(true);
   mocks.rpc.mockResolvedValue({
@@ -43,6 +54,10 @@ beforeEach(() => {
     Promise.resolve(fixtureRecords[table] ?? [])
   ));
   mocks.single.mockResolvedValue({ data: fixtureRecords.recipes?.[0], error: null });
+  mocks.organizationSingle.mockResolvedValue({
+    data: { measurement_system: 'imperial' },
+    error: null,
+  });
 });
 const details = (id = fixtureId(400), version?: string, returnTo?: string) => RecipeDetails({
   params: Promise.resolve({ id }), searchParams: Promise.resolve({ version, returnTo }),
@@ -226,6 +241,7 @@ describe('recipe and product screens', () => {
     await expect(details()).rejects.toThrow('REDIRECT:/app');
     expect(mocks.rows).not.toHaveBeenCalled();
     expect(mocks.single).not.toHaveBeenCalled();
+    expect(mocks.organizationSingle).not.toHaveBeenCalled();
   });
   it('returns not-found for invalid, absent, and unrelated history links', async () => {
     await expect(details('invalid')).rejects.toThrow('NOT_FOUND');

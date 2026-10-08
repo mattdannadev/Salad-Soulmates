@@ -25,6 +25,14 @@ interface Unit {
   active: boolean;
 }
 
+function unitAvailabilityLabel(unit: Unit, measurementSystem: 'metric' | 'imperial') {
+  if (!unit.active) return 'Inactive';
+  if (unit.measurement_system === measurementSystem || unit.measurement_system === 'universal') {
+    return 'Available';
+  }
+  return 'Other system';
+}
+
 function DeleteUnit({ unit }: { unit: Unit }) {
   const [pending, start] = useTransition();
   const [message, setMessage] = useState('');
@@ -196,7 +204,7 @@ export default function UomCatalogManager({
                         {unit.is_purchase_unit ? 'Purchase' : ''}
                       </span>
                       <span className={unit.active && (unit.measurement_system === measurementSystem || unit.measurement_system === 'universal') ? 'badge' : 'badge muted'}>
-                        {!unit.active ? 'Inactive' : unit.measurement_system === measurementSystem || unit.measurement_system === 'universal' ? 'Available' : 'Other system'}
+                        {unitAvailabilityLabel(unit, measurementSystem)}
                       </span>
                     </summary>
                     <div className="unit-row-form"><UnitForm unit={unit} families={families} /></div>

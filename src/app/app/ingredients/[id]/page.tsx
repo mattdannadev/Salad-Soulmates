@@ -12,10 +12,10 @@ import { PageHeader } from '@/components/shell';
 import { loadIngredientReferenceSummary } from '@/lib/ingredient-stock';
 import IngredientReferenceSummary from '@/components/ingredient-reference-summary';
 import BackButton from '@/components/back-button';
+import { organizationMeasurementSystem, selectableUoms } from '@/services/uoms';
 import {
   ingredientReturnContext, ingredientReturnHref, ingredientSupplierRecoveryHref,
 } from '../return-context';
-import { organizationMeasurementSystem, selectableUoms } from '@/services/uoms';
 
 export default async function IngredientDetail({
   params, searchParams,

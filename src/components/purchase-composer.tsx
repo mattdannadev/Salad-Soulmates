@@ -226,101 +226,103 @@ export default function PurchaseComposer({
       <details className="purchase-group">
         <summary>{es ? 'Asignar o cambiar ingredientes' : 'Assign or change ingredients'}</summary>
         <div className="form-grid">
-          {shortages.filter((requirement) => includedIngredients[requirement.ingredient_id]).map((requirement) => {
-            const options = activePacks.filter(
-              (pack) => pack.ingredient_id === requirement.ingredient_id,
-            );
-            const chosen = options.find(
-              (pack) => pack.id === selected[requirement.ingredient_id],
-            );
-            return (
-              <label
-                key={requirement.ingredient_id}
-                htmlFor={`${prefix}-${requirement.ingredient_id}`}
-              >
-                {requirement.ingredient_name}
-                <select
-                  id={`${prefix}-${requirement.ingredient_id}`}
-                  value={selected[requirement.ingredient_id] ?? ''}
-                  onChange={(event) => {
-                    const supplierItemId = event.target.value;
-                    const nextPack = activePacks.find((pack) => pack.id === supplierItemId);
-                    setSelected({ ...selected, [requirement.ingredient_id]: supplierItemId });
-                    if (nextPack && nextPack.pack_quantity_uom === requirement.uom) {
-                      setPurchaseUnits({
-                        ...purchaseUnits,
+          {shortages
+            .filter((requirement) => includedIngredients[requirement.ingredient_id])
+            .map((requirement) => {
+              const options = activePacks.filter(
+                (pack) => pack.ingredient_id === requirement.ingredient_id,
+              );
+              const chosen = options.find(
+                (pack) => pack.id === selected[requirement.ingredient_id],
+              );
+              return (
+                <label
+                  key={requirement.ingredient_id}
+                  htmlFor={`${prefix}-${requirement.ingredient_id}`}
+                >
+                  {requirement.ingredient_name}
+                  <select
+                    id={`${prefix}-${requirement.ingredient_id}`}
+                    value={selected[requirement.ingredient_id] ?? ''}
+                    onChange={(event) => {
+                      const supplierItemId = event.target.value;
+                      const nextPack = activePacks.find((pack) => pack.id === supplierItemId);
+                      setSelected({ ...selected, [requirement.ingredient_id]: supplierItemId });
+                      if (nextPack && nextPack.pack_quantity_uom === requirement.uom) {
+                        setPurchaseUnits({
+                          ...purchaseUnits,
+                          [requirement.ingredient_id]: String(recommendPurchase(
+                            requirement.shortage,
+                            nextPack.pack_quantity,
+                          ).units),
+                        });
+                        setOverrideReasons({
+                          ...overrideReasons,
+                          [requirement.ingredient_id]: '',
+                        });
+                      }
+                    }}
+                  >
+                    <option value="">
+                      {es ? 'Seleccionar presentación' : 'Select supplier pack'}
+                    </option>
+                    {suppliers.map((supplier) => {
+                      const supplierOptions = options.filter(
+                        (pack) => pack.supplier_id === supplier.id,
+                      );
+                      if (!supplierOptions.length) return null;
+                      return (
+                        <optgroup key={supplier.id} label={supplier.name}>
+                          {supplierOptions.map((pack) => (
+                            <option key={pack.id} value={pack.id}>
+                              {formatNumber(pack.pack_quantity)}
+                              {' '}
+                              {pack.pack_quantity_uom}
+                              /
+                              {pack.purchase_uom}
+                              {pack.supplier_sku ? ` · ${pack.supplier_sku}` : ''}
+                            </option>
+                          ))}
+                        </optgroup>
+                      );
+                    })}
+                  </select>
+                  {!options.length && <small>{es ? 'Agrega una presentación para continuar.' : 'Add a supplier pack to continue.'}</small>}
+                  <SupplierPackQuickAdd
+                    ingredientId={requirement.ingredient_id}
+                    ingredientName={requirement.ingredient_name}
+                    inventoryUom={requirement.uom}
+                    suppliers={suppliers}
+                    locale={locale}
+                    onCreated={(pack) => {
+                      setAvailablePacks((current) => [...current, pack]);
+                      setSelected((current) => ({
+                        ...current,
+                        [requirement.ingredient_id]: pack.id,
+                      }));
+                      setPurchaseUnits((current) => ({
+                        ...current,
                         [requirement.ingredient_id]: String(recommendPurchase(
                           requirement.shortage,
-                          nextPack.pack_quantity,
+                          pack.pack_quantity,
                         ).units),
-                      });
-                      setOverrideReasons({
-                        ...overrideReasons,
+                      }));
+                      setOverrideReasons((current) => ({
+                        ...current,
                         [requirement.ingredient_id]: '',
-                      });
-                    }
-                  }}
-                >
-                  <option value="">
-                    {es ? 'Seleccionar presentación' : 'Select supplier pack'}
-                  </option>
-                  {suppliers.map((supplier) => {
-                    const supplierOptions = options.filter(
-                      (pack) => pack.supplier_id === supplier.id,
-                    );
-                    if (!supplierOptions.length) return null;
-                    return (
-                      <optgroup key={supplier.id} label={supplier.name}>
-                        {supplierOptions.map((pack) => (
-                          <option key={pack.id} value={pack.id}>
-                            {formatNumber(pack.pack_quantity)}
-                            {' '}
-                            {pack.pack_quantity_uom}
-                            /
-                            {pack.purchase_uom}
-                            {pack.supplier_sku ? ` · ${pack.supplier_sku}` : ''}
-                          </option>
-                        ))}
-                      </optgroup>
-                    );
-                  })}
-                </select>
-                {!options.length && <small>{es ? 'Agrega una presentación para continuar.' : 'Add a supplier pack to continue.'}</small>}
-                <SupplierPackQuickAdd
-                  ingredientId={requirement.ingredient_id}
-                  ingredientName={requirement.ingredient_name}
-                  inventoryUom={requirement.uom}
-                  suppliers={suppliers}
-                  locale={locale}
-                  onCreated={(pack) => {
-                    setAvailablePacks((current) => [...current, pack]);
-                    setSelected((current) => ({
-                      ...current,
-                      [requirement.ingredient_id]: pack.id,
-                    }));
-                    setPurchaseUnits((current) => ({
-                      ...current,
-                      [requirement.ingredient_id]: String(recommendPurchase(
-                        requirement.shortage,
-                        pack.pack_quantity,
-                      ).units),
-                    }));
-                    setOverrideReasons((current) => ({
-                      ...current,
-                      [requirement.ingredient_id]: '',
-                    }));
-                  }}
-                />
-                {chosen && chosen.pack_quantity_uom !== requirement.uom && (
-                <small role="alert">
-                  {es
-                    ? 'La presentación necesita una conversión validada a la unidad base.'
-                    : 'This pack needs a validated conversion to the ingredient’s base unit.'}
-                </small>
-                )}
-              </label>
-            );
-          })}
+                      }));
+                    }}
+                  />
+                  {chosen && chosen.pack_quantity_uom !== requirement.uom && (
+                  <small role="alert">
+                    {es
+                      ? 'La presentación necesita una conversión validada a la unidad base.'
+                      : 'This pack needs a validated conversion to the ingredient’s base unit.'}
+                  </small>
+                  )}
+                </label>
+              );
+            })}
         </div>
       </details>
       {suppliers

@@ -23,7 +23,7 @@ test('sidebar collapses to accessible icons and expands after navigation', async
   await expect(page.locator('.brand strong')).toBeVisible();
   await expect(navigation.locator('.nav-label').first()).toBeVisible();
   await page.screenshot({ path: info.outputPath('sidebar-expanded.png'), fullPage: true });
-  await page.locator('#locale').selectOption('es');
+  await page.locator('#language').selectOption('es');
   await page.getByRole('button', { name: 'Contraer navegación' }).click();
   await expect(page.getByRole('button', { name: 'Expandir navegación' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Navegación principal' })

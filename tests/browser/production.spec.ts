@@ -9,11 +9,15 @@ test('prepares customer production with paired batches, shortage review, revisio
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/app$/);
   await page.goto('/app/orders');
-  await page.getByRole('combobox', { name: 'Customer', exact: true }).selectOption({ label: 'Production customer' });
-  await page.getByLabel('Customer order reference (optional)').fill(`Production ${info.project.name}`);
-  await page.getByLabel('Customer pickup date').fill('2026-10-01');
-  await page.getByLabel('Preview Italian dressing', { exact: true }).fill('4');
-  await page.getByRole('button', { name: 'Save order & estimate ingredients' }).click();
+  await page.getByRole('link', { name: 'New order', exact: true }).click();
+  const newOrderDialog = page.getByRole('dialog', { name: 'New order', exact: true });
+  await expect(newOrderDialog).toBeVisible();
+  await newOrderDialog.getByRole('combobox', { name: 'Customer', exact: true })
+    .selectOption({ label: 'Production customer' });
+  await newOrderDialog.getByLabel('Customer order reference (optional)').fill(`Production ${info.project.name}`);
+  await newOrderDialog.getByLabel('Customer pickup date').fill('2026-10-01');
+  await newOrderDialog.getByLabel('Preview Italian dressing', { exact: true }).fill('4');
+  await newOrderDialog.getByRole('button', { name: 'Save order & estimate ingredients' }).click();
   await expect(page).toHaveURL(/\/app\/orders\?order=/);
   const preparation = page.getByRole('region', { name: 'Production preparation', exact: true });
   await expect(preparation).toContainText('Not planned');

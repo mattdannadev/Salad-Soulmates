@@ -16,6 +16,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { signOut } from '@/app/actions';
+import type { RegionalLocale } from '@/domain/user-preferences';
 import FeedbackDrawer from './feedback';
 import LocaleSwitcher from './locale-switcher';
 import styles from './shell-ai-launcher.module.css';
@@ -30,7 +31,6 @@ import {
   navigationLabel,
   navigationSections,
 } from './navigation-registry';
-import type { RegionalLocale } from '@/domain/user-preferences';
 
 export function Shell({
   children,

@@ -511,6 +511,8 @@ export default function WorkforceScheduler({
   const [pending, startTransition] = useTransition();
   const [calendarPending, setCalendarPending] = useState(false);
   const [deletingWorkId, setDeletingWorkId] = useState<string | null>(null);
+  const [deletionTransitionActive, setDeletionTransitionActive] = useState(false);
+  const [deletionRecoveryMessage, setDeletionRecoveryMessage] = useState<string | null>(null);
   const [assignmentState, setAssignmentState] = useState({
     source: assignments,
     items: assignments,
@@ -565,6 +567,12 @@ export default function WorkforceScheduler({
   useEffect(() => {
     pendingRef.current = pending;
   }, [pending]);
+
+  useEffect(() => {
+    if (!deletionTransitionActive || pending) return undefined;
+    const timer = window.setTimeout(() => setDeletionTransitionActive(false), 0);
+    return () => window.clearTimeout(timer);
+  }, [deletionTransitionActive, pending]);
 
   useEffect(() => {
     if (!activeDialog) {
@@ -1292,36 +1300,51 @@ export default function WorkforceScheduler({
   const deleteAssignment = useCallback(
     (id: string) => {
       if (!canManage || pending || calendarPending) return;
+      setDeletionTransitionActive(true);
+      setDeletionRecoveryMessage(null);
       startTransition(async () => {
-        const previous = localAssignments.find((item) => item.id === id);
-        if (!previous) return;
         let deleted = false;
         try {
+          const previous = localAssignments.find((item) => item.id === id);
+          if (!previous) {
+            const unavailableMessage = es
+              ? 'El trabajo ya no est\u00e1 disponible. Recargue antes de volver a intentarlo.'
+              : 'This work is no longer available. Reload before retrying.';
+            setDeletingWorkId(null);
+            setMessage(unavailableMessage);
+            setDeletionRecoveryMessage(unavailableMessage);
+            return;
+          }
           const result = await deleteScheduleEvent({
             id,
             facility_id: facilityId,
             revision: previous.revision,
           });
           if (!result.ok) {
+            setDeletingWorkId(null);
             setMessage(result.message);
+            setDeletionRecoveryMessage(result.message);
             return;
           }
           setFormOpen(false);
           setDeletingWorkId(null);
           deleted = true;
+          setDeletionRecoveryMessage(null);
           setMessage(es ? 'Asignación eliminada.' : 'Assignment deleted.');
           router.refresh();
         } catch (error) {
+          const deleteErrorMessage = es
+            ? 'No se pudo eliminar. Vuelva a intentarlo.'
+            : 'Could not delete. Try again.';
           console.error('scheduler.form-delete-failed', {
             code: error instanceof Error ? error.name : 'unknown',
           });
-          setMessage(
-            es ? 'No se pudo eliminar. Vuelva a intentarlo.' : 'Could not delete. Try again.',
-          );
+          setDeletingWorkId(null);
+          setMessage(deleteErrorMessage);
+          setDeletionRecoveryMessage(deleteErrorMessage);
         } finally {
           if (!deleted) {
             resetCalendarFromLocalState();
-            router.refresh();
           }
         }
       });
@@ -1331,6 +1354,22 @@ export default function WorkforceScheduler({
       resetCalendarFromLocalState,
     ],
   );
+  const openDeleteConfirmation = useCallback(
+    (id: string) => {
+      if (!canManage || pending || calendarPending) return;
+      setMessage('');
+      setDeletionTransitionActive(false);
+      setDeletionRecoveryMessage(null);
+      setDeletingWorkId(id);
+    },
+    [canManage, pending, calendarPending],
+  );
+  function reloadScheduleAfterDeletionFailure() {
+    if (pending || calendarPending) return;
+    setMessage('');
+    setDeletionRecoveryMessage(null);
+    startTransition(() => router.refresh());
+  }
   function applyPeriod() {
     if (!periodStart || !periodEnd || periodEnd < periodStart) {
       setMessage(es ? 'Seleccione un período válido.' : 'Choose a valid reporting period.');
@@ -1714,7 +1753,8 @@ export default function WorkforceScheduler({
                       locale={locale}
                       canManage={canManage}
                       pending={
-                        pending || calendarPending || formOpen || ptoOpen || Boolean(summaryEventId)
+                        (pending && !deletionTransitionActive)
+                        || calendarPending || formOpen || ptoOpen || Boolean(summaryEventId)
                       }
                       resetVersion={calendarResetVersion}
                       focusedWorkId={initialWorkId}
@@ -1725,7 +1765,7 @@ export default function WorkforceScheduler({
                       }}
                       onEdit={editAssignment}
                       onDuplicate={duplicateAssignment}
-                      onDelete={setDeletingWorkId}
+                      onDelete={openDeleteConfirmation}
                       onViewExecutionSchedule={viewExecutionSchedule}
                       onCreate={createFromCalendar}
                       onDateChange={changeCalendarDates}
@@ -2040,9 +2080,20 @@ export default function WorkforceScheduler({
         </>
       )}
       {message && !formOpen && (
-        <p role="status" className={styles.status}>
-          {message}
-        </p>
+        <>
+          <p role="status" className={styles.status}>
+            {message}
+          </p>
+          {deletionRecoveryMessage === message && (
+            <button
+              type="button"
+              disabled={pending || calendarPending}
+              onClick={reloadScheduleAfterDeletionFailure}
+            >
+              {es ? 'Recargar horario' : 'Reload schedule'}
+            </button>
+          )}
+        </>
       )}
       {ptoOpen && canManage && (
         <div className={styles.modalBackdrop}>
@@ -2459,6 +2510,15 @@ export default function WorkforceScheduler({
                 {message}
               </p>
             )}
+            {deletionRecoveryMessage === message && (
+              <button
+                type="button"
+                disabled={pending || calendarPending}
+                onClick={reloadScheduleAfterDeletionFailure}
+              >
+                {es ? 'Recargar horario' : 'Reload schedule'}
+              </button>
+            )}
             <div className={styles.dialogActions}>
               {editingId && (
                 <button
@@ -2531,7 +2591,11 @@ export default function WorkforceScheduler({
         confirmLabel={es ? 'Eliminar' : 'Delete'}
         cancelLabel={es ? 'Cancelar' : 'Cancel'}
         pending={pending}
-        onCancel={() => setDeletingWorkId(null)}
+        onCancel={() => {
+          setDeletionTransitionActive(false);
+          setDeletionRecoveryMessage(null);
+          setDeletingWorkId(null);
+        }}
         onConfirm={() => {
           if (deletingWorkId) deleteAssignment(deletingWorkId);
         }}

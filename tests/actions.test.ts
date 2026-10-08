@@ -317,6 +317,7 @@ describe('Auth service and invitation failures', () => {
     contact_kind: 'email',
     contact_value: 'person@example.test',
     preferred_locale: 'en',
+    regional_locale: 'en-US',
     requested_role: 'reviewer',
     status: 'New',
     review_note: '',
@@ -335,6 +336,7 @@ describe('Auth service and invitation failures', () => {
     form.set('display_name', 'New teammate');
     form.set('email', 'new@example.test');
     form.set('preferred_locale', 'en');
+    form.set('regional_locale', 'en-US');
     form.set('facility_id', inventory.ingredient_id);
     form.set('access_profile_id', inventory.request_id);
     return inviteUserFromSettings(initial, form);
@@ -351,6 +353,7 @@ describe('Auth service and invitation failures', () => {
       contact_kind: 'email',
       contact_value: 'new@example.test',
       preferred_locale: 'en',
+      regional_locale: 'en-US',
       requested_role: 'reviewer',
     });
     expect(mocks.invite).toHaveBeenCalledWith('new@example.test', expect.anything());

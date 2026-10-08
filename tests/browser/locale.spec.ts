@@ -13,16 +13,16 @@ test('language changes update navigation and dashboard and survive reload', asyn
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/app$/);
 
-  await page.locator('#locale').selectOption('es');
+  await page.locator('#language').selectOption('es');
   await expect(navigation('es').getByRole('link', { name: 'Panel', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Bienvenido');
   await expect(page.locator('main')).toContainText('Próximas recogidas');
   await page.screenshot({ path: info.outputPath('dashboard-spanish.png'), fullPage: true });
   await page.reload();
-  await expect(page.locator('#locale')).toHaveValue('es');
+  await expect(page.locator('#language')).toHaveValue('es');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Bienvenido');
   await page.goto('/worker');
-  await expect(page.getByRole('heading', { name: 'Preparaciones de especias', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Mi horario', exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Volver al panel', exact: true }).click();
   if (info.project.name === 'phone') {
     await expect(navigation('es')).toBeVisible();
@@ -41,13 +41,13 @@ test('language changes update navigation and dashboard and survive reload', asyn
   }
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Pedidos');
 
-  await page.locator('#locale').selectOption('en');
+  await page.locator('#language').selectOption('en');
   await expect(navigation('en').getByRole('link', { name: 'Dashboard', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Orders');
   await navigation('en').getByRole('link', { name: 'Dashboard', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Welcome');
   await page.reload();
-  await expect(page.locator('#locale')).toHaveValue('en');
+  await expect(page.locator('#language')).toHaveValue('en');
   await expect(page.locator('main')).toContainText('Upcoming pickups');
   await page.screenshot({ path: info.outputPath('dashboard-english.png'), fullPage: true });
 
@@ -55,17 +55,17 @@ test('language changes update navigation and dashboard and survive reload', asyn
     if (route.request().method() === 'POST') await route.abort('failed');
     else await route.continue();
   });
-  await page.locator('#locale').selectOption('es');
+  await page.locator('#language').selectOption('es');
   await expect(page.getByRole('alert').filter({ hasText: 'Could not save the language' })).toBeVisible();
-  await expect(page.locator('#locale')).toHaveValue('en');
+  await expect(page.locator('#language')).toHaveValue('en');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Welcome');
   await page.unroute('**/app');
-  await page.locator('#locale').selectOption('es');
+  await page.locator('#language').selectOption('es');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Bienvenido');
-  await page.locator('#locale').selectOption('en');
+  await page.locator('#language').selectOption('en');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Welcome');
   await page.goto('/worker');
-  await expect(page.getByRole('heading', { name: 'Spice preparations', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'My schedule', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Feedback', exact: true }).click();
   await expect(page.getByLabel('Your feedback *')).toBeVisible();
   await page.getByRole('button', { name: 'Close feedback', exact: true }).click();

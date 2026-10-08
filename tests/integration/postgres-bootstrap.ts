@@ -64,6 +64,8 @@ const migrations = [
   '20260930060000_customer_price_stable_customer.sql',
   '20260930141220_workforce_pto_types.sql',
   '20260930170000_plant_operations_configuration.sql',
+  '20260930190000_schedule_customer_products.sql',
+  '20260930190100_schedule_batch_context.sql',
   '20261001022749_timed_workforce_schedule.sql',
   '20261001030100_fix_schedule_customer_product_lookup.sql',
   '20261001040722_add_schedule_customer_order_context.sql',
@@ -89,6 +91,8 @@ const migrations = [
   '20261005120000_work_plan_master_data.sql',
   '20261005194602_worker_personal_work_projection.sql',
   '20261005201804_mobile_mixing_prep_api.sql',
+  '20261006045231_recipe_process_configuration.sql',
+  '20261006150000_process_profile_description.sql',
 ];
 
 /** Apply migrations and synthetic identity data only inside the newly created test database. */
