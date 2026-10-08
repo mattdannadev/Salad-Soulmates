@@ -63,7 +63,15 @@ it('shows the complete review before offering a supplier purchase draft', () => 
   }));
 
   expect(html).toContain('Required: 100 lb');
-  expect(html).toContain('1. Review supplier recommendations');
+  expect(html).toContain('1. Select ingredients to buy');
+  expect(html).toContain('2. Review supplier recommendations');
+  expect(html).toContain('3. Change supplier or pack recommendations');
+  expect(html.indexOf('1. Select ingredients to buy')).toBeLessThan(
+    html.indexOf('2. Review supplier recommendations'),
+  );
+  expect(html.indexOf('2. Review supplier recommendations')).toBeLessThan(
+    html.indexOf('3. Change supplier or pack recommendations'),
+  );
   expect(html).toContain('Test supplier · 1 ingredient');
   expect(html).toContain('Change supplier or pack recommendations');
   expect(html).toContain('On hand: 25 lb');

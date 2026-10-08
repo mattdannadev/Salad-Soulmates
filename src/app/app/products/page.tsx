@@ -16,13 +16,13 @@ import { loadRecipeCatalog } from '@/lib/recipe-catalog';
 import { formatNumber } from '@/domain/format';
 import { recipeLineRowSchema, recipeSectionRowSchema } from '@/domain/recipes';
 import { rowSchemas } from '@/domain/master-data';
+import { organizationMeasurementSystem, selectableUoms } from '@/services/uoms';
 import {
   PRODUCT_PAGE_SIZE, parseProductDirectoryQuery, productDirectoryFilters,
   productDirectoryHref, productDirectorySorts, selectProductDirectory, type ProductSearchParams,
 } from './directory-query';
 import ProductFocus from './product-focus';
 import productSetupReturnHref from './return-context';
-import { organizationMeasurementSystem, selectableUoms } from '@/services/uoms';
 
 export default async function Products({
   searchParams,

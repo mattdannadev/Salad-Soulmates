@@ -7,7 +7,7 @@ export const test = base.extend<{ preparedDatabase: void }>({
     expect(reset.ok()).toBe(true);
     const profile = await request.patch(
       'http://127.0.0.1:4010/rest/v1/profiles?id=eq.00000000-0000-4000-8000-000000000001',
-      { data: { preferred_locale: 'en' } },
+      { data: { preferred_locale: 'en', regional_locale: 'en-US' } },
     );
     expect(profile.ok()).toBe(true);
     await use();

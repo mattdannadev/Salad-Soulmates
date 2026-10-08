@@ -3,16 +3,28 @@ import { expect, test } from './fixtures';
 const ingredientId = '00000000-0000-4000-8000-000000000100';
 
 async function createConfirmedPurchase(page: import('@playwright/test').Page) {
-  await page.goto(`/app/purchasing?ingredient=${ingredientId}`);
-  await page.getByLabel('Expected delivery').fill('2026-10-01');
-  await page.getByLabel(/Whole packs \(0 skips this ingredient\)/).fill('1');
+  await page.goto(`/app/purchasing?ingredient=${ingredientId}&create=1`);
+  const purchaseDialog = page.getByRole('dialog', {
+    name: 'Select a supplier for Preview garlic powder',
+    exact: true,
+  });
+  await expect(purchaseDialog).toBeVisible();
+  await purchaseDialog.getByLabel('Expected delivery').fill('2026-10-01');
+  await purchaseDialog.getByLabel(/Whole packs \(0 skips this ingredient\)/).fill('1');
   const references = page.getByRole('article').filter({ hasText: 'Confirmed' }).locator('strong');
   const previousReferences = await references.allTextContents();
-  await page.getByRole('button', { name: 'Create purchase order', exact: true }).click();
+  await purchaseDialog.getByRole('button', { name: 'Create purchase order', exact: true }).click();
   await expect(references).toHaveCount(previousReferences.length + 1);
-  const createdReference = (await references.allTextContents())
-    .find((reference) => !previousReferences.includes(reference));
-  if (!createdReference) throw new Error('The newly created purchase order was not displayed');
+  const createdReferenceLabel = (await references.allTextContents()).find(
+    (reference) => !previousReferences.includes(reference),
+  );
+  if (!createdReferenceLabel) {
+    throw new Error('The newly created purchase order was not displayed');
+  }
+  const createdReference = createdReferenceLabel.replace(/^PO #:\s*/u, '');
+  if (!createdReference) {
+    throw new Error('The newly created purchase order did not include a reference');
+  }
   return createdReference;
 }
 
@@ -36,8 +48,9 @@ test('receives multiple same-supplier POs with source-lot splits and package lab
 
   const firstOrder = page.getByRole('group', { name: firstReference });
   const secondOrder = page.getByRole('group', { name: secondReference });
-  await expect(firstOrder.getByRole('row').filter({ hasText: 'Preview garlic powder' }))
-    .toContainText('30 lb');
+  await expect(
+    firstOrder.getByRole('row').filter({ hasText: 'Preview garlic powder' }),
+  ).toContainText('30 lb');
   await firstOrder.getByLabel('Actual received (lb)').fill('10');
   await firstOrder.getByLabel('Supplier lot').fill(' LOT-A ');
   await firstOrder.getByLabel('Package 1 · quantity (lb)').fill('10');
@@ -51,19 +64,25 @@ test('receives multiple same-supplier POs with source-lot splits and package lab
   await page.screenshot({ path: info.outputPath('purchase-receiving-entry.png'), fullPage: true });
   await page.getByRole('button', { name: 'Receive inventory & create labels' }).click();
   await expect(page.getByRole('status')).toContainText('Delivery received');
-  await expect(page.getByRole('link', { name: 'View this receipt and print labels' }))
-    .toBeVisible();
-  await expect(page.getByRole('heading', { name: 'No open purchase orders to receive' }))
-    .toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'View this receipt and print labels' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'No open purchase orders to receive' }),
+  ).toBeVisible();
   const receipt = page.locator('#receipt-history article').filter({ hasText: 'TRUCK-RECEIVE-1' });
   await expect(receipt).toContainText(firstReference);
   await expect(receipt).toContainText(secondReference);
   await expect(receipt.getByRole('row')).toHaveCount(4);
-  await page.screenshot({ path: info.outputPath('purchase-receiving-complete.png'), fullPage: true });
+  await page.screenshot({
+    path: info.outputPath('purchase-receiving-complete.png'),
+    fullPage: true,
+  });
 
   await page.getByRole('link', { name: 'View this receipt and print labels' }).click();
   await expect(page.locator('.package-label')).toHaveCount(3);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
-    .toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
   expect(errors).toEqual([]);
 });

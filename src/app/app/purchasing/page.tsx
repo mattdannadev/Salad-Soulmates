@@ -245,7 +245,11 @@ export default async function Purchasing({
               {backLabel}
             </Link>
             {canWrite && !inactiveSupplier && (
-              <Link className="button button--compact" href={selected ? newPurchaseHref : '#aggregate-purchase-planning'} scroll={false}>
+              <Link
+                className="button button--compact"
+                href={selected || selectedIngredient ? newPurchaseHref : '#aggregate-purchase-planning'}
+                scroll={false}
+              >
                 {es ? 'Nueva orden de compra' : 'New purchase order'}
               </Link>
             )}

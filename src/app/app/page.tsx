@@ -349,7 +349,7 @@ export default async function Home() {
                     ? 'Los pedidos con fechas futuras aparecerán aquí con productos y lotes.'
                     : 'Orders with future pickup dates appear here with dressing names and batch counts.'}
                 </p>
-                <Link href="/app/orders#new-order">
+                <Link href="/app/orders?returnTo=%2Fapp&create=order">
                   {es ? 'Preparar un pedido →' : 'Prepare an order →'}
                 </Link>
               </div>

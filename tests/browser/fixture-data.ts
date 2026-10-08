@@ -20,6 +20,11 @@ export const fixtureRecords: Readonly<Record<string, readonly Record<string, unk
     active: true,
     operations_copilot_enabled: false,
   }],
+  organizations: [{
+    id: fixtureId(10),
+    measurement_system: 'imperial',
+    operations_copilot_plan_enabled: false,
+  }],
   reference_lists: [{
     organization_id: fixtureId(10),
     code: 'ingredient_category',

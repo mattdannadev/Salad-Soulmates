@@ -18,6 +18,7 @@ import { formatPrice } from '@/domain/customer-pricing';
 import { customerOrderLabel } from '@/domain/customer-orders';
 import { formatDate, formatNumber } from '@/domain/format';
 import loadPurchasingWorkspace from '@/lib/purchasing-data';
+import { resolveReturnContext } from '@/lib/return-context';
 import ListGrid, { type ListGridRow } from '@/components/list-grid';
 import {
   ORDER_PAGE_SIZE,
@@ -68,10 +69,23 @@ export default async function Orders({
     productTypes,
   );
   const directoryHref = orderDirectoryHref(directoryQuery);
+  const requestedCreationOrigin = resolveReturnContext(rawQuery.returnTo, undefined, {
+    fallbackHref: directoryHref,
+    isAllowedPathname: (pathname) => pathname === '/app' || pathname === '/app/orders',
+  });
+  // Order-directory state is reconstructed from typed filters below. Home is the
+  // only external origin permitted for the order-creation dialog.
+  const returnsToWorkspace = new URL(
+    requestedCreationOrigin.href,
+    'https://internal.invalid',
+  ).pathname === '/app';
+  const workspaceReturnHref = returnsToWorkspace ? requestedCreationOrigin.href : undefined;
   const returnParams = new URL(directoryHref, 'https://internal.invalid').searchParams;
   if (query.data.customer) returnParams.set('customer', query.data.customer);
   returnParams.set('draft', draftId);
-  const closeOrderHref = `/app/orders?${returnParams}`;
+  const directoryCloseHref = `/app/orders?${returnParams}`;
+  const closeOrderHref = workspaceReturnHref ?? directoryCloseHref;
+  if (workspaceReturnHref) returnParams.set('returnTo', workspaceReturnHref);
   returnParams.set('create', 'order');
   const orderReturnHref = `/app/orders?${returnParams}`;
   const activeLabel = es ? 'Activo' : 'Active';
@@ -250,10 +264,11 @@ export default async function Orders({
     : 'Adjust the search or filters.';
   let headerAction;
   if (selected) {
+    const directoryBackHref = `${directoryHref}${query.data.order ? `#order-${query.data.order}` : ''}`;
     headerAction = (
       <Link
         className="button secondary"
-        href={`${directoryHref}${query.data.order ? `#order-${query.data.order}` : ''}`}
+        href={workspaceReturnHref ?? directoryBackHref}
       >
         {es ? 'Volver a pedidos' : 'Back to orders'}
       </Link>
@@ -498,6 +513,7 @@ export default async function Orders({
                 initialCustomerId={query.data.customer}
                 draftId={draftId}
                 returnHref={orderReturnHref}
+                afterSaveReturnHref={workspaceReturnHref ?? directoryHref}
                 choices={choices}
                 customers={workspace.customers}
                 options={workspace.customerOptions}

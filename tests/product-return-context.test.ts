@@ -10,7 +10,7 @@ describe('product setup return context', () => {
   });
 
   it('preserves an authorized order draft continuation', () => {
-    const orderHref = `/app/orders?draft=${draftId}#new-order`;
+    const orderHref = `/app/orders?draft=${draftId}&create=order`;
     expect(productSetupReturnHref(orderHref)).toBe(orderHref);
   });
 

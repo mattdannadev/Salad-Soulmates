@@ -1,6 +1,6 @@
 import { expect, test } from './fixtures';
 
-test('manager schedule loads Bryntum and supports scheduler-owned assignment creation', async ({
+test('manager schedule loads the accessible board and supports scheduler-owned assignment creation', async ({
   page,
 }, info) => {
   await page.goto('/login');
@@ -10,20 +10,21 @@ test('manager schedule loads Bryntum and supports scheduler-owned assignment cre
   await expect(page).toHaveURL(/\/app$/);
 
   await page.goto('/app/scheduling?surface=calendar');
-  await expect(page.getByRole('heading', { name: 'Team scheduling', exact: true })).toBeVisible();
-  const calendar = page.getByRole('region', { name: 'Workweek calendar', exact: true });
+  await expect(
+    page.getByRole('heading', { name: 'Production Planning', exact: true }),
+  ).toBeVisible();
+  const calendar = page.locator('#schedule-calendar');
+  const scheduleBoard = calendar.getByRole('region', { name: 'Work schedule', exact: true });
   await expect(calendar).toBeVisible();
-  await expect(calendar.getByLabel('Workweek calendar')).toBeVisible();
-  await expect(calendar.locator('.b-calendar')).toBeVisible();
-  await expect(page.getByText('The calendar could not load.', { exact: false })).toHaveCount(0);
+  await expect(scheduleBoard).toBeVisible();
 
-  const addWork = calendar.getByRole('button', { name: 'Add work', exact: true });
+  const addWork = scheduleBoard.getByRole('button', { name: 'Add work', exact: true });
   await expect(addWork).toBeEnabled();
   await addWork.click();
   const dialog = page.getByRole('dialog', { name: 'Create Work Order', exact: true });
   await expect(dialog).toBeVisible();
   await expect(dialog).toHaveAccessibleDescription(/Choose the task, dates, times, and employees/);
-  await expect(dialog.getByLabel('Task', { exact: true })).toBeFocused();
+  await expect(dialog.getByRole('combobox', { name: 'Task', exact: true })).toBeFocused();
   await expect(dialog.getByLabel('Start', { exact: true })).toBeVisible();
   await expect(dialog.getByLabel('End', { exact: true })).toBeVisible();
   await expect(dialog.getByLabel('Work details', { exact: true })).toBeVisible();
@@ -37,8 +38,8 @@ test('manager schedule loads Bryntum and supports scheduler-owned assignment cre
   await page.keyboard.press('Escape');
   await expect(dialog).not.toBeVisible();
   await expect(addWork).toBeFocused();
-  await expect(calendar.getByLabel('Workweek calendar')).toBeVisible();
-  await page.screenshot({ path: info.outputPath('scheduling-fallback.png'), fullPage: true });
+  await expect(scheduleBoard).toBeVisible();
+  await page.screenshot({ path: info.outputPath('scheduling-board.png'), fullPage: true });
 });
 
 test('manager can switch repeatedly between the production plan and execution calendar', async ({
@@ -56,23 +57,20 @@ test('manager can switch repeatedly between the production plan and execution ca
     name: 'Execution calendar',
     exact: true,
   });
-  const productionPlan = page.getByRole('region', { name: 'Production plan', exact: true });
-  const calendar = page.getByRole('region', { name: 'Workweek calendar', exact: true });
+  const scheduleBoard = page.getByRole('region', { name: 'Work schedule', exact: true });
 
-  await expect(productionPlan.locator('.b-gantt')).toBeVisible();
+  await expect(scheduleBoard).toBeVisible();
   await expect(productionPlanButton).toHaveAttribute('aria-current', 'page');
 
   const switchToCalendarAndBack = async () => {
     await executionCalendarButton.click();
     await expect(page).toHaveURL(/surface=calendar/);
-    await expect(calendar.locator('.b-calendar')).toBeVisible();
-    await expect(productionPlan).toHaveCount(0);
+    await expect(scheduleBoard).toBeVisible();
     await expect(executionCalendarButton).toHaveAttribute('aria-current', 'page');
 
     await productionPlanButton.click();
     await expect(page).not.toHaveURL(/surface=calendar/);
-    await expect(productionPlan.locator('.b-gantt')).toBeVisible();
-    await expect(calendar.locator('.b-calendar')).toHaveCount(0);
+    await expect(scheduleBoard).toBeVisible();
     await expect(productionPlanButton).toHaveAttribute('aria-current', 'page');
   };
   // Repeat the round trip to catch stale state and widget cleanup failures.
@@ -80,7 +78,9 @@ test('manager can switch repeatedly between the production plan and execution ca
   await switchToCalendarAndBack();
 });
 
-test('production-plan work can be saved, reloaded, and deleted without flattening its tree', async ({ page }) => {
+test('production-plan work can be saved, reloaded, and deleted through confirmation', async ({
+  page,
+}) => {
   await page.goto('/login');
   await page.getByLabel('Email or phone number').fill('admin@example.test');
   await page.getByLabel('Password', { exact: true }).fill('local-test-password');
@@ -88,8 +88,8 @@ test('production-plan work can be saved, reloaded, and deleted without flattenin
   await expect(page).toHaveURL(/\/app$/);
   await page.goto('/app/scheduling');
 
-  const productionPlan = page.getByRole('region', { name: 'Production plan', exact: true });
-  await productionPlan.getByRole('button', { name: 'Add work', exact: true }).click();
+  const scheduleBoard = page.getByRole('region', { name: 'Work schedule', exact: true });
+  await scheduleBoard.getByRole('button', { name: 'Add work', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Create Work Order', exact: true });
   await expect(dialog).toBeVisible();
   await expect(dialog).toHaveAccessibleDescription(/Choose the task, dates, and employees/);
@@ -100,24 +100,25 @@ test('production-plan work can be saved, reloaded, and deleted without flattenin
   await expect(dialog).not.toBeVisible();
   await expect(page.getByText('Assignment saved.', { exact: true })).toBeVisible();
 
-  const parentLabel = productionPlan.getByText('Work without an order', { exact: true });
-  const workLabel = productionPlan.getByText('Mixing', { exact: true });
-  await expect(parentLabel).toBeVisible();
-  await expect(workLabel).toBeVisible();
-  const parentX = await parentLabel.evaluate((element) => element.getBoundingClientRect().x);
-  const workX = await workLabel.evaluate((element) => element.getBoundingClientRect().x);
-  expect(workX).toBeGreaterThan(parentX);
+  const mixingWork = scheduleBoard.getByRole('listitem').filter({ hasText: 'Mixing' });
+  await expect(mixingWork).toHaveCount(1);
+  await expect(mixingWork).toBeVisible();
 
   await page.reload();
-  await expect(productionPlan.locator('.b-gantt')).toBeVisible();
-  await expect(productionPlan.getByText('Mixing', { exact: true })).toBeVisible();
-  await productionPlan.getByText('Mixing', { exact: true }).click({ button: 'right' });
-  await page.getByText('Delete', { exact: true }).click();
+  await expect(scheduleBoard).toBeVisible();
+  await expect(mixingWork).toHaveCount(1);
+  await mixingWork.getByRole('button', { name: 'Edit', exact: true }).click();
+  const edit = page.getByRole('dialog', { name: 'Edit work', exact: true });
+  await expect(edit).toBeVisible();
+  await edit.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(edit).not.toBeVisible();
+  await mixingWork.getByRole('button', { name: 'Delete', exact: true }).click();
   const confirm = page.getByRole('dialog', { name: 'Delete work order', exact: true });
+  await expect(confirm).toBeVisible();
   await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(page.getByText('Assignment deleted.', { exact: true })).toBeVisible();
   await page.reload();
-  await expect(productionPlan.getByText('Mixing', { exact: true })).toHaveCount(0);
+  await expect(mixingWork).toHaveCount(0);
 });
 
 test('schedule controls stay focused and reflow on narrow screens', async ({ page }) => {
@@ -131,9 +132,10 @@ test('schedule controls stay focused and reflow on narrow screens', async ({ pag
     '/app/scheduling?types=cleaning&staffing=unassigned&status=completed&publication=draft',
   );
   const controls = page.getByLabel('Calendar controls', { exact: true });
-  await expect(controls.getByRole('combobox')).toHaveCount(2);
-  await expect(controls.getByLabel('Customer', { exact: true })).toBeVisible();
-  await expect(controls.getByLabel('Order', { exact: true })).toBeVisible();
+  const focus = page.getByRole('group', { name: 'Calendar focus', exact: true });
+  await expect(focus.getByRole('combobox')).toHaveCount(2);
+  await expect(focus.getByRole('combobox', { name: 'Customer', exact: true })).toBeVisible();
+  await expect(focus.getByRole('combobox', { name: 'Order', exact: true })).toBeVisible();
   await expect(controls.getByRole('link', { name: 'Production plan', exact: true })).toBeVisible();
   await expect(
     controls.getByRole('link', { name: 'Execution calendar', exact: true }),
@@ -166,11 +168,12 @@ test('execution calendar focus can be cleared in one action', async ({ page }) =
   await page.getByLabel('Email or phone number').fill('admin@example.test');
   await page.getByLabel('Password', { exact: true }).fill('local-test-password');
   await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page).toHaveURL(/\/app$/);
   await page.goto('/app/scheduling?surface=calendar');
 
   const focus = page.getByRole('group', { name: 'Calendar focus', exact: true });
-  const customer = focus.getByLabel('Customer', { exact: true });
-  await customer.selectOption({ index: 1 });
+  const customer = focus.getByRole('combobox', { name: 'Customer', exact: true });
+  await customer.selectOption({ label: 'Production customer' });
   const showAll = focus.getByRole('button', { name: 'Show all', exact: true });
   await expect(showAll).toBeVisible();
   await showAll.click();

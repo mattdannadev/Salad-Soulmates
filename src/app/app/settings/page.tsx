@@ -60,12 +60,14 @@ export default async function SettingsPage() {
       <ReferenceDataManager
         lists={lists}
         options={options}
-        unitManager={<UomCatalogManager
-          families={families}
-          units={units}
-          measurementSystem={organization.measurement_system}
-          embedded
-        />}
+        unitManager={(
+          <UomCatalogManager
+            families={families}
+            units={units}
+            measurementSystem={organization.measurement_system}
+            embedded
+          />
+        )}
       />
     </>
   );

@@ -106,7 +106,7 @@ export default function AggregatePurchasePlanner({
 
   if (!shortages.length) {
     return (
-      <p className="notice">
+      <p className="notice" id="aggregate-purchase-planning">
         {es
           ? 'La demanda acumulada de los pedidos abiertos está cubierta.'
           : 'Aggregate demand for open orders is covered.'}
@@ -116,7 +116,7 @@ export default function AggregatePurchasePlanner({
 
   if (reviewing) {
     return (
-      <section className="purchase-group">
+      <section className="purchase-group" id="aggregate-purchase-planning">
         <div className="section-heading">
           <div>
             <h2>{es ? 'Resumen antes de ordenar' : 'Review before ordering'}</h2>
@@ -233,7 +233,7 @@ export default function AggregatePurchasePlanner({
   }
 
   return (
-    <section className="purchase-group">
+    <section className="purchase-group" id="aggregate-purchase-planning">
       <h2>{es ? 'Compra para todos los pedidos abiertos' : 'Purchase for all open orders'}</h2>
       <p>
         {es

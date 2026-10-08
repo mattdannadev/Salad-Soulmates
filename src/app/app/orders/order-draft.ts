@@ -4,7 +4,9 @@ import { resolveReturnContext } from '@/lib/return-context';
 
 const STORAGE_PREFIX = 'salad-soulmates:order-draft:';
 const MAX_STORED_DRAFT_LENGTH = 16_384;
-const ORDER_FALLBACK_HREF = '/app/orders#new-order';
+const ORDER_FALLBACK_HREF = '/app/orders?create=order';
+const ORDER_PATH = '/app/orders';
+const WORKSPACE_PATH = '/app';
 const draftSchema = z.object({
   customerId: z.union([z.uuid(), z.literal('')]),
   reference: z.string().max(120),
@@ -28,8 +30,11 @@ export function orderProductReturnHref(input: unknown): string {
   const url = new URL(context.href, 'https://order-return.invalid');
   const drafts = url.searchParams.getAll('draft');
   const customers = url.searchParams.getAll('customer');
+  const creationModes = url.searchParams.getAll('create');
   if (
-    url.hash !== '#new-order'
+    url.hash
+    || creationModes.length !== 1
+    || creationModes[0] !== 'order'
     || drafts.length !== 1
     || !z.uuid().safeParse(drafts[0]).success
     || customers.length > 1
@@ -42,6 +47,25 @@ export function orderProductReturnHref(input: unknown): string {
 
 export function orderProductSetupHref(returnHref: string): string {
   return `/app/products?${new URLSearchParams({ returnTo: orderProductReturnHref(returnHref) })}`;
+}
+
+/** Keep a validated origin through a newly saved order's detail view. */
+export function orderSavedDetailHref(orderId: string, returnTo: unknown): string {
+  const params = new URLSearchParams({ order: orderId });
+  const context = resolveReturnContext(returnTo, undefined, {
+    fallbackHref: ORDER_PATH,
+    isAllowedPathname: (pathname) => pathname === WORKSPACE_PATH || pathname === ORDER_PATH,
+  });
+  const destination = new URL(context.href, 'https://order-return.invalid');
+  if (destination.pathname === ORDER_PATH) {
+    destination.searchParams.set('order', orderId);
+    ['create', 'customer', 'draft', 'estimate', 'returnTo'].forEach((key) => {
+      destination.searchParams.delete(key);
+    });
+    return `${destination.pathname}${destination.search}`;
+  }
+  if (destination.pathname === WORKSPACE_PATH) params.set('returnTo', context.href);
+  return `${ORDER_PATH}?${params}`;
 }
 
 function storageKey(draftId: string): string | null {

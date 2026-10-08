@@ -10,7 +10,7 @@ const setupDestinations: Record<SetupStepId, string> = {
   suppliers: '/app/suppliers?returnTo=%2Fapp',
   products: '/app/products?returnTo=%2Fapp',
   pricing: '/app/products?pricing=missing&returnTo=%2Fapp',
-  orders: '/app/orders?returnTo=%2Fapp#new-order',
+  orders: '/app/orders?returnTo=%2Fapp&create=order',
 };
 
 const copy: Record<SetupStepId, { en: string; es: string; actionEn: string; actionEs: string }> = {

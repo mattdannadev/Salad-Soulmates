@@ -11,6 +11,7 @@ import {
   useState,
   useSyncExternalStore,
   type ReactNode,
+  type SyntheticEvent,
 } from 'react';
 import {
   ClientSideRowModelModule,
@@ -105,6 +106,20 @@ interface FocusPageApi {
   paginationGoToPage: (page: number) => void;
 }
 
+interface CellContentOptions {
+  nativeLinks?: boolean;
+  isolateLinksFromGrid?: boolean;
+}
+
+interface ListGridLinkProps {
+  href: string;
+  children: ReactNode;
+  className?: string;
+  ariaLabel?: string;
+  native?: boolean;
+  isolateFromGrid?: boolean;
+}
+
 /** Reveal a focused row on its sorted grid page before an owner restores DOM focus. */
 export function revealFocusRowPage(api: FocusPageApi, rowId: string, pageSize: number): void {
   const rowIndex = api.getRowNode(rowId)?.rowIndex;
@@ -128,7 +143,82 @@ function cellText(cell: ListGridCell | undefined): string {
   return cell?.text ?? '';
 }
 
-function RowActionMenu({ label, actions }: { label: string; actions: ListGridAction[] }) {
+function fallbackPageSummary(
+  locale: ListGridProps['locale'],
+  shownRows: number,
+  totalRows: number,
+): string {
+  if (locale === 'es') return `Mostrando los primeros ${shownRows} de ${totalRows} registros.`;
+  return `Showing the first ${shownRows} of ${totalRows} records.`;
+}
+
+function defaultEmptyText(es: boolean): string {
+  return es ? 'No hay registros para mostrar.' : 'No records to display.';
+}
+
+function positiveSafeIntegerOr(value: number | undefined, fallback: number): number {
+  if (value === undefined || !Number.isSafeInteger(value) || value <= 0) return fallback;
+  return value;
+}
+
+function nonNegativeSafeIntegerOr(value: number | undefined, fallback: number): number {
+  if (value === undefined || !Number.isSafeInteger(value) || value < 0) return fallback;
+  return value;
+}
+
+/**
+ * Keep AG Grid's row handlers from intercepting a nested link while allowing
+ * Next's Link handler (or the browser's native anchor behavior) to navigate.
+ */
+export function stopListGridLinkPropagation(event: Pick<SyntheticEvent, 'stopPropagation'>): void {
+  event.stopPropagation();
+}
+
+function ListGridLink({
+  href,
+  children,
+  className = undefined,
+  ariaLabel = undefined,
+  native = false,
+  isolateFromGrid = false,
+}: ListGridLinkProps) {
+  const onClick = isolateFromGrid ? stopListGridLinkPropagation : undefined;
+  const onPointerDown = isolateFromGrid ? stopListGridLinkPropagation : undefined;
+  if (native) {
+    return (
+      <a
+        href={href}
+        className={className}
+        aria-label={ariaLabel}
+        onClick={onClick}
+        onPointerDown={onPointerDown}
+      >
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link
+      href={href}
+      className={className}
+      aria-label={ariaLabel}
+      onClick={onClick}
+      onPointerDown={onPointerDown}
+    >
+      {children}
+    </Link>
+  );
+}
+
+function RowActionMenu({
+  label,
+  actions,
+  linkOptions,
+}: {
+  label: string;
+  actions: ListGridAction[];
+  linkOptions: CellContentOptions;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <div className={styles.actionMenu}>
@@ -152,9 +242,15 @@ function RowActionMenu({ label, actions }: { label: string; actions: ListGridAct
       {open && (
         <div className={styles.actionMenuItems}>
           {actions.map((action) => (
-            <Link href={action.href} aria-label={action.ariaLabel} key={action.href}>
+            <ListGridLink
+              href={action.href}
+              ariaLabel={action.ariaLabel}
+              native={linkOptions.nativeLinks}
+              isolateFromGrid={linkOptions.isolateLinksFromGrid}
+              key={action.href}
+            >
               {action.label}
-            </Link>
+            </ListGridLink>
           ))}
         </div>
       )}
@@ -162,7 +258,11 @@ function RowActionMenu({ label, actions }: { label: string; actions: ListGridAct
   );
 }
 
-function cellContent(value: ListGridCell | undefined, cellSlots: Record<string, ReactNode>) {
+function cellContent(
+  value: ListGridCell | undefined,
+  cellSlots: Record<string, ReactNode>,
+  options: CellContentOptions = {},
+) {
   if (!value) return null;
   if (value.slot) return cellSlots[value.slot] ?? null;
   if (value.actions) {
@@ -170,16 +270,22 @@ function cellContent(value: ListGridCell | undefined, cellSlots: Record<string, 
     return (
       <div className={styles.actions}>
         {primaryAction && (
-          <Link
+          <ListGridLink
             className={styles.primaryAction}
             href={primaryAction.href}
-            aria-label={primaryAction.ariaLabel}
+            ariaLabel={primaryAction.ariaLabel}
+            native={options.nativeLinks}
+            isolateFromGrid={options.isolateLinksFromGrid}
           >
             {primaryAction.label}
-          </Link>
+          </ListGridLink>
         )}
         {!!secondaryActions.length && (
-          <RowActionMenu label={value.actionsLabel ?? 'More actions'} actions={secondaryActions} />
+          <RowActionMenu
+            label={value.actionsLabel ?? 'More actions'}
+            actions={secondaryActions}
+            linkOptions={options}
+          />
         )}
       </div>
     );
@@ -192,13 +298,25 @@ function cellContent(value: ListGridCell | undefined, cellSlots: Record<string, 
     value.text
   );
   let main = content;
-  if (value.href) main = <Link href={value.href}>{content}</Link>;
+  if (value.href) {
+    main = (
+      <ListGridLink
+        href={value.href}
+        native={options.nativeLinks}
+        isolateFromGrid={options.isolateLinksFromGrid}
+      >
+        {content}
+      </ListGridLink>
+    );
+  }
   if (value.detailsId) {
     main = (
       <a
         href={`#${value.detailsId}`}
         aria-controls={value.detailsId}
-        onClick={() => {
+        onPointerDown={options.isolateLinksFromGrid ? stopListGridLinkPropagation : undefined}
+        onClick={(event) => {
+          if (options.isolateLinksFromGrid) stopListGridLinkPropagation(event);
           const target = document.getElementById(value.detailsId ?? '');
           if (target instanceof HTMLDetailsElement) target.open = true;
         }}
@@ -216,11 +334,40 @@ function cellContent(value: ListGridCell | undefined, cellSlots: Record<string, 
 }
 
 function renderGridCell(params: GridCellParams, cellSlots: Record<string, ReactNode>) {
-  return cellContent(params.value ?? undefined, cellSlots);
+  return cellContent(params.value ?? undefined, cellSlots, { isolateLinksFromGrid: true });
 }
 
 function gridCellRenderer(cellSlots: Record<string, ReactNode>) {
   return (params: GridCellParams) => renderGridCell(params, cellSlots);
+}
+
+function createColumnDefinitions(
+  columns: ListGridColumn[],
+  externallyControlled: boolean,
+  locale: 'en' | 'es',
+  cellSlots: Record<string, ReactNode>,
+): ColDef<ListGridRow, ListGridCell>[] {
+  return columns.map((column) => ({
+    colId: column.key,
+    headerName: column.label,
+    minWidth: column.minWidth ?? 140,
+    flex: column.flex ?? 1,
+    resizable: true,
+    sortable: !externallyControlled && (column.sortable ?? true),
+    filter: externallyControlled || column.filterable === false ? false : 'agTextColumnFilter',
+    valueGetter: (params) => params.data?.cells[column.key],
+    filterValueGetter: (params) => cellText(params.data?.cells[column.key]),
+    getQuickFilterText: (params) => cellText(params.data?.cells[column.key]),
+    comparator: (left, right) => {
+      const a = left?.sortValue ?? cellText(left ?? undefined);
+      const b = right?.sortValue ?? cellText(right ?? undefined);
+      if (typeof a === 'number' && typeof b === 'number') return a - b;
+      return String(a).localeCompare(String(b), locale, { numeric: true, sensitivity: 'base' });
+    },
+    cellRenderer: gridCellRenderer(cellSlots),
+    autoHeight: true,
+    wrapText: true,
+  }));
 }
 
 function StaticTable({
@@ -248,9 +395,7 @@ function StaticTable({
   let statusText = emptyMessage;
   if (loading) statusText = locale === 'es' ? 'Cargando…' : 'Loading…';
   const initialRows = controlled ? rows : rows.slice(0, pageSize);
-  const pageSummary = locale === 'es'
-    ? `Mostrando los primeros ${initialRows.length} de ${rows.length} registros.`
-    : `Showing the first ${initialRows.length} of ${rows.length} records.`;
+  const pageSummary = fallbackPageSummary(locale, initialRows.length, rows.length);
   return (
     <table className={styles.fallbackTable} aria-label={label} aria-busy={loading}>
       {!loading && rows.length > initialRows.length && (
@@ -276,7 +421,9 @@ function StaticTable({
           initialRows.map((row) => (
             <tr key={row.id}>
               {columns.map((column) => (
-                <td key={column.key}>{cellContent(row.cells[column.key], cellSlots ?? {})}</td>
+                <td key={column.key}>
+                  {cellContent(row.cells[column.key], cellSlots ?? {}, { nativeLinks: true })}
+                </td>
               ))}
             </tr>
           ))
@@ -316,29 +463,9 @@ export default function ListGrid({
     if (api && !api.isDestroyed()) api.setGridAriaProperty('label', label);
   }, [label]);
   const es = locale === 'es';
-  const emptyText = emptyMessage ?? (es ? 'No hay registros para mostrar.' : 'No records to display.');
-  const columnDefs = useMemo<ColDef<ListGridRow, ListGridCell>[]>(
-    () => columns.map((column) => ({
-      colId: column.key,
-      headerName: column.label,
-      minWidth: column.minWidth ?? 140,
-      flex: column.flex ?? 1,
-      resizable: true,
-      sortable: !externallyControlled && (column.sortable ?? true),
-      filter: externallyControlled || column.filterable === false ? false : 'agTextColumnFilter',
-      valueGetter: (params) => params.data?.cells[column.key],
-      filterValueGetter: (params) => cellText(params.data?.cells[column.key]),
-      getQuickFilterText: (params) => cellText(params.data?.cells[column.key]),
-      comparator: (left, right) => {
-        const a = left?.sortValue ?? cellText(left ?? undefined);
-        const b = right?.sortValue ?? cellText(right ?? undefined);
-        if (typeof a === 'number' && typeof b === 'number') return a - b;
-        return String(a).localeCompare(String(b), locale, { numeric: true, sensitivity: 'base' });
-      },
-      cellRenderer: gridCellRenderer(cellSlots),
-      autoHeight: true,
-      wrapText: true,
-    })),
+  const emptyText = emptyMessage ?? defaultEmptyText(es);
+  const columnDefs = useMemo(
+    () => createColumnDefinitions(columns, externallyControlled, locale, cellSlots),
     [cellSlots, columns, externallyControlled, locale],
   );
 
@@ -354,21 +481,9 @@ export default function ListGrid({
       ? 'No se encontraron resultados. Prueba otra búsqueda o filtro.'
       : 'No matching results. Try another search or filter.';
   }
-  const controlledPage = (
-    controlled && Number.isSafeInteger(controlled.page) && controlled.page > 0
-      ? controlled.page
-      : 1
-  );
-  const controlledPageSize = (
-    controlled && Number.isSafeInteger(controlled.pageSize) && controlled.pageSize > 0
-      ? controlled.pageSize
-      : effectivePageSize
-  );
-  const controlledTotal = (
-    controlled && Number.isSafeInteger(controlled.totalCount) && controlled.totalCount >= 0
-      ? controlled.totalCount
-      : rows.length
-  );
+  const controlledPage = positiveSafeIntegerOr(controlled?.page, 1);
+  const controlledPageSize = positiveSafeIntegerOr(controlled?.pageSize, effectivePageSize);
+  const controlledTotal = nonNegativeSafeIntegerOr(controlled?.totalCount, rows.length);
   const start = rows.length === 0 ? 0 : (controlledPage - 1) * controlledPageSize + 1;
   const end = rows.length === 0 ? 0 : start + rows.length - 1;
   const sortColumn = columns.find((column) => column.key === controlled?.sort?.key);

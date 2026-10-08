@@ -27,10 +27,12 @@ const PROFILE = {
   work_email: FIXTURE_EMAIL,
   role: 'admin',
   preferred_locale: 'en',
+  regional_locale: 'en-US',
   active: true,
   deactivated_at: null,
   deactivated_by: null,
   deactivation_reason: null,
+  operations_copilot_override: null,
   access_profile_id: '00000000-0000-4000-8000-000000000020',
 };
 const LOGIN_EVENTS: Record<string, unknown>[] = [];

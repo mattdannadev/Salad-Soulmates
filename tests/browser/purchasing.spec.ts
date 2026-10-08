@@ -1,7 +1,17 @@
 import { expect, test } from './fixtures';
 
+function isPlannedSupplierPurchaseUrl(url: URL) {
+  return [
+    url.pathname === '/app/purchasing',
+    Boolean(url.searchParams.get('plan')),
+    Boolean(url.searchParams.get('supplier')),
+  ].every(Boolean);
+}
+
 test.afterEach(async ({ page }, info) => {
-  if (info.status !== info.expectedStatus) console.error('Synthetic browser failure:', await page.locator('main').ariaSnapshot());
+  if (info.status !== info.expectedStatus) {
+    console.error('Synthetic browser failure:', await page.locator('main').ariaSnapshot());
+  }
 });
 
 test('inventory starts a purchase with its ingredient fixed', async ({ page }, info) => {
@@ -12,36 +22,62 @@ test('inventory starts a purchase with its ingredient fixed', async ({ page }, i
   await expect(page).toHaveURL(/\/app$/);
   await page.goto('/app/inventory');
   const mainNavigation = page.getByRole('navigation', { name: 'Main navigation' });
-  await expect(
-    mainNavigation.getByRole('link', { name: 'Purchasing', exact: true }),
-  ).toHaveCount(1);
-  await page.getByRole('link', { name: 'Purchase Preview garlic powder' }).click();
+  const mobileNavigation = page.getByRole('dialog', {
+    name: 'Main navigation',
+    exact: true,
+  });
+  if (info.project.name === 'phone') {
+    await page.getByRole('button', { name: 'More sections', exact: true }).click();
+    await expect(mobileNavigation).toBeVisible();
+  }
+  await expect(mainNavigation.getByRole('link', { name: 'Purchasing', exact: true })).toHaveCount(
+    1,
+  );
+  if (info.project.name === 'phone') {
+    await mobileNavigation.getByRole('button', { name: 'Close navigation', exact: true }).click();
+    await expect(mobileNavigation).toBeHidden();
+  }
+  const inventory = page.getByRole('region', { name: 'On-hand inventory', exact: true });
+  const garlicPowder = inventory.getByRole('row').filter({ hasText: 'Preview garlic powder' });
+  await garlicPowder.getByRole('link', { name: 'Purchase', exact: true }).click();
   await expect(page).toHaveURL(
-    /\/app\/purchasing\?ingredient=00000000-0000-4000-8000-000000000100/,
+    /\/app\/purchasing\?ingredient=00000000-0000-4000-8000-000000000100$/,
+  );
+  await page.getByRole('link', { name: 'New purchase order', exact: true }).click();
+  await expect(page).toHaveURL(
+    /\/app\/purchasing\?ingredient=00000000-0000-4000-8000-000000000100&create=1/,
   );
   await expect(page.getByText('Selected ingredient: Preview garlic powder')).toBeVisible();
-  await expect(page.getByText('The ingredient is fixed.', { exact: false })).toBeVisible();
+  const purchaseDialog = page.getByRole('dialog', {
+    name: 'Select a supplier for Preview garlic powder',
+    exact: true,
+  });
+  await expect(purchaseDialog).toBeVisible();
+  await expect(
+    purchaseDialog.getByText('The ingredient is fixed.', { exact: false }),
+  ).toBeVisible();
   await expect(page.getByText('Preview lemon juice', { exact: true })).toHaveCount(0);
-  await page.getByLabel('Expected delivery').fill('2026-10-01');
-  await page.getByLabel(/Whole packs \(0 skips this ingredient\)/).fill('2');
-  const createPurchase = page.getByRole('button', { name: 'Create purchase order', exact: true });
+  await purchaseDialog.getByLabel('Expected delivery').fill('2026-10-01');
+  await purchaseDialog.getByLabel(/Whole packs \(0 skips this ingredient\)/).fill('2');
+  const createPurchase = purchaseDialog.getByRole('button', {
+    name: 'Create purchase order',
+    exact: true,
+  });
   await expect(createPurchase).toBeEnabled();
   if (info.project.name === 'phone') {
     await createPurchase.scrollIntoViewIfNeeded();
+    await expect(createPurchase).toBeInViewport();
     expect(
       await createPurchase.evaluate((button) => {
-        const viewport = window.visualViewport;
-        if (!viewport) return false;
         const bounds = button.getBoundingClientRect();
         const centerX = bounds.left + bounds.width / 2;
         const centerY = bounds.top + bounds.height / 2;
-        return (
-          document.documentElement.scrollWidth <= viewport.width
-          && bounds.right <= viewport.width
-          && bounds.bottom <= viewport.height
-          && document.elementFromPoint(centerX, centerY) === button
-        );
+        const hitTarget = document.elementFromPoint(centerX, centerY);
+        return hitTarget !== null && button.contains(hitTarget);
       }),
+    ).toBe(true);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
   }
   await createPurchase.click();
@@ -59,15 +95,18 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/app$/);
   await page.goto('/app/products');
-  const productGrid = page.locator('main table').first();
+  const productGrid = page.getByRole('region', { name: 'Product directory', exact: true });
   await expect(productGrid.getByRole('columnheader')).toHaveCount(4);
   await expect(productGrid).toContainText('gal per bag');
   const customerOptions = page.locator('details.product-customer-options').first();
   await expect(customerOptions).not.toHaveAttribute('open', '');
   await customerOptions.locator(':scope > summary').click();
-  let addOption = customerOptions.locator('details').filter({ hasText: '+ Add customer option' });
-  await addOption.locator('summary').click();
-  await addOption.getByLabel('Customer', { exact: true }).fill('Preview customer');
+  await customerOptions.getByText('+ Add customer option', { exact: true }).click();
+  const addOption = customerOptions.locator('form:has(select[name="customer_id"]:not(:disabled))');
+  await expect(addOption).toBeVisible();
+  await addOption.locator('select[name="customer_id"]').selectOption({
+    label: 'Preview customer',
+  });
   await addOption.getByLabel('Option name', { exact: true }).fill('2-gallon bag');
   await addOption.getByRole('combobox', { name: /^Packaging/ }).selectOption('custom');
   await addOption.getByRole('combobox', { name: 'Sales unit', exact: true }).selectOption('bag');
@@ -77,9 +116,11 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await expect(
     customerOptions.getByText('Preview customer · 2-gallon bag · $12.50 / bag', { exact: true }),
   ).toBeVisible();
-  addOption = customerOptions.locator('details').filter({ hasText: '+ Add customer option' });
-  await addOption.locator('summary').click();
-  await addOption.getByLabel('Customer', { exact: true }).fill('Preview customer');
+  await customerOptions.getByText('+ Add customer option', { exact: true }).click();
+  await expect(addOption).toBeVisible();
+  await addOption.locator('select[name="customer_id"]').selectOption({
+    label: 'Preview customer',
+  });
   await addOption.getByLabel('Option name', { exact: true }).fill('Standard case');
   await addOption.getByLabel('Price per unit (USD)', { exact: true }).fill('24');
   await addOption.getByLabel('Preferred ordering unit', { exact: true }).selectOption('false');
@@ -95,18 +136,23 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await page.goto('/app/orders');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Orders');
   await expect(page.getByLabel('Worksheet name')).toHaveCount(0);
-  await page
+  await page.getByRole('link', { name: 'New order', exact: true }).click();
+  const newOrderDialog = page.getByRole('dialog', { name: 'New order', exact: true });
+  await expect(newOrderDialog).toBeVisible();
+  await newOrderDialog
     .getByRole('combobox', { name: 'Customer', exact: true })
     .selectOption({ label: 'Preview customer' });
-  const orderingUnit = page.getByRole('combobox', { name: 'Ordering unit', exact: true });
+  const orderingUnit = newOrderDialog.getByRole('combobox', { name: 'Ordering unit', exact: true });
   await expect(orderingUnit).toBeEnabled();
   await expect(orderingUnit).toHaveValue(/^[0-9a-f-]{36}$/);
   await expect(orderingUnit.locator('option:checked')).toHaveText('bag');
-  await page.getByLabel('Customer order reference (optional)').fill(`Order ${info.project.name}`);
-  await page.getByLabel('Customer pickup date').fill('2026-10-01');
-  await page.getByLabel('Preview Italian dressing', { exact: true }).fill('40');
+  await newOrderDialog
+    .getByLabel('Customer order reference (optional)')
+    .fill(`Order ${info.project.name}`);
+  await newOrderDialog.getByLabel('Customer pickup date').fill('2026-10-01');
+  await newOrderDialog.getByLabel('Preview Italian dressing', { exact: true }).fill('40');
   await orderingUnit.selectOption({ label: 'bag' });
-  await page.getByRole('button', { name: 'Save order & estimate ingredients' }).click();
+  await newOrderDialog.getByRole('button', { name: 'Save order & estimate ingredients' }).click();
   await expect(page).toHaveURL(/\/app\/orders\?order=/);
   const orderUrl = page.url();
   await expect(
@@ -137,8 +183,9 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await expect(page.getByRole('table', { name: 'Ordered products', exact: true })).toContainText(
     '$10,000.00',
   );
-  await page.getByRole('link', { name: 'Review purchasing', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Purchasing', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Review shortages & purchases', exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/purchasing\?plan=/u);
+  await expect(page.getByRole('heading', { name: /^Purchase planning/u })).toBeVisible();
   await page.goto('/app/suppliers');
   const supplier = page.locator('details.supplier-orders').filter({ hasText: 'Preview supplier' });
   await expect(supplier).not.toHaveAttribute('open', '');
@@ -155,62 +202,76 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   ).toBeVisible();
   await expect(supplier.locator('.supplier-demand')).toContainText('Oct 1, 2026');
   await expect(supplier.locator('.supplier-demand')).toContainText('No purchase order yet');
-  await supplier.getByRole('link', { name: 'New purchase order', exact: true }).click();
-  await expect(page).toHaveURL(/supplier=/);
+  await supplier
+    .getByRole('link', { name: 'Prepare purchase for this order', exact: true })
+    .click();
+  await expect(page).toHaveURL(isPlannedSupplierPurchaseUrl);
   await expect(
     page.getByText('Selected supplier: Preview supplier', { exact: false }),
   ).toBeVisible();
-  await expect(page.getByLabel(/30 lb\/pail · Whole packs/)).toBeVisible();
-  await expect(page.getByLabel(/5 gal\/case · Whole packs/)).toBeVisible();
-  await page
-    .locator('.worksheet-links')
-    .getByRole('link', { name: `Preview customer · Order ${info.project.name}`, exact: false })
-    .click();
-  await expect(page).toHaveURL(/plan=.*supplier=/);
-  await expect(page.getByText('Required: 40 lb', { exact: false })).toBeVisible();
-  await expect(page.getByText('On hand: 0 lb', { exact: false })).toBeVisible();
-  await expect(page.getByText('Confirmed inbound: 0 lb', { exact: false })).toBeVisible();
-  await expect(page.getByText('Recommended quantity: 2 pail = 60 lb')).toBeVisible();
-  await expect(page.getByText('20 lb over the raw shortage', { exact: false })).toBeVisible();
-  const orderNow = page.getByLabel('Preview garlic powder · Order now (pail)');
-  const overrideReason = page.getByLabel('Preview garlic powder · Override reason');
+  await page.getByRole('link', { name: 'New purchase order', exact: true }).click();
+  const purchaseDialog = page.getByRole('dialog', { name: 'New purchase order', exact: true });
+  await expect(purchaseDialog).toBeVisible();
+  await expect(purchaseDialog.getByText('Required: 40 lb', { exact: false })).toBeVisible();
+  await expect(purchaseDialog.getByText('On hand: 0 lb', { exact: false })).toBeVisible();
+  await expect(purchaseDialog.getByText('Confirmed inbound: 0 lb', { exact: false })).toBeVisible();
+  await expect(purchaseDialog.getByText('Recommended quantity: 2 pail = 60 lb')).toBeVisible();
+  await expect(
+    purchaseDialog.getByText('20 lb over the raw shortage', { exact: false }),
+  ).toBeVisible();
+  const orderNow = purchaseDialog.getByLabel('Preview garlic powder · Order now (pail)');
+  const overrideReason = purchaseDialog.getByLabel('Preview garlic powder · Override reason');
   await orderNow.fill('');
   await expect(
-    page.getByText('Enter a valid whole-pack quantity to review the ordered base quantity.'),
+    purchaseDialog.getByText(
+      'Enter a valid whole-pack quantity to review the ordered base quantity.',
+    ),
   ).toBeVisible();
   await orderNow.fill('1.5');
   await expect(
-    page.getByText('Enter a valid whole-pack quantity to review the ordered base quantity.'),
+    purchaseDialog.getByText(
+      'Enter a valid whole-pack quantity to review the ordered base quantity.',
+    ),
   ).toBeVisible();
   await orderNow.fill('1');
-  await expect(page.getByText('10 lb under the raw shortage', { exact: false })).toBeVisible();
+  await expect(
+    purchaseDialog.getByText('10 lb under the raw shortage', { exact: false }),
+  ).toBeVisible();
   await expect(overrideReason).toHaveAttribute('required', '');
   await expect(
-    page.getByText('Explain why Order now differs from the recommended quantity.', {
+    purchaseDialog.getByText('Explain why Order now differs from the recommended quantity.', {
       exact: false,
     }),
   ).toBeVisible();
   await overrideReason.fill('  a  ');
-  expect(await overrideReason.evaluate(
-    (input) => input instanceof HTMLInputElement && input.checkValidity(),
-  )).toBe(false);
+  expect(
+    await overrideReason.evaluate(
+      (input) => input instanceof HTMLInputElement && input.checkValidity(),
+    ),
+  ).toBe(false);
   await overrideReason.fill(' a b ');
-  expect(await overrideReason.evaluate(
-    (input) => input instanceof HTMLInputElement && input.checkValidity(),
-  )).toBe(true);
+  expect(
+    await overrideReason.evaluate(
+      (input) => input instanceof HTMLInputElement && input.checkValidity(),
+    ),
+  ).toBe(true);
   await overrideReason.fill('Use remaining stock before ordering another pail');
   await orderNow.fill('2');
   await expect(overrideReason).not.toHaveAttribute('required', '');
   await expect(overrideReason).toHaveValue('');
   await expect(
-    page.getByText('Explain why Order now differs from the recommended quantity.', {
+    purchaseDialog.getByText('Explain why Order now differs from the recommended quantity.', {
       exact: false,
     }),
   ).toHaveCount(0);
-  await page
+  await purchaseDialog
     .getByRole('button', { name: 'Create purchase draft for Preview supplier' })
     .click();
   await expect(page.getByRole('article').getByText('Draft', { exact: true })).toBeVisible();
+  await purchaseDialog
+    .getByRole('button', { name: 'Close new purchase order', exact: true })
+    .click();
+  await expect(purchaseDialog).toBeHidden();
   await page.getByRole('link', { name: 'Back to suppliers', exact: true }).click();
   await supplier.locator(':scope > summary').click();
   const draft = page.getByRole('article').filter({ hasText: 'Preview supplier' });
@@ -225,37 +286,66 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await expect(draft).toContainText('Expected delivery');
   await page.screenshot({ path: info.outputPath('purchasing.png'), fullPage: true });
   await page.goto('/app/receiving');
-  await page.getByText('Receive without a purchase order', { exact: true }).click();
-  await page.getByLabel('Quantity received').fill('10');
-  await page.getByLabel('Quantity in each physical package').fill('10');
-  const inboundOrder = page.getByRole('combobox', { name: 'Confirmed inbound order (optional)' });
+  await page.getByRole('link', { name: 'Receive without a purchase order', exact: true }).click();
+  const receiveWithoutPurchaseOrderDialog = page.getByRole('dialog', {
+    name: 'Receive without a purchase order',
+    exact: true,
+  });
+  await expect(receiveWithoutPurchaseOrderDialog).toBeVisible();
+  await receiveWithoutPurchaseOrderDialog.getByLabel('Quantity received').fill('10');
+  await receiveWithoutPurchaseOrderDialog
+    .getByLabel('Quantity in each physical package')
+    .fill('10');
+  const inboundOrder = receiveWithoutPurchaseOrderDialog.getByRole('combobox', {
+    name: 'Confirmed inbound order (optional)',
+  });
   await inboundOrder.selectOption({
     label: `PO-${info.project.name} · Preview garlic powder · 60 lb`,
   });
-  const capturedPack = page.getByRole('combobox', { name: /^Supplier pack from confirmed order/ });
+  const capturedPack = receiveWithoutPurchaseOrderDialog.getByRole('combobox', {
+    name: /^Supplier pack from confirmed order/,
+  });
   await expect(capturedPack.locator('option:checked')).toHaveText('pail · 30 lb');
   await inboundOrder.selectOption('');
-  await expect(page.getByRole('combobox', { name: 'Supplier item / pack (optional)' })).toHaveValue(
-    '',
-  );
+  await expect(
+    receiveWithoutPurchaseOrderDialog.getByRole('combobox', {
+      name: 'Supplier item / pack (optional)',
+    }),
+  ).toHaveValue('');
   await inboundOrder.selectOption({
     label: `PO-${info.project.name} · Preview garlic powder · 60 lb`,
   });
   await expect(capturedPack.locator('option:checked')).toHaveText('pail · 30 lb');
-  await page.getByLabel(/^Supplier-provided lot \(if shown\)/).fill('TEST-LOT');
-  await page.getByRole('button', { name: 'Post receipt & update inventory' }).click();
+  await receiveWithoutPurchaseOrderDialog
+    .getByLabel(/^Supplier-provided lot \(if shown\)/)
+    .fill('TEST-LOT');
+  await receiveWithoutPurchaseOrderDialog
+    .getByRole('button', { name: 'Post receipt & update inventory' })
+    .click();
   await expect(page.getByRole('status')).toContainText('Receipt posted');
   await page.goto('/app/purchasing');
   await expect(
     page.getByRole('article').getByRole('row').filter({ hasText: 'Preview garlic powder' }),
   ).toContainText('50 lb');
   await page.goto('/app');
-  await page.getByRole('link', { name: 'Review unreceived deliveries', exact: true }).click();
+  const unreceivedDeliveries = page.getByRole('link', {
+    name: /^Review unreceived deliveries\b/u,
+  });
+  await expect(unreceivedDeliveries).toContainText('1 confirmed purchases awaiting receipt');
+  await expect(unreceivedDeliveries).toHaveAttribute(
+    'href',
+    '/app/purchasing?delivery=unreceived&sort=due-soon',
+  );
+  await unreceivedDeliveries.click();
   await expect(page).toHaveURL(/\/app\/purchasing\?delivery=unreceived&sort=due-soon$/);
   await expect(page.getByRole('article')).toContainText('Preview garlic powder');
   await page.reload();
   await expect(page).toHaveURL(/\/app\/purchasing\?delivery=unreceived&sort=due-soon$/);
-  await page.goBack();
+  // Reloaded browser-history behavior is not an application return contract.
+  // Use the explicit Dashboard action that users have on both responsive layouts.
+  const dashboard = page.getByRole('link', { name: 'Dashboard', exact: true }).first();
+  await expect(dashboard).toHaveAttribute('href', '/app');
+  await dashboard.click();
   await expect(page).toHaveURL(/\/app$/);
   await page.goto('/app/suppliers');
   await supplier.locator(':scope > summary').click();
@@ -263,10 +353,8 @@ test('customer packaging and order estimates lead to purchasing and partial rece
     supplier.getByRole('article').getByText('Partially received', { exact: true }),
   ).toBeVisible();
   await expect(supplier.getByRole('article')).toContainText('50 lb');
-  await expect(
-    page.getByRole('row').filter({ hasText: 'Preview supplier' }).first().getByRole('cell')
-      .last(),
-  ).toHaveText('1');
+  const supplierRow = page.getByRole('row').filter({ hasText: 'Preview supplier' }).first();
+  await expect(supplierRow.getByRole('gridcell').last()).toHaveText('1');
   const fitsScreen = await page.evaluate(
     () => document.documentElement.scrollWidth <= window.innerWidth,
   );

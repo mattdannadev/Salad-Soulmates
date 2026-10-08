@@ -8,7 +8,7 @@ interface DashboardQuickActionsProps {
 
 const quickActions = (es: boolean) => [
   {
-    href: '/app/orders#new-order',
+    href: '/app/orders?returnTo=%2Fapp&create=order',
     label: es ? '+ Nuevo pedido' : '+ New order',
   },
   {

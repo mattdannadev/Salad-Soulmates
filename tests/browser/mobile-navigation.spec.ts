@@ -20,7 +20,9 @@ test('phone navigation keeps Dashboard prominent and opens every permitted secti
   await mobileNavigation.getByRole('button', { name: 'More sections' }).click();
   const mainNavigation = page.getByRole('navigation', { name: 'Main navigation' });
   await expect(mainNavigation).toBeInViewport();
-  const inventory = mainNavigation.locator('.nav-group').filter({ hasText: 'Inventory & traceability' });
+  const inventory = mainNavigation
+    .locator('.nav-group')
+    .filter({ hasText: 'Inventory & traceability' });
   await expect(inventory).toHaveAttribute('open', '');
   await expect(inventory.getByRole('link', { name: 'Inventory', exact: true })).toBeVisible();
 
@@ -133,52 +135,59 @@ test('390px shell controls stay inside the viewport and the drawer dismisses by 
   const bottomNavigation = page.getByRole('navigation', { name: 'Mobile navigation' });
   const feedback = page.getByRole('button', { name: 'Feedback', exact: true });
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  await expect
-    .poll(() => page.evaluate(() => {
+  await expect(page.getByRole('button', { name: 'Open commands' })).toBeVisible();
+  function shellControlsFitViewport() {
+    return page.evaluate(() => {
       const viewport = window.visualViewport;
-      const toggleRect = document
-        .querySelector('.mobile-navigation-toggle')
-        ?.getBoundingClientRect();
+      const menuToggle = document.querySelector<HTMLElement>('.mobile-navigation-toggle');
       const bottomRect = document.querySelector('.mobile-navigation')?.getBoundingClientRect();
       const feedbackRect = document.querySelector('.feedback-button')?.getBoundingClientRect();
-      if (!viewport || !toggleRect || !bottomRect || !feedbackRect) return false;
-      return (
-        document.documentElement.scrollWidth <= viewport.width
-          && toggleRect.width >= 48
-          && toggleRect.height >= 48
-          && toggleRect.left >= 0
-          && toggleRect.right <= viewport.width
-          && bottomRect.left >= 0
-          && bottomRect.right <= viewport.width
-          && bottomRect.bottom <= viewport.height
-          && feedbackRect.left >= 0
-          && feedbackRect.right <= viewport.width
-          && feedbackRect.bottom <= bottomRect.top
+      if (!viewport || !menuToggle || !bottomRect || !feedbackRect) return false;
+      const toggleRect = menuToggle.getBoundingClientRect();
+      const toggleCenterElement = document.elementFromPoint(
+        toggleRect.left + toggleRect.width / 2,
+        toggleRect.top + toggleRect.height / 2,
       );
-    }))
-    .toBe(true);
+      return [
+        document.documentElement.scrollWidth <= viewport.width,
+        toggleRect.width >= 48,
+        toggleRect.height >= 48,
+        toggleRect.left >= 0,
+        toggleRect.right <= viewport.width,
+        menuToggle.contains(toggleCenterElement),
+        bottomRect.left >= 0,
+        bottomRect.right <= viewport.width,
+        bottomRect.bottom <= viewport.height,
+        feedbackRect.left >= 0,
+        feedbackRect.right <= viewport.width,
+        feedbackRect.bottom <= bottomRect.top,
+      ].every((condition) => condition);
+    });
+  }
+  await expect.poll(shellControlsFitViewport).toBe(true);
 
   await toggle.click();
   const drawer = page.locator('.sidebar');
   await expect(drawer).toHaveAttribute('role', 'dialog');
   await expect(drawer).toHaveAttribute('aria-modal', 'true');
   await expect(drawer.getByRole('button', { name: 'Close navigation' })).toBeFocused();
-  await expect
-    .poll(() => page.evaluate(() => {
+  function drawerFitsViewport() {
+    return page.evaluate(() => {
       const viewport = window.visualViewport;
       const drawerRect = document.querySelector('.sidebar')?.getBoundingClientRect();
       const scrimRect = document.querySelector('.navigation-scrim')?.getBoundingClientRect();
       if (!viewport || !drawerRect || !scrimRect) return false;
-      return (
-        drawerRect.left >= 0
-          && drawerRect.right <= viewport.width
-          && drawerRect.bottom <= viewport.height
-          && scrimRect.left >= 0
-          && scrimRect.right <= viewport.width
-          && scrimRect.bottom <= viewport.height
-      );
-    }))
-    .toBe(true);
+      return [
+        drawerRect.left >= 0,
+        drawerRect.right <= viewport.width,
+        drawerRect.bottom <= viewport.height,
+        scrimRect.left >= 0,
+        scrimRect.right <= viewport.width,
+        scrimRect.bottom <= viewport.height,
+      ].every((condition) => condition);
+    });
+  }
+  await expect.poll(drawerFitsViewport).toBe(true);
   await page.locator('.navigation-scrim').click({ position: { x: 380, y: 100 } });
   await expect(drawer).toBeHidden();
   await expect(toggle).toBeFocused();
@@ -197,19 +206,71 @@ test('390px shell controls stay inside the viewport and the drawer dismisses by 
 
   await feedback.click();
   await expect(page.getByRole('button', { name: 'Close feedback' })).toBeVisible();
-  await expect
-    .poll(() => page.evaluate(() => {
+  function feedbackDrawerFitsViewport() {
+    return page.evaluate(() => {
       const viewport = window.visualViewport;
       const bounds = document.querySelector('.feedback-drawer')?.getBoundingClientRect();
-      return (
-        !!viewport
-          && !!bounds
-          && bounds.left >= 0
-          && bounds.right <= viewport.width
-          && bounds.bottom <= viewport.height
-      );
-    }))
-    .toBe(true);
+      if (!viewport || !bounds) return false;
+      return [
+        bounds.left >= 0,
+        bounds.right <= viewport.width,
+        bounds.bottom <= viewport.height,
+      ].every((condition) => condition);
+    });
+  }
+  await expect.poll(feedbackDrawerFitsViewport).toBe(true);
+});
+
+test('320px shell keeps mobile navigation and global discovery pointer reachable', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto('/login');
+  await page.getByLabel('Email or phone number').fill('admin@example.test');
+  await page.getByLabel('Password', { exact: true }).fill('local-test-password');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page).toHaveURL(/\/app$/);
+
+  const menuToggle = page.getByRole('button', { name: 'Open navigation' });
+  const commands = page.getByRole('button', { name: 'Open commands' });
+  function headerControlsArePointerReachable() {
+    return page.evaluate(() => {
+      const controls = [
+        document.querySelector<HTMLElement>('.mobile-navigation-toggle'),
+        document.querySelector<HTMLElement>('.command-palette-trigger'),
+      ];
+      return controls.every((control) => {
+        if (!control) return false;
+        const bounds = control.getBoundingClientRect();
+        const centerTarget = document.elementFromPoint(
+          bounds.left + bounds.width / 2,
+          bounds.top + bounds.height / 2,
+        );
+        return [
+          bounds.width >= 44,
+          bounds.height >= 44,
+          bounds.left >= 0,
+          bounds.right <= window.innerWidth,
+          control.contains(centerTarget),
+        ].every((condition) => condition);
+      });
+    });
+  }
+  await expect.poll(headerControlsArePointerReachable).toBe(true);
+
+  await commands.click();
+  const commandDialog = page.getByRole('dialog', { name: 'Commands' });
+  await expect(commandDialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(commandDialog).not.toBeVisible();
+  await expect(commands).toBeFocused();
+
+  await menuToggle.click();
+  const navigationDrawer = page.getByRole('dialog', { name: 'Main navigation' });
+  await expect(navigationDrawer).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(navigationDrawer).toBeHidden();
+  await expect(menuToggle).toBeFocused();
 });
 
 test('Spanish phone drawer exposes labeled keyboard controls at 390px', async ({ page }) => {
@@ -219,7 +280,7 @@ test('Spanish phone drawer exposes labeled keyboard controls at 390px', async ({
   await page.getByLabel('Password', { exact: true }).fill('local-test-password');
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/app$/);
-  await page.locator('#locale').selectOption('es');
+  await page.locator('#language').selectOption('es');
 
   const toggle = page.getByRole('button', { name: 'Abrir navegación' });
   await toggle.focus();

@@ -17,7 +17,9 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Welcome');
   const mainNavigation = page.getByRole('navigation', { name: 'Main navigation' });
   await expect(mainNavigation.getByRole('link', { name: 'Inventory', exact: true })).toHaveCount(1);
-  await expect(mainNavigation.getByRole('link', { name: 'Traceability', exact: true })).toHaveCount(1);
+  await expect(mainNavigation.getByRole('link', { name: 'Traceability', exact: true })).toHaveCount(
+    1,
+  );
   await Promise.all(
     [
       'Dashboard',
@@ -30,7 +32,7 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
       'Allergens',
       'Recipes',
       'Products',
-      'Schedule',
+      'Production Planning',
       'Users',
       'Profile Management',
       'Access Requests',
@@ -64,11 +66,22 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
   await page.goto('/app/materials');
   await expect(page).toHaveURL(/\/app\/orders$/);
   await page.goto('/app/planning');
-  await expect(page).toHaveURL(/\/app\/orders$/);
-  await expect(page.getByRole('navigation', { name: 'Main navigation' })
-    .getByRole('link', { name: 'Inventory', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/app\/planning$/);
+  await expect(
+    page.getByRole('heading', { name: 'Production planning', exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole('navigation', { name: 'Main navigation' })
+      .getByRole('link', { name: 'Inventory', exact: true }),
+  ).toBeVisible();
   await page.goto('/app/products');
-  await expect(page.getByRole('cell', { name: /^Preview Italian dressing Active$/ })).toBeVisible();
+  await expect(
+    page
+      .getByRole('grid', { name: 'Product directory' })
+      .getByRole('link', { name: 'Preview Italian dressing', exact: true })
+      .first(),
+  ).toBeVisible();
   const recipeDetails = page.locator('details.product-recipe-details');
   await expect(recipeDetails).not.toHaveAttribute('open', '');
   await recipeDetails.locator('summary').click();
@@ -90,9 +103,9 @@ test('login validation, authenticated workflows, and sign-out', async ({ page },
   await page.goto('/app/settings');
   await expect(page.getByRole('heading', { name: 'Configuration', exact: true })).toBeVisible();
   await expect(
-    page.getByRole('heading', { name: 'Shared unit catalog', exact: true }),
+    page.getByRole('heading', { name: 'Other dropdown options', exact: true }),
   ).toBeVisible();
-  await expect(page.getByText('Pound (lb)', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ingredient type', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Invite a new user', exact: true })).toHaveCount(
     0,
   );
@@ -149,16 +162,34 @@ test('a lost inventory response preserves the request ID and entered values on r
   await adjustmentDialog.getByRole('spinbutton', { name: /^Quantity/ }).fill('2');
   await adjustmentDialog.getByLabel('Reason *', { exact: true }).fill(reason);
   let interrupted = false;
-  await page.route('**/app/inventory', async (route) => {
+  await page.route(/\/app\/inventory(?:\?.*)?$/u, async (route) => {
     if (!interrupted && route.request().method() === 'POST') {
       interrupted = true;
-      await route.fetch();
-      await route.abort('failed');
+      const actionRequest = route.request();
+      const actionBody = actionRequest.postDataBuffer();
+      if (!actionBody) {
+        throw new Error('The inventory adjustment action must include its form data.');
+      }
+      const actionHeaders = Object.fromEntries(
+        Object.entries(await actionRequest.allHeaders()).filter(([name]) => !['accept-encoding', 'connection', 'content-length', 'host'].includes(name.toLowerCase())),
+      );
+      const committedResponse = await page.context().request.fetch(actionRequest.url(), {
+        method: actionRequest.method(),
+        headers: actionHeaders,
+        data: actionBody,
+      });
+      expect(committedResponse.ok()).toBe(true);
+      await route.fulfill({
+        status: 503,
+        contentType: 'text/plain',
+        body: 'Fixture deliberately drops the inventory action response.',
+      });
       return;
     }
     await route.continue();
   });
   await adjustmentDialog.getByRole('button', { name: 'Record adjustment', exact: true }).click();
+  await expect.poll(() => interrupted).toBe(true);
   await expect(
     adjustmentDialog.getByRole('alert').filter({ hasText: 'Connection interrupted' }),
   ).toBeVisible();
@@ -166,8 +197,14 @@ test('a lost inventory response preserves the request ID and entered values on r
   await expect(adjustmentDialog.getByLabel('Reason *', { exact: true })).toHaveValue(reason);
   await adjustmentDialog.getByRole('button', { name: 'Record adjustment', exact: true }).click();
   await expect(
+    adjustmentDialog.getByRole('status').filter({ hasText: 'already saved' }),
+  ).toBeVisible();
+  await expect(
+    adjustmentDialog.getByRole('combobox', { name: /^Ingredient\s*\*/ }),
+  ).toHaveValue('');
+  await expect(
     adjustmentDialog.getByRole('button', { name: 'Record adjustment', exact: true }),
-  ).toBeEnabled();
+  ).toBeDisabled();
   const response = await page.request.get('http://127.0.0.1:4010/test/inventory-attempts');
   const body: unknown = await response.json();
   const attempts = z

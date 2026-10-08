@@ -19,9 +19,12 @@ export default async function saveProcessProfile(input: unknown): Promise<Action
     const result = await db.rpc('save_process_profile', { payload: parsed.data });
     if (result.error) {
       logFailure('save_process_profile', result.error);
-      return { ok: false, message: result.error.message.includes('changed; reload')
-        ? 'This process profile changed. Reload and try again.'
-        : 'Could not save the process profile. Check the selected Work Type and retry.' };
+      return {
+        ok: false,
+        message: result.error.message.includes('changed; reload')
+          ? 'This process profile changed. Reload and try again.'
+          : 'Could not save the process profile. Check the selected Work Type and retry.',
+      };
     }
     const id = z.uuid().safeParse(result.data);
     if (!id.success) return { ok: false, message: 'The process profile could not be confirmed. Reload before retrying.' };

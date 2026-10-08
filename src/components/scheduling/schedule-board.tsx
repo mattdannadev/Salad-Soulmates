@@ -8,7 +8,7 @@ import type { BryntumSchedulerProps } from './bryntum-scheduler';
  * production without requiring a private trial-package registry at build time.
  */
 export default function ScheduleBoard({
-  data, locale, canManage, pending, focusedWorkId, onAddWork, onEventSummary, onEdit,
+  data, locale, canManage, pending, focusedWorkId, onAddWork, onEventSummary, onEdit, onDelete,
 }: BryntumSchedulerProps) {
   const events = [...data.events].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
   return (
@@ -26,15 +26,18 @@ export default function ScheduleBoard({
           const date = event.startDate.toLocaleDateString(locale === 'es' ? 'es-MX' : 'en-US', {
             month: 'short', day: 'numeric', year: 'numeric',
           });
+          const assignedLabel = locale === 'es' ? 'asignado(s)' : 'assigned';
+          const unassignedLabel = locale === 'es' ? 'Sin asignar' : 'Unassigned';
+          const assignmentLabel = event.assignedResources.length
+            ? `${event.assignedResources.length} ${assignedLabel}`
+            : unassignedLabel;
           return (
             <li key={event.id} aria-current={focused ? 'true' : undefined}>
               <strong>{event.name || scheduleKindLabel(event.workType, locale)}</strong>
               {' — '}
               {date}
               {' · '}
-              {event.assignedResources.length
-                ? `${event.assignedResources.length} ${locale === 'es' ? 'asignado(s)' : 'assigned'}`
-                : locale === 'es' ? 'Sin asignar' : 'Unassigned'}
+              {assignmentLabel}
               {' '}
               <button type="button" onClick={() => onEventSummary(event.id)}>
                 {locale === 'es' ? 'Ver' : 'View'}
@@ -42,6 +45,11 @@ export default function ScheduleBoard({
               {canManage && (
                 <button type="button" disabled={pending} onClick={() => onEdit(event.id)}>
                   {locale === 'es' ? 'Editar' : 'Edit'}
+                </button>
+              )}
+              {canManage && onDelete && (
+                <button type="button" disabled={pending} onClick={() => onDelete(event.id)}>
+                  {locale === 'es' ? 'Eliminar' : 'Delete'}
                 </button>
               )}
             </li>

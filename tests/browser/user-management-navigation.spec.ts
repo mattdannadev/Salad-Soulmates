@@ -11,19 +11,29 @@ test('User Management navigation organizes admin screens and preserves legacy ac
   await expect(page).toHaveURL(/\/app$/);
 
   const navigation = page.getByRole('navigation', { name: 'Main navigation' });
-  await Promise.all(['Users', 'Profile Management', 'Access Requests', 'Login History']
-    .map(async (label) => {
+  await Promise.all(
+    ['Users', 'Profile Management', 'Access Requests', 'Login History'].map(async (label) => {
       await expect(navigation.getByRole('link', { name: label, exact: true })).toBeVisible();
-    }));
+    }),
+  );
 
   await page.goto('/app/settings');
   await expect(page.getByRole('heading', { name: 'Configuration', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Shared unit catalog', exact: true })).toBeVisible();
-  const massFamily = page.getByText('Mass / weight / Masa / peso', { exact: true });
-  await massFamily.click();
-  await expect(page.getByText('Pound (lb) · imperial', { exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'We couldn’t load this workspace page.' })).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Invite a new user', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Process setup', exact: true })).toBeVisible();
+  const referenceData = page.getByRole('region', { name: 'Reference data configuration' });
+  await expect(
+    referenceData.getByRole('heading', { name: 'Other dropdown options', exact: true }),
+  ).toBeVisible();
+  await expect(
+    referenceData.getByRole('heading', { name: 'Ingredient type', exact: true }),
+  ).toBeVisible();
+  await expect(referenceData.locator('summary').filter({ hasText: /Dry.*Active/ })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'We couldn’t load this workspace page.' }),
+  ).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Invite a new user', exact: true })).toHaveCount(
+    0,
+  );
 
   await page.goto('/app/user-management/users');
   await expect(page.getByRole('heading', { name: 'Users', exact: true })).toBeVisible();
@@ -36,6 +46,11 @@ test('User Management navigation organizes admin screens and preserves legacy ac
 
   await page.goto('/app/user-management/login-history');
   await expect(page.getByRole('heading', { name: 'Login History', exact: true })).toBeVisible();
-  await expect(page.getByRole('row').filter({ hasText: 'Test Administrator' })
-    .filter({ hasText: 'Signed in' }).first()).toBeVisible();
+  await expect(
+    page
+      .getByRole('row')
+      .filter({ hasText: 'Test Administrator' })
+      .filter({ hasText: 'Signed in' })
+      .first(),
+  ).toBeVisible();
 });

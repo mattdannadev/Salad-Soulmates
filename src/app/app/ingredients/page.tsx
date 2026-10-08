@@ -13,13 +13,13 @@ import IngredientActivityAction from '@/components/ingredient-activity-action';
 import ListGrid from '@/components/list-grid';
 import DirectoryToolbar from '@/components/directory-toolbar';
 import { Suspense } from 'react';
+import { organizationMeasurementSystem, selectableUoms } from '@/services/uoms';
 import IngredientFocus from './ingredient-focus';
 import { ingredientLinkHref, ingredientReturnContext } from './return-context';
 import {
   ingredientDirectoryFilters, ingredientDirectorySorts,
   parseIngredientDirectoryQuery, type IngredientSearchParams,
 } from './directory-query';
-import { organizationMeasurementSystem, selectableUoms } from '@/services/uoms';
 
 const PAGE_SIZE = 20;
 

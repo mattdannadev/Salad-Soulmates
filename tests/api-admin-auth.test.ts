@@ -40,6 +40,7 @@ const profile = {
   display_name: 'Admin User',
   role: 'admin' as const,
   preferred_locale: 'en' as const,
+  regional_locale: 'en-US' as const,
   active: true,
   access_profile_id: ACCESS_PROFILE_ID,
 };

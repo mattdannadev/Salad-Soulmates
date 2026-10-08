@@ -62,6 +62,7 @@ describe('Supabase tenant signup adapter', () => {
       contact_kind: 'email',
       contact_value: 'ana@example.test',
       preferred_locale: 'es',
+      regional_locale: 'es-MX',
       requested_role: 'receiver',
     });
     expect(mocks.rpc.mock.calls[0]?.[1]).not.toHaveProperty('organization_id');

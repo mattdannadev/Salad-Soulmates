@@ -7,7 +7,9 @@ import hasPermission from '@/lib/permissions';
 
 /** Assigns reusable Work Types to recipes for future work generation. */
 export default async function ProcessProfilesPage() {
-  const { db, products, recipes, locale } = await loadRecipeCatalog();
+  const {
+    db, products, recipes, locale,
+  } = await loadRecipeCatalog();
   const [canManageSettings, canWrite, configurationResult] = await Promise.all([
     hasPermission(db, 'settings.manage'),
     hasPermission(db, 'products.write'),
@@ -25,9 +27,8 @@ export default async function ProcessProfilesPage() {
     .map((recipe) => ({
       id: recipe.id,
       name: recipe.name,
-      productName:
-        productNames.get(recipe.product_id) ??
-        (locale === 'es' ? 'Producto no disponible' : 'Product unavailable'),
+      productName: productNames.get(recipe.product_id)
+        ?? (locale === 'es' ? 'Producto no disponible' : 'Product unavailable'),
     }))
     .sort((left, right) => left.name.localeCompare(right.name, locale));
 

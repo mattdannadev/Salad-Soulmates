@@ -2,7 +2,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { Buffer } from 'node:buffer';
 import { createServer } from 'node:http';
 import { z } from 'zod';
-import { supplierSchema } from '../../src/domain/master-data.ts';
+import supplierSchema from '../../src/domain/supplier-schema.ts';
 import { initializeGateDatabase, gateActor } from '../integration/postgres-bootstrap.ts';
 import {
   fixtureId,
@@ -15,6 +15,7 @@ import {
 const tables = new Set([
   'suppliers',
   'products',
+  'uoms',
   'packaging_profile_versions',
   'material_plans',
   'customer_orders',
@@ -29,6 +30,7 @@ const tables = new Set([
   'inventory_receipt_lines',
   'receipt_serializations',
   'serialized_unit_events',
+  'inventory_events',
 ]);
 const mutations = new Set([
   'save_customer_master',
@@ -59,11 +61,44 @@ const scheduleReads = new Set([
   'get_schedule_batch_context',
   'get_schedule_customer_orders',
   'get_schedule_supplier_deliveries',
+  'get_my_workforce_schedule',
 ]);
+// These reads derive authorization and scope from the current database actor.
+// Keep them on the disposable migration-backed database rather than returning
+// generic fixture data, so worker surfaces exercise their real RPC contracts.
+const workerReads = new Set(['get_my_workforce_work_queue', 'get_my_worker_work']);
+// This configuration is read from the disposable database so recipe pages exercise
+// the same function and authorization behavior as production.
+const zeroArgumentReads = new Set(['list_recipe_process_configuration']);
+const inventoryEventSchema = z
+  .object({
+    ingredient_id: z.uuid(),
+    event_type: z.enum([
+      'OpeningBalance',
+      'Adjustment',
+      'Receipt',
+      'ManualGain',
+      'ManualShrink',
+      'OrderUsage',
+    ]),
+    quantity_delta: z
+      .number()
+      .finite()
+      .min(-1000000)
+      .max(1000000)
+      .multipleOf(0.0001)
+      .refine((quantity) => quantity !== 0),
+    uom: z.string().trim().min(1).max(50),
+    reason_note: z.string().trim().min(3).max(1000),
+    effective_on: z.iso.date(),
+    request_id: z.uuid(),
+  })
+  .strict();
 /** @type {Promise<PGlite> | undefined} */
 let databasePromise;
 let pending = Promise.resolve();
 let workPlanPermission = true;
+const inventoryAttempts = [];
 async function createDatabase() {
   const db = new PGlite();
   await initializeGateDatabase((sql) => db.exec(sql));
@@ -81,7 +116,8 @@ async function createDatabase() {
       values('${fixtureId(300)}','Preview Italian dressing','TEST-ITALIAN',2,2);
     insert into public.customers(id,name) values
       ('${fixtureId(500)}','Production customer'),
-      ('${fixtureId(501)}','Shipping customer');
+      ('${fixtureId(501)}','Shipping customer'),
+      ('${fixtureId(502)}','Preview customer');
     insert into public.customer_product_options(
       id,customer_id,product_id,label,packaging_mode,unit_name,gallons_per_unit,
       unit_price,currency,active,is_preferred
@@ -105,14 +141,19 @@ function isPurchasingFixtureRequest(url) {
   const endpoint = url.pathname.replace('/rest/v1/', '');
   return (
     tables.has(endpoint)
-    || endpoint === 'rpc/material_requirements' || endpoint === 'rpc/cancel_material_plan'
-    || endpoint === 'rpc/demand_coverage' || endpoint === 'rpc/generate_demand_purchases'
+    || endpoint === 'rpc/material_requirements'
+    || endpoint === 'rpc/cancel_material_plan'
+    || endpoint === 'rpc/demand_coverage'
+    || endpoint === 'rpc/generate_demand_purchases'
     || endpoint === 'rpc/cancel_customer_order'
-    || endpoint === 'rpc/find_serialized_units' || endpoint === 'rpc/order_production_batches'
+    || endpoint === 'rpc/find_serialized_units'
+    || endpoint === 'rpc/order_production_batches'
     || endpoint === 'rpc/worker_spice_preparations'
     || endpoint === 'rpc/get_workforce_schedule'
     || endpoint === 'rpc/list_work_plan_versions'
     || scheduleReads.has(endpoint.replace('rpc/', ''))
+    || workerReads.has(endpoint.replace('rpc/', ''))
+    || zeroArgumentReads.has(endpoint.replace('rpc/', ''))
     || mutations.has(endpoint.replace('rpc/', ''))
     || endpoint === 'test/purchasing-reset'
     || endpoint === 'test/work-plan-permission'
@@ -145,9 +186,7 @@ async function executeRequest(url, method, body) {
       .array(z.object({ value: z.record(z.string(), z.unknown()) }))
       .parse(result.rows)
       .map((record) => record.value)
-      .filter((record) => [
-        'id', 'unit_id', 'delivery_request_id', 'created_by',
-      ].every((key) => {
+      .filter((record) => ['id', 'unit_id', 'delivery_request_id', 'created_by'].every((key) => {
         const filter = url.searchParams.get(key);
         return !filter || record[key] === filter.replace('eq.', '');
       }));
@@ -161,6 +200,26 @@ async function executeRequest(url, method, body) {
     return result.rows[0] ?? null;
   }
   const input = JSON.parse(body);
+  if (endpoint === 'inventory_events' && method === 'POST') {
+    const event = inventoryEventSchema.parse(input);
+    inventoryAttempts.push({ request_id: event.request_id, reason_note: event.reason_note });
+    if (inventoryAttempts.length > 50) inventoryAttempts.shift();
+    const result = await db.query(
+      `insert into public.inventory_events(
+        ingredient_id,event_type,quantity_delta,uom,reason_note,effective_on,request_id
+      ) values($1,$2,$3,$4,$5,$6,$7) returning id`,
+      [
+        event.ingredient_id,
+        event.event_type,
+        event.quantity_delta,
+        event.uom,
+        event.reason_note,
+        event.effective_on,
+        event.request_id,
+      ],
+    );
+    return z.object({ id: z.uuid() }).parse(result.rows[0]);
+  }
   if (endpoint === 'rpc/list_work_plan_versions') {
     const result = await db.query('select public.list_work_plan_versions() as value');
     return z.object({ value: z.unknown() }).parse(result.rows[0]).value;
@@ -169,14 +228,22 @@ async function executeRequest(url, method, body) {
     const supplier = supplierSchema.parse(input);
     const result = await db.query(
       'insert into public.suppliers(name,contact_name,email,phone,lead_time_days,active) values($1,$2,$3,$4,$5,$6) returning id',
-      [supplier.name, supplier.contact_name, supplier.email,
-        supplier.phone, supplier.lead_time_days, supplier.active],
+      [
+        supplier.name,
+        supplier.contact_name,
+        supplier.email,
+        supplier.phone,
+        supplier.lead_time_days,
+        supplier.active,
+      ],
     );
     return z.object({ id: z.uuid() }).parse(result.rows[0]);
   }
   if (endpoint === 'rpc/order_production_batches') {
     const args = z.object({ order_id: z.uuid() }).parse(input);
-    const result = await db.query('select public.order_production_batches($1) as value', [args.order_id]);
+    const result = await db.query('select public.order_production_batches($1) as value', [
+      args.order_id,
+    ]);
     return z.object({ value: z.unknown() }).parse(result.rows[0]).value;
   }
   if (endpoint === 'rpc/worker_spice_preparations') {
@@ -184,17 +251,18 @@ async function executeRequest(url, method, body) {
     return z.object({ value: z.unknown() }).parse(result.rows[0]).value;
   }
   if (endpoint === 'rpc/get_workforce_schedule') {
-    const args = z.object({
-      payload: z.object({
-        facility_id: z.uuid(),
-        start_on: z.iso.date(),
-        end_on: z.iso.date(),
-      }),
-    }).parse(input).payload;
-    const result = await db.query(
-      'select public.get_workforce_schedule($1::jsonb) as schedule',
-      [JSON.stringify(args)],
-    );
+    const args = z
+      .object({
+        payload: z.object({
+          facility_id: z.uuid(),
+          start_on: z.iso.date(),
+          end_on: z.iso.date(),
+        }),
+      })
+      .parse(input).payload;
+    const result = await db.query('select public.get_workforce_schedule($1::jsonb) as schedule', [
+      JSON.stringify(args),
+    ]);
     return z.object({ schedule: z.unknown() }).parse(result.rows[0]).schedule;
   }
   if (scheduleReads.has(endpoint.replace('rpc/', ''))) {
@@ -205,18 +273,37 @@ async function executeRequest(url, method, body) {
     ]);
     return z.object({ value: z.unknown() }).parse(result.rows[0]).value;
   }
+  if (workerReads.has(endpoint.replace('rpc/', ''))) {
+    const name = endpoint.replace('rpc/', '');
+    const args = z.object({ payload: z.record(z.string(), z.unknown()) }).parse(input).payload;
+    const result = await db.query(`select public.${name}($1::jsonb) as value`, [
+      JSON.stringify(args),
+    ]);
+    return z.object({ value: z.unknown() }).parse(result.rows[0]).value;
+  }
+  if (zeroArgumentReads.has(endpoint.replace('rpc/', ''))) {
+    const name = endpoint.replace('rpc/', '');
+    const result = await db.query(`select public.${name}() as value`);
+    return z.object({ value: z.unknown() }).parse(result.rows[0]).value;
+  }
   if (endpoint === 'rpc/cancel_customer_order') {
     const args = z.object({ order_id: z.uuid() }).parse(input);
     const result = await db.query('select public.cancel_customer_order($1) as id', [args.order_id]);
     return z.object({ id: z.uuid() }).parse(result.rows[0]).id;
   }
   if (endpoint === 'rpc/find_serialized_units') {
-    const args = z.object({
-      search_text: z.string().optional(),
-      receipt_filter: z.uuid().optional(),
-      unit_filter: z.uuid().optional(),
-    }).parse(input);
-    const result = await db.query('select public.find_serialized_units($1,$2,$3) as value', [args.search_text ?? '', args.receipt_filter ?? null, args.unit_filter ?? null]);
+    const args = z
+      .object({
+        search_text: z.string().optional(),
+        receipt_filter: z.uuid().optional(),
+        unit_filter: z.uuid().optional(),
+      })
+      .parse(input);
+    const result = await db.query('select public.find_serialized_units($1,$2,$3) as value', [
+      args.search_text ?? '',
+      args.receipt_filter ?? null,
+      args.unit_filter ?? null,
+    ]);
     return z.object({ value: z.unknown() }).parse(result.rows[0]).value;
   }
   if (endpoint === 'rpc/cancel_material_plan') {
@@ -237,7 +324,9 @@ async function executeRequest(url, method, body) {
   }
   if (endpoint === 'rpc/generate_demand_purchases') {
     const args = z.object({ request_id: z.uuid() }).parse(input);
-    const result = await db.query('select public.generate_demand_purchases($1) as value', [args.request_id]);
+    const result = await db.query('select public.generate_demand_purchases($1) as value', [
+      args.request_id,
+    ]);
     return z.object({ value: z.unknown() }).parse(result.rows[0]).value;
   }
   const name = z
@@ -327,15 +416,24 @@ const profile = {
   work_email: 'admin@example.test',
   role: 'admin',
   preferred_locale: 'en',
+  regional_locale: 'en-US',
   active: true,
   deactivated_at: null,
   deactivated_by: null,
   deactivation_reason: null,
+  operations_copilot_override: null,
   access_profile_id: '00000000-0000-4000-8000-000000000020',
 };
-const inventoryAttempts = [];
+const profileUpdateSchema = z
+  .object({
+    preferred_locale: z.enum(['en', 'es']).optional(),
+    regional_locale: z.enum(['en-US', 'es-MX']).optional(),
+  })
+  .strict()
+  .refine(
+    (update) => update.preferred_locale !== undefined || update.regional_locale !== undefined,
+  );
 const loginEvents = [];
-const attemptSchema = z.object({ request_id: z.uuid(), reason_note: z.string() });
 createServer((request, response) => {
   const url = new URL(request.url ?? '/', 'http://127.0.0.1:4010');
   response.setHeader('Content-Type', 'application/json');
@@ -370,9 +468,7 @@ createServer((request, response) => {
         .catch((error) => {
           console.error('purchasing_fixture_request_failed', error);
           response.writeHead(500);
-          response.end(
-            JSON.stringify({ code: 'FIXTURE_FAILED', message: 'Fixture failed' }),
-          );
+          response.end(JSON.stringify({ code: 'FIXTURE_FAILED', message: 'Fixture failed' }));
         });
       return;
     }
@@ -419,14 +515,26 @@ createServer((request, response) => {
     }
     if (url.pathname.endsWith('/profiles')) {
       if (request.method === 'PATCH') {
-        const update = z.object({ preferred_locale: z.enum(['en', 'es']) }).strict()
-          .safeParse(JSON.parse(payload));
+        let profileUpdate;
+        try {
+          profileUpdate = JSON.parse(payload);
+        } catch {
+          response.writeHead(400);
+          response.end(JSON.stringify({ code: 'INVALID_LOCALE_UPDATE' }));
+          return;
+        }
+        const update = profileUpdateSchema.safeParse(profileUpdate);
         if (!update.success || url.searchParams.get('id') !== `eq.${profile.id}`) {
           response.writeHead(400);
           response.end(JSON.stringify({ code: 'INVALID_LOCALE_UPDATE' }));
           return;
         }
-        profile.preferred_locale = update.data.preferred_locale;
+        if (update.data.preferred_locale !== undefined) {
+          profile.preferred_locale = update.data.preferred_locale;
+        }
+        if (update.data.regional_locale !== undefined) {
+          profile.regional_locale = update.data.regional_locale;
+        }
       }
       response.end(
         JSON.stringify(
@@ -437,8 +545,12 @@ createServer((request, response) => {
     }
     if (url.pathname.endsWith('/rpc/has_permission')) {
       const { requested } = JSON.parse(payload);
-      response.end(JSON.stringify(ADMIN_PERMISSIONS.includes(requested)
-        && (requested !== 'operations.work_plans.manage' || workPlanPermission)));
+      response.end(
+        JSON.stringify(
+          ADMIN_PERMISSIONS.includes(requested)
+            && (requested !== 'operations.work_plans.manage' || workPlanPermission),
+        ),
+      );
       return;
     }
     if (url.pathname.endsWith('/rpc/login_event_user_names')) {
@@ -447,10 +559,12 @@ createServer((request, response) => {
     }
     if (url.pathname.endsWith('/login_events')) {
       if (request.method === 'POST') {
-        const event = z.object({
-          event_type: z.enum(['signed_in', 'signed_out']),
-          user_agent: z.string().max(1000).nullable().optional(),
-        }).safeParse(JSON.parse(payload));
+        const event = z
+          .object({
+            event_type: z.enum(['signed_in', 'signed_out']),
+            user_agent: z.string().max(1000).nullable().optional(),
+          })
+          .safeParse(JSON.parse(payload));
         if (!event.success) {
           response.writeHead(400);
           response.end(JSON.stringify({ code: 'INVALID_LOGIN_EVENT' }));
@@ -487,19 +601,13 @@ createServer((request, response) => {
       };
       response.end(
         JSON.stringify(
-          request.headers.accept?.includes('vnd.pgrst.object+json')
-            ? facility
-            : [facility],
+          request.headers.accept?.includes('vnd.pgrst.object+json') ? facility : [facility],
         ),
       );
       return;
     }
     const table = url.pathname.slice('/rest/v1/'.length);
-    if (
-      request.method === 'GET'
-      && url.pathname.startsWith('/rest/v1/')
-      && fixtureRecords[table]
-    ) {
+    if (request.method === 'GET' && url.pathname.startsWith('/rest/v1/') && fixtureRecords[table]) {
       const records = selectFixtureRecords(table, url);
       response.end(
         JSON.stringify(
@@ -518,22 +626,6 @@ createServer((request, response) => {
     if (request.method === 'GET' && url.pathname.startsWith('/rest/v1/')) {
       response.end(request.headers.accept?.includes('vnd.pgrst.object+json') ? 'null' : '[]');
       return;
-    }
-    if (url.pathname === '/rest/v1/inventory_events' && request.method === 'POST') {
-      let submitted;
-      try {
-        submitted = JSON.parse(payload);
-      } catch (error) {
-        if (!(error instanceof SyntaxError)) throw error;
-        response.writeHead(400);
-        response.end('{}');
-        return;
-      }
-      const attempt = attemptSchema.safeParse(submitted);
-      if (attempt.success) {
-        inventoryAttempts.push(attempt.data);
-        if (inventoryAttempts.length > 50) inventoryAttempts.shift();
-      }
     }
     response.writeHead(503);
     response.end(

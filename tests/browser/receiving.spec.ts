@@ -1,6 +1,8 @@
 import { expect, test } from './fixtures';
 
-test('receive physical packages, print labels, resolve a barcode, and preserve audited balances', async ({ page }, info) => {
+test('receive physical packages, print labels, resolve a barcode, and preserve audited balances', async ({
+  page,
+}, info) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/login');
@@ -15,7 +17,9 @@ test('receive physical packages, print labels, resolve a barcode, and preserve a
   await page.getByLabel('Expiration date').fill('2099-10-01');
   await page.getByLabel('Quantity in each physical package').fill('30 | SUPPLIER-ONE\n19');
   await page.getByRole('button', { name: 'Post receipt & update inventory' }).click();
-  await expect(page.locator('main').getByRole('alert')).toContainText('Package quantities must equal');
+  await expect(page.locator('main').getByRole('alert')).toContainText(
+    'Package quantities must equal',
+  );
   await page.getByLabel('Quantity in each physical package').fill('30 | SUPPLIER-ONE\n20');
   await page.getByRole('button', { name: 'Post receipt & update inventory' }).click();
   await expect(page.getByRole('status')).toContainText('packages serialized');
@@ -25,24 +29,25 @@ test('receive physical packages, print labels, resolve a barcode, and preserve a
   await expect(image).toBeVisible();
   await page.screenshot({ path: info.outputPath('package-labels.png'), fullPage: true });
   await page.goto('/receiving/packages');
-  await page.getByLabel('Scan or enter a barcode').fill('SUPPLIER-ONE');
-  await page.getByRole('button', { name: 'Find package' }).click();
+  const packageFilters = page.getByRole('region', { name: 'Package filters', exact: true });
+  await packageFilters.getByRole('searchbox', { name: 'Search', exact: true }).fill('SUPPLIER-ONE');
+  await packageFilters.getByRole('button', { name: 'Search', exact: true }).click();
+  await expect(page).toHaveURL(/\/receiving\/packages\?q=SUPPLIER-ONE$/u);
   await expect(page.locator('.serial-card')).toHaveCount(1);
   await page.locator('.serial-card').click();
   await expect(page.getByRole('heading', { name: '30 lb remaining' })).toBeVisible();
   await expect(page.locator('main')).toContainText('TRACE-LOT-1');
   const serial = await page.locator('.serial-code').innerText();
   expect(serial).toMatch(/^SSU-/);
-  const packageUrl = page.url();
   await page.getByText('Update balance or hold status', { exact: true }).click();
   await page.getByLabel('Remaining quantity').fill('12');
   await page.getByRole('combobox', { name: 'Status', exact: true }).selectOption('Hold');
-  await page.getByLabel('Required reason')
+  await page
+    .getByLabel('Required reason')
     .fill('Measured remaining quantity during quality inspection');
   await page.getByRole('button', { name: 'Save package change' }).click();
   await expect(page.getByRole('heading', { name: '12 lb remaining' })).toBeVisible();
-  await expect(page.locator('.serial-history'))
-    .toContainText('Measured remaining quantity');
+  await expect(page.locator('.serial-history')).toContainText('Measured remaining quantity');
   await expect(page.locator('main')).toContainText('Unavailable for production');
   await page.reload();
   await expect(page.getByRole('heading', { name: '12 lb remaining' })).toBeVisible();
@@ -57,9 +62,15 @@ test('receive physical packages, print labels, resolve a barcode, and preserve a
   await page.reload();
   await expect(page.getByRole('img', { name: `QR barcode ${serial}`, exact: true })).toBeVisible();
   await page.goto('/receiving/packages');
-  await page.getByLabel('Scan or enter a barcode').fill(serial);
-  await page.getByRole('button', { name: 'Find package' }).click();
+  await packageFilters.getByRole('searchbox', { name: 'Search', exact: true }).fill(serial);
+  await packageFilters.getByRole('button', { name: 'Search', exact: true }).click();
+  const serialSearchHref = `/receiving/packages?q=${serial}`;
+  const serialSearchPattern = new RegExp(`/receiving/packages\\?q=${serial}$`, 'u');
+  await expect(page).toHaveURL(serialSearchPattern);
   await page.locator('.serial-card').click();
-  await expect(page).toHaveURL(packageUrl);
+  const backToSerialSearch = page.getByRole('link', { name: /Find a package/u });
+  await expect(backToSerialSearch).toHaveAttribute('href', serialSearchHref);
+  await backToSerialSearch.click();
+  await expect(page).toHaveURL(serialSearchPattern);
   expect(errors).toEqual([]);
 });
