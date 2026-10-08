@@ -189,6 +189,11 @@ function ListGridLink({
   native = false,
   isolateFromGrid = false,
 }: ListGridLinkProps) {
+  // The static fallback and hydrated AG Grid cells both use native anchors.
+  // AG Grid owns nested pointer/click handling and can intercept a framework
+  // link; a normal document navigation keeps the same semantics through
+  // hydration. Callers must keep destination and return context in href, never
+  // in ephemeral client state.
   const onClick = isolateFromGrid ? stopListGridLinkPropagation : undefined;
   const onPointerDown = isolateFromGrid ? stopListGridLinkPropagation : undefined;
   if (native || isolateFromGrid) {

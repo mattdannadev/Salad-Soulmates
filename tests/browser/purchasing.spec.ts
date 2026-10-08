@@ -340,6 +340,14 @@ test('customer packaging and order estimates lead to purchasing and partial rece
   await unreceivedDeliveries.click();
   await expect(page).toHaveURL(/\/app\/purchasing\?delivery=unreceived&sort=due-soon$/);
   await expect(page.getByRole('article')).toContainText('Preview garlic powder');
+  // Browser Back remains valid for ordinary, URL-addressable navigation.
+  // Post-save returns use the named action below rather than browser history.
+  await page.goBack();
+  await expect(page).toHaveURL(/\/app$/);
+  await expect(unreceivedDeliveries).toBeVisible();
+  await unreceivedDeliveries.click();
+  await expect(page).toHaveURL(/\/app\/purchasing\?delivery=unreceived&sort=due-soon$/);
+  await expect(page.getByRole('article')).toContainText('Preview garlic powder');
   await page.reload();
   await expect(page).toHaveURL(/\/app\/purchasing\?delivery=unreceived&sort=due-soon$/);
   // Reloaded browser-history behavior is not an application return contract.
